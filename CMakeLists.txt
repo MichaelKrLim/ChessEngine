@@ -13,6 +13,7 @@ add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 add_executable(
 	engine
 	main.cpp
+	Board_state.cpp Board_state.h
 )
 
 set_property(TARGET engine PROPERTY CXX_STANDARD 20)
