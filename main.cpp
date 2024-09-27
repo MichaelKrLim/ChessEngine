@@ -2,12 +2,16 @@
 
 #include "Board_state.h"
 
+void init_weightmaps(Board_state& board_state)
+{
+	board_state.white_weightmaps() = 
+	board_state.piece_values() =
+
+	board_state.black_weightmaps() = std::ranges::reverse(board_state.white_weightmaps);
+}
+
 int main()
 {
-	std::array<std::array, 2>, 2 a = {{1,2}, {3,4}};
-	std::reverse(array.begin(), array.end());
-	for(const auto & ar : a)
-	{
-		std::cout << ar[0] << ar[1] << "\n";
-	}
+    Board_state board_state;
+    
 }

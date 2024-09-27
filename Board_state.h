@@ -106,6 +106,10 @@ class Board_state
 	[[nodiscard]] const bool black_is_mated() const;
 	[[nodiscard]] const bool is_draw() const;
 	[[nodiscard]] const double evaluate() const;
+
+	std::unordered_map<Piece, int>& white_weightmaps() { return white_weightmaps; }
+	std::unordered_map<Piece, int>& black_weightmaps() { return black_weightmaps; }
+	std::unordered_map<Piece, int>& piece_values() { return piece_values; }
 };
 
 #endif // Board_state_h_INCLUDED
