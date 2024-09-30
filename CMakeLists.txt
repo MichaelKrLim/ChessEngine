@@ -16,4 +16,4 @@ add_executable(
 	Board_state.cpp Board_state.h
 )
 
-set_property(TARGET engine PROPERTY CXX_STANDARD 20)
+set_property(TARGET engine PROPERTY CXX_STANDARD 23)

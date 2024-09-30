@@ -4,6 +4,6 @@
 
 int main()
 {
-    Board_state board_state;
-    
+	Board_state board_state;
+	board_state.output_weights();
 }
