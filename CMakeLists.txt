@@ -14,6 +14,12 @@ add_executable(
 	engine
 	main.cpp
 	Board_state.cpp Board_state.h
+	Engine.cpp Engine.h
+	Position.h
+	Constants.h
+	FEN.h FEN.cpp
+	Board.h
 )
 
-set_property(TARGET engine PROPERTY CXX_STANDARD 23)
+set_property(TARGET engine PROPERTY CXX_STANDARD 20)
+set_property(TARGET engine PROPERTY CXX_EXTENSIONS OFF)
