@@ -19,6 +19,10 @@ add_executable(
 	Constants.h
 	FEN.h FEN.cpp
 	Board.h
+	Square.h
+	Move.h
+	Pieces.h
+	Legal_move_generator.h Legal_move_generator.cpp
 )
 
 set_property(TARGET engine PROPERTY CXX_STANDARD 20)

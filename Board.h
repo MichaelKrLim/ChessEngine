@@ -24,28 +24,13 @@ namespace engine
 				const auto file = board_index%engine::board_size;
 				return (engine::board_size-1-rank)*engine::board_size+file;
 			};
-			const auto to_piece = [](char to_convert)
-			{
-				const std::array<Piece, 256> to_piece = []()
-				{
-					std::array<Piece, 256> to_piece = {};
-					to_piece['p'] = Piece::pawn;
-					to_piece['n'] = Piece::knight;
-					to_piece['b'] = Piece::bishop;
-					to_piece['q'] = Piece::queen;
-					to_piece['k'] = Piece::king;
-					to_piece['r'] = Piece::rook;
-					return to_piece;
-				}();
-				return to_piece[to_convert];
-			};
-
+			
 			std::size_t board_index{};
 			for(std::size_t i{0}; i<FEN_string.size(); ++i)
 			{
 				const auto add_piece = [&](std::array<uint64_t, 6>& pieces)
 				{
-					std::size_t piece_type_index = static_cast<std::size_t> (to_piece(std::tolower(FEN_string[i])));
+					std::size_t piece_type_index = static_cast<std::size_t> (fen.to_piece(std::tolower(FEN_string[i])));
 					pieces[piece_type_index] |= 1ULL << to_absolute_index(board_index);
 				};
 
