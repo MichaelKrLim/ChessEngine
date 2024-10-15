@@ -12,9 +12,16 @@
 
 namespace engine
 {
-	// TODO - fix broken lambda add_piece
 	struct Board
 	{
+		//TODO - add castling rights and pawns for en passant
+		struct Side_position
+		{
+			std::array<uint64_t, 6> pieces{};
+			bool can_castle_left, can_castle_right;
+			uint64_t occupied_squares{};
+		};
+
 		explicit inline Board(engine::FEN fen)
 		{
 			const auto FEN_string = fen.state_string();
@@ -28,10 +35,11 @@ namespace engine
 			std::size_t board_index{};
 			for(std::size_t i{0}; i<FEN_string.size(); ++i)
 			{
-				const auto add_piece = [&](std::array<uint64_t, 6>& pieces)
+				const auto add_piece = [&](Side_position& side)
 				{
 					std::size_t piece_type_index = static_cast<std::size_t> (fen.to_piece(std::tolower(FEN_string[i])));
-					pieces[piece_type_index] |= 1ULL << to_absolute_index(board_index);
+					side.pieces[piece_type_index] |= 1ULL << to_absolute_index(board_index);
+					side.occupied_squares |= side.pieces[piece_type_index];
 				};
 
 				if(FEN_string[i] == '/')
@@ -42,21 +50,20 @@ namespace engine
 				}
 				else if(std::isupper(FEN_string[i]))
 				{
-					add_piece(white_pieces);
+					add_piece(white);
 					++board_index;
 				}
 				else
 				{
-					add_piece(black_pieces);
+					add_piece(black);
 					++board_index;
 				}
+				occupied_squares = black.occupied_squares | white.occupied_squares;
 			}
 		}
 
 		inline void output() const
 		{
-			//TODO - currently uses old piece type, update to use bitboard.
-			/*
 			const auto enumerate_pieces = [&]() -> std::array<char, board_size*board_size>
 			{
 				const auto to_character = [](Piece piece) -> char
@@ -66,15 +73,21 @@ namespace engine
 				};
 				std::array<char, board_size*board_size> board;
 				std::ranges::fill(board, ' ');
-				for(std::size_t i{0}; i<white_pieces.size(); ++i)
+				for(std::size_t piece{0}; piece<=static_cast<std::size_t>(Piece::king); ++piece)
 				{
-					if(white_pieces[i])
-						board[i] = std::toupper(to_character(white_pieces[i].value()));
+					for(std::size_t board_index{0}; board_index<board_size*board_size; ++board_index)
+					{
+						if(((white.pieces[piece] >> board_index) & 1) == 1)
+							board[board_index] = std::toupper(to_character(static_cast<Piece>(piece)));
+					}
 				}
-				for(std::size_t i{0}; i<black_pieces.size(); ++i)
+				for(std::size_t piece{0}; piece<=static_cast<std::size_t>(Piece::king); ++piece)
 				{
-					if(black_pieces[i])
-						board[i] = std::tolower(to_character(black_pieces[i].value()));
+					for(std::size_t board_index{0}; board_index<board_size*board_size; ++board_index)
+					{
+						if(((black.pieces[piece] >> board_index) & 1) == 1)
+							board[board_index] = std::tolower(to_character(static_cast<Piece>(piece)));
+					}
 				}
 				return board;
 			};
@@ -87,18 +100,12 @@ namespace engine
 				}
 				std::cout << "\n";
 			}
-			*/
 		}
 
-		std::array<uint64_t, 6> white_pieces{};
-		std::array<uint64_t, 6> black_pieces{};
+		Side_position black;
+		Side_position white;
 
-		bool black_can_castle_left, black_can_castle_right;
-		bool white_can_castle_left, white_can_castle_right;
-
-		std::array<uint64_t, 6> squares_occupied_by_black;
-		std::array<uint64_t, 6> squares_occupied_by_white;
-		std::array<uint64_t, 6> occupied_squares;
+		uint64_t occupied_squares{};
 	};
 }
 
