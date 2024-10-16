@@ -48,6 +48,10 @@ namespace engine
 		
 		private:
 
+		// bits 0-5, destination square 
+		// bits 6-11, origin square
+		// bits 12-13, promotion piece type, (Piece::, from knight to queen)
+		// bits 14-15, special move flag (Move_type::), promotion (1), en passant (2), castle (3)
 		std::uint16_t move_data_;
 	};
 }
