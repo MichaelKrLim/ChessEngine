@@ -13,13 +13,11 @@ add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 add_executable(
 	engine
 	main.cpp
-	Board_state.cpp Board_state.h
 	Engine.cpp Engine.h
 	Position.h
 	Constants.h
 	FEN.h FEN.cpp
 	Board.h
-	Square.h
 	Move.h
 	Pieces.h
 	Legal_move_generator.h Legal_move_generator.cpp

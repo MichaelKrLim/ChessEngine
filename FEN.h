@@ -13,11 +13,11 @@ namespace engine
 	{
 		public:
 
-		FEN() { std::cin >> state_string_; };
 		explicit FEN(std::string state_string) : state_string_(state_string) {};
 		
 		[[nodiscard]] std::string_view state_string() const;
 		[[nodiscard]] Piece to_piece(const char& to_convert) const;
+		static FEN from_input();
 
 		private:
 

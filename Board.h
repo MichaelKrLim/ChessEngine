@@ -29,7 +29,7 @@ namespace engine
 			{
 				const auto rank = board_index/engine::board_size;
 				const auto file = board_index%engine::board_size;
-				return (engine::board_size-1-rank)*engine::board_size+file;
+				return (board_size-1-rank)*board_size+file;
 			};
 			
 			std::size_t board_index{};
@@ -58,8 +58,8 @@ namespace engine
 					add_piece(black);
 					++board_index;
 				}
-				occupied_squares = black.occupied_squares | white.occupied_squares;
 			}
+			occupied_squares = black.occupied_squares | white.occupied_squares;
 		}
 
 		inline void output() const
@@ -68,12 +68,12 @@ namespace engine
 			{
 				const auto to_character = [](Piece piece) -> char
 				{
-					constexpr std::array<char, 8> map = {'p', 'n', 'b', 'r', 'q', 'k'};
+					constexpr std::array<char, 8> map = {'k', 'p', 'n', 'b', 'r', 'q'};
 					return map[static_cast<int>(piece)];
 				};
 				std::array<char, board_size*board_size> board;
 				std::ranges::fill(board, ' ');
-				for(std::size_t piece{0}; piece<=static_cast<std::size_t>(Piece::king); ++piece)
+				for(std::size_t piece{0}; piece<number_of_piece_types; ++piece)
 				{
 					for(std::size_t board_index{0}; board_index<board_size*board_size; ++board_index)
 					{
@@ -81,7 +81,7 @@ namespace engine
 							board[board_index] = std::toupper(to_character(static_cast<Piece>(piece)));
 					}
 				}
-				for(std::size_t piece{0}; piece<=static_cast<std::size_t>(Piece::king); ++piece)
+				for(std::size_t piece{0}; piece<number_of_piece_types; ++piece)
 				{
 					for(std::size_t board_index{0}; board_index<board_size*board_size; ++board_index)
 					{

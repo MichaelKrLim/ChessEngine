@@ -3,11 +3,9 @@
 
 #include "Move.h"
 #include "Pieces.h"
-#include "Square.h"
 
 #include <array>
 #include <cstdint>
-#include <optional>
 #include <vector>
 
 namespace engine 
@@ -23,15 +21,14 @@ namespace engine
 		void initialise_attack_table();
 		void cast_magic();
 
-		std::optional<std::vector<Move>> knight_reachable_squares(const Square& square, const uint64_t& occupied_squares);
-		std::optional<std::vector<Move>> rook_reachable_squares(const Square& square, const uint64_t& occupied_squares);
-		std::optional<std::vector<Move>> bishop_reachable_squares(const Square& square, const uint64_t& occupied_squares);
+		std::vector<Move> knight_reachable_squares(const Position& square, const uint64_t& occupied_squares);
+		std::vector<Move> rook_reachable_squares(const Position& square, const uint64_t& occupied_squares);
+		std::vector<Move> bishop_reachable_squares(const Position& square, const uint64_t& occupied_squares);
 
-		uint64_t reachable_squares(const Square& square, const Piece& piece, const uint64_t& occupied_squares);
+		uint64_t reachable_squares(const Position& square, const Piece& piece, const uint64_t& occupied_squares);
 
 		struct Magic_square
 		{
-			const std::vector<uint64_t>& attack_table;
 			uint64_t mask;
 			uint64_t magic;
 			int shift;

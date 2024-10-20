@@ -7,8 +7,10 @@ namespace engine
 {
 	enum class Piece : std::uint8_t
 	{
-		pawn = 0, knight = 1, bishop = 2, rook = 3, queen = 4, king = 5
+		king = 0, pawn = 1, knight = 2, bishop = 3, rook = 4, queen = 5
 	};
+
+	const std::size_t number_of_piece_types = 6;
 }
 
 #endif // Pieces_h_INCLUDED

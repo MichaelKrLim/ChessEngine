@@ -25,3 +25,9 @@ Piece FEN::to_piece(const char& to_convert) const
 	return to_piece[to_convert];
 }
 
+FEN FEN::from_input()
+{
+	std::string state_string;
+	std::cin >> state_string;
+	return FEN(std::move(state_string));
+}
