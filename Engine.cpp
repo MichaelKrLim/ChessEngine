@@ -103,9 +103,9 @@ Engine::weightmap_type Engine::generate_black_weightmap()
 		{
 			for(std::uint8_t file{0}; file<board_size; ++file)
 			{
-				Position ubove_midpoint = {rank, file};
-				Position below_midpoint = {static_cast<std::uint8_t>(board_size-1-rank), file};
-				std::swap(weightmap[to_index(ubove_midpoint)], weightmap[to_index(below_midpoint)]);
+				Position above_midpoint = Position{rank, file};
+				Position below_midpoint = Position{static_cast<std::uint8_t>(board_size-1-rank), file};
+				std::swap(weightmap[to_index(above_midpoint)], weightmap[to_index(below_midpoint)]);
 			}
 		}
 	}

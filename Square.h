@@ -1,6 +1,8 @@
 #ifndef Square_h_INCLUDED
 #define Square_h_INCLUDED
 
+#include <cstdint>
+
 namespace engine
 {
 	enum class Square : std::size_t

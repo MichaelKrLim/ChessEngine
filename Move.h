@@ -23,14 +23,17 @@ namespace engine
 		public:
 
 		Move() = default;
-		constexpr explicit Move(std::uint16_t move_data) : move_data_(move_data) {}
-		constexpr Move(Square current_position, Square desired_position) :
-			move_data_((current_position<<6) + desired_position) {}
+		constexpr explicit Move(const std::uint16_t& move_data) : move_data_(move_data) {}
+		constexpr Move(const Square& current_square, const Square& desired_square) :
+			move_data_((static_cast<std::size_t>(current_square)<<6) + static_cast<std::size_t>(desired_square)) {}
 
 		template<Move_type move_type>
-		static constexpr Move make(Square current_position, Square desired_position, Piece piece_type = Piece::knight)
+		static constexpr Move make(Square current_square, Square desired_square, Piece piece_type = Piece::knight)
 		{
-			return Move(static_cast<std::uint16_t>(move_type)+((static_cast<std::uint16_t>(piece_type)-static_cast<std::uint16_t>(Piece::knight))<<12)+(current_position<<6)+desired_position);
+			return Move(static_cast<std::uint16_t>(move_type)+
+					  ((static_cast<std::uint16_t>(piece_type)-static_cast<std::uint16_t>(Piece::knight))<<12)+
+					   (static_cast<std::uint16_t>(current_square)<<6)+
+			            static_cast<std::uint16_t>(desired_square));
 		}
 		constexpr Square from_square() const
 		{
