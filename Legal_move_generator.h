@@ -6,6 +6,7 @@
 
 #include <array>
 #include <cstdint>
+#include <unordered_map>
 #include <vector>
 
 namespace engine 
@@ -29,15 +30,15 @@ namespace engine
 
 		struct Magic_square
 		{
-			uint64_t mask;
-			uint64_t magic;
+			std::uint64_t mask;
+			std::uint64_t magic;
 			int shift;
 		};
 
-		std::array<Magic_square, 64> bishop_attack_table_;
-		std::array<Magic_square, 64> rook_attack_table_;
+		static std::array<Magic_square, 64> bishop_attack_table_;
+		static std::array<Magic_square, 64> rook_attack_table_;
 
-		std::vector<uint64_t> attack_table_;
+		static std::array<std::unordered_map<Position, std::vector<std::uint64_t>>, 6> attack_table_{};
 
 		constexpr static std::array<std::array<int, 2>, 8> knight_moves =
 		{{
