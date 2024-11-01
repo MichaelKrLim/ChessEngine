@@ -30,15 +30,16 @@ namespace engine
 
 		struct Magic_square
 		{
-			std::uint64_t mask;
-			std::uint64_t magic;
-			int shift;
+			const std::vector<std::uint64_t>& attack_table;
+			const std::uint64_t mask;
+			const std::uint64_t magic;
+			const int shift;
 		};
 
-		static std::array<Magic_square, 64> bishop_attack_table_;
-		static std::array<Magic_square, 64> rook_attack_table_;
+		static std::array<Magic_square, 64> bishops_magic_squares_;
+		static std::array<Magic_square, 64> rooks_magic_squares_;
 
-		static std::array<std::unordered_map<Position, std::vector<std::uint64_t>>, 6> attack_table_{};
+		static std::vector<std::uint_64_t> attack_table_{};
 
 		constexpr static std::array<std::array<int, 2>, 8> knight_moves =
 		{{
