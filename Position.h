@@ -11,6 +11,11 @@ namespace engine
 {
 	struct Position
 	{
+		Position operator+(const Position& to_add) const
+		{
+			return Position{rank_ + to_add.rank_, file_ + to_add.file_};
+		}
+		
 		constexpr Position() = default;
 		explicit constexpr Position(const std::size_t& board_index)
 		{

@@ -25,6 +25,8 @@ namespace engine
 		std::vector<Move> knight_reachable_squares(const Position& square, const uint64_t& occupied_squares);
 		std::vector<Move> rook_reachable_squares(const Position& square, const uint64_t& occupied_squares);
 		std::vector<Move> bishop_reachable_squares(const Position& square, const uint64_t& occupied_squares);
+		void explore_diagonal(const Position& bishop_square, const Position& diagonal_offset,
+		const uint64_t occupied_squares, std::vector<Move>& valid_moves, const Position& origional_bishop_square);
 
 		uint64_t reachable_squares(const Position& square, const Piece& piece, const uint64_t& occupied_squares);
 
@@ -45,6 +47,11 @@ namespace engine
 		{{
 			{2, 1}, {2, -1}, {-2, 1}, {-2, -1},
 			{1, 2}, {1, -2}, {-1, 2}, {-1, -2}
+		}};
+		constexpr static std::array<Position, 8> bishop_moves =
+		{{
+			Position{1, 1}, Position{1, -1},
+			Position{-1, 1}, Position{-1, -1}
 		}};
 	};
 }
