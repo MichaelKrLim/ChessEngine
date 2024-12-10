@@ -5,59 +5,54 @@
 
 using namespace engine;
 
-//will fix constexpr
-uint64_t Legal_move_generator::reachable_squares(const Position& square, const Piece& piece, const uint64_t& occupied_squares)
+constexpr Legal_move_generator::Legal_move_generator()
 {
-	//TODO
-	switch(piece)
+	cast_magic();	
+}
+
+std::uint64_t Legal_move_generator::kings_reachable_squares(const Position& knight_square, const std::uint64_t& occupied_squares)
+{
+	std::uint64_t valid_moves{0};
+	for(const auto& move : king_moves)
 	{
-		case Piece::pawn:
-			break;
-		case Piece::knight:
-			break;
-		case Piece::bishop:
-			break;
-		case Piece::rook:
-			break;
-		case Piece::queen:
-			break;
-		case Piece::king:
-			break;
+		const auto [del_rank, del_file] = move;
+		const Position destination_square{king_square.rank_+del_rank, king_square.file_+del_file};
+		valid_moves |= (1 << to_index(destination_square))
 	}
 }
 
-std::vector<Move> Legal_move_generator::knight_reachable_squares(const Position& knight_square, const uint64_t& occupied_squares)
+std::uint64_t Legal_move_generator::knights_reachable_squares(const Position& knight_square, const std::uint64_t& occupied_squares)
 {
-	std::vector<Move> valid_moves{};
-	uint64_t reachable_squares{0};
+	uint64_t valid_moves{0};
 	for(const auto& move : knight_moves)
 	{
 		const auto [del_rank, del_file] = move;
 		const Position destination_square{knight_square.rank_+del_rank, knight_square.file_+del_file};
-		if(is_valid_destination(destination_square, occupied_squares))
-			valid_moves.push_back(Move{knight_square, destination_square});
+		valid_moves |= (1 << to_index(destination_square))
 	}
 	return valid_moves;
 }
 
-std::vector<Move> Legal_move_generator::rook_reachable_squares(const Position& rook_square, const uint64_t& occupied_squares)
+constexpr std::uint64_t Legal_move_generator::rooks_reachable_squares(const Position& rook_square, const std::uint64_t& occupied_squares)
 {
-	std::vector<Move> valid_moves{};
+	std::uint64_t valid_moves{0};
 	for(int del_rank{0}; del_rank < board_size; ++del_rank)
 	{
 		for(int del_file{0}; del_file < board_size; ++del_file)
 		{
-			const Position destination_square{del_rank, del_file};
+			const Position destination_square = rook_square + Position{del_rank, del_file};
 			if(is_valid_destination(destination_square, occupied_squares))
-				valid_moves.push_back(Move{rook_square, destination_square});
+				valid_moves |= (1 << to_index(destination_square));
+			else 
+				break;
 		}
 	}
 	return valid_moves;
 }
 
-std::vector<Move> Legal_move_generator::bishop_reachable_squares(const Position& bishop_square, const uint64_t& occupied_squares)
+constexpr std::vector<Move> Legal_move_generator::bishops_reachable_squares(const Position& bishop_square, const uint64_t& occupied_squares)
 {
-	std::vector<Move> valid_moves{};
+	std::uint64_t valid_moves{};
 	for(const auto& direction : bishop_moves)
 	{
 		explore_diagonal(bishop_square, direction, occupied_squares, valid_moves, bishop_square);
@@ -65,22 +60,39 @@ std::vector<Move> Legal_move_generator::bishop_reachable_squares(const Position&
 	return valid_moves;
 }
 
-void Legal_move_generator::explore_diagonal(const Position& bishop_square, const Position& diagonal_offset, const uint64_t occupied_squares, std::vector<Move>& valid_moves, const Position& origional_bishop_square)
+
+
+constexpr void Legal_move_generator::explore_diagonal(const Position& bishop_square, const Position& diagonal_offset, const uint64_t occupied_squares, std::uint64_t& valid_moves, const Position& origional_bishop_square)
 {
 	const Position destination_square = bishop_square + diagonal_offset;
 	if(!is_valid_destination(destination_square, occupied_squares))
 		return;
-	valid_moves.push_back(Move{origional_bishop_square, destination_square});
+	valid_moves |= (1 << destination_square);
 
 	explore_diagonal(destination_square, diagonal_offset, occupied_squares, valid_moves, origional_bishop_square);
 }
 
-void Legal_move_generator::initialise_attack_table()
+std::vector<Move> legal_pawn_moves()
+{
+	
+}
+
+std::vector<Move> get()
 {
 
 }
 
-void Legal_move_generator::cast_magic()
+constexpr void Legal_move_generator::initialise_attack_table()
+{
+	for(const auto& moves : { {bishop_moves()}
+
+	})
+	{
+
+	}
+}
+
+constexpr void Legal_move_generator::cast_magic()
 {
 
 }

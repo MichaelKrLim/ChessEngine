@@ -5,6 +5,12 @@
 
 namespace engine 
 {
+	enum class Side
+	{
+		white, black
+	}
+
 	const static uint8_t board_size = 8;
 }
+
 #endif // Constants_h_INCLUDED
