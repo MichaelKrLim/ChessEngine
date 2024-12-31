@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5.0)
+cmake_minimum_required(VERSION 3.23)
 project(engine VERSION 0.0.1)
 
 # for intellisense
@@ -23,5 +23,5 @@ add_executable(
 	Legal_move_generator.h Legal_move_generator.cpp
 )
 
-set_property(TARGET engine PROPERTY CXX_STANDARD 20)
+set_property(TARGET engine PROPERTY CXX_STANDARD 23)
 set_property(TARGET engine PROPERTY CXX_EXTENSIONS OFF)

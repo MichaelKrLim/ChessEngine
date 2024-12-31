@@ -1,6 +1,7 @@
 #ifndef Legal_move_generator_h_INCLUDED
 #define Legal_move_generator_h_INCLUDED
 
+#include "Board.h"
 #include "Move.h"
 #include "Pieces.h"
 
@@ -16,23 +17,24 @@ namespace engine
 		public:
 
 		constexpr Legal_move_generator();
-		std::vector<Move> get();
+		const std::unordered_map<Piece, uint64_t> get(const Side_position&, const bool& is_white_to_move) const;
 		
 		private:
 
 		constexpr void initialise_attack_table();
 		constexpr void cast_magic();
 
-		std::uint64_t knights_reachable_squares(const Position& square, const uint64_t& occupied_squares);
-		std::uint64_t rooks_reachable_squares(const Position& square, const uint64_t& occupied_squares);
-		constexpr std::uint64_t bishops_reachable_squares(const Position& square, const uint64_t& occupied_squares);
-		constexpr void explore_diagonal(const Position& bishop_square, const Position& diagonal_offset,
-			const uint64_t occupied_squares,
-			std::uint64_t& valid_moves, 
-			const Position& origional_bishop_square
-		);
 
-		constexpr struct Magic_square
+		const std::uint64_t Legal_move_generator::pawn_legal_moves(const std::uint64_t& white_pawns, const std::uint64_t black_pawns, 
+			const uint64_t& occupied_squares, const bool& is_white_to_move
+		) const;
+		const std::uint64_t king_legal_moves(const Position& square, const uint64_t& occupied_squares) const;
+		const std::uint64_t knight_legal_moves(const Position& square, const uint64_t& occupied_squares) const;
+
+		constexpr const std::uint64_t rook_reachable_squares(const Position& square, const uint64_t& occupied_squares) const;
+		constexpr const std::uint64_t bishop_reachable_squares(const Position& square, const uint64_t& occupied_squares) const;
+
+		struct Magic_square
 		{
 			const std::vector<std::uint64_t>& attack_table;
 			const std::uint64_t mask;
@@ -40,10 +42,10 @@ namespace engine
 			const int shift;
 		};
 
-		constexpr static std::array<Magic_square, 64> bishops_magic_squares_;
-		constexpr static std::array<Magic_square, 64> rooks_magic_squares_;
+		constexpr static std::array<Magic_square, 64> bishop_magic_squares_;
+		constexpr static std::array<Magic_square, 64> rook_magic_squares_;
 
-		constexpr static std::vector<std::uint_64_t> attack_table_{};
+		constexpr static std::array<std::uint64_t, 1408> attack_table_;
 
 		constexpr static std::array<Position, 8> knight_moves =
 		{{

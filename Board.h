@@ -9,19 +9,19 @@
 #include <array>
 #include <cctype>
 #include <cstdint>
+#include <ranges>
 
 namespace engine
 {
+	struct Side_position
+	{
+		std::array<uint64_t, 6> pieces{};
+		bool can_castle_left, can_castle_right;
+		uint64_t occupied_squares{};
+	};
 	struct Board
 	{
 		//TODO - add castling rights and pawns for en passant
-		struct Side_position
-		{
-			std::array<uint64_t, 6> pieces{};
-			bool can_castle_left, can_castle_right;
-			uint64_t occupied_squares{};
-		};
-
 		explicit inline Board(engine::FEN fen)
 		{
 			const auto FEN_string = fen.state_string();
