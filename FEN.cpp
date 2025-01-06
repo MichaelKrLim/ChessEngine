@@ -11,9 +11,9 @@ std::string_view FEN::state_string() const
 
 Piece FEN::to_piece(const char& to_convert) const
 {	
-	constexpr std::array<Piece, 256> to_piece = []()
+	const std::array<Piece, 256> to_piece = []()
 	{
-		std::array<Piece, 256> to_piece = {};
+		constexpr std::array<Piece, 256> to_piece = {};
 		to_piece['p'] = Piece::pawn;
 		to_piece['n'] = Piece::knight;
 		to_piece['b'] = Piece::bishop;
