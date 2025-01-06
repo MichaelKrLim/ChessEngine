@@ -10,22 +10,22 @@ constexpr Legal_move_generator::Legal_move_generator()
 	cast_magic();
 }
 
-const std::unordered_map<Piece, uint64_t> Legal_move_generator::get(const Side_position &, const bool &is_white_to_move) const
+const std::unordered_map<Piece, Bitboard> Legal_move_generator::get(const Side_position &, const bool &is_white_to_move) const
 {
     
 }
 
 //raw cgpt to fix
-const uint64_t Legal_move_generator::pawn_legal_moves(const std::uint64_t& white_pawns, const std::uint64_t black_pawns, 
-	const uint64_t& occupied_squares, const bool& is_white_to_move
+const Bitboard Legal_move_generator::pawn_legal_moves(const Bitboard& white_pawns, const Bitboard black_pawns, 
+	const Bitboard& occupied_squares, const bool& is_white_to_move
 ) const
 {
 
 }
 
-const std::uint64_t Legal_move_generator::knight_legal_moves(const Position& knight_square, const std::uint64_t& occupied_squares) const
+const Bitboard Legal_move_generator::knight_legal_moves(const Position& knight_square, const Bitboard& occupied_squares) const
 {
-	std::uint64_t valid_moves{0};
+	Bitboard valid_moves{0};
 	for(const auto& move : knight_moves)
 	{
 		const auto [del_rank, del_file] = move;
@@ -36,9 +36,9 @@ const std::uint64_t Legal_move_generator::knight_legal_moves(const Position& kni
 	return valid_moves;
 }
 
-const std::uint64_t Legal_move_generator::king_legal_moves(const Position& king_square, const std::uint64_t& occupied_squares) const
+const Bitboard Legal_move_generator::king_legal_moves(const Position& king_square, const Bitboard& occupied_squares) const
 {
-	std::uint64_t valid_moves{0};
+	Bitboard valid_moves{0};
 	for(const auto& move : king_moves)
 	{
 		const auto [del_rank, del_file] = move;
@@ -49,8 +49,8 @@ const std::uint64_t Legal_move_generator::king_legal_moves(const Position& king_
 	return valid_moves;
 }
 
-constexpr const std::uint64_t Legal_move_generator::rook_reachable_squares(const Position& rook_square,
-	const std::uint64_t& occupied_squares
+constexpr const Bitboard Legal_move_generator::rook_reachable_squares(const Position& rook_square,
+	const Bitboard& occupied_squares
 ) const
 {
 	std::vector<Move> valid_moves{};
@@ -68,12 +68,12 @@ constexpr const std::uint64_t Legal_move_generator::rook_reachable_squares(const
 	return valid_moves;
 }
 
-constexpr const std::uint64_t Legal_move_generator::bishop_reachable_squares(const Position& bishop_square,
-	const uint64_t& occupied_squares
+constexpr const Bitboard Legal_move_generator::bishop_reachable_squares(const Position& bishop_square,
+	const Bitboard& occupied_squares
 ) const
 {
 	const auto explore_diagonal = [&explore_diagonal()](const Position& bishop_square, const Position& diagonal_offset,
-		const uint64_t occupied_squares, std::uint64_t& valid_moves,
+		const Bitboard occupied_squares, Bitboard& valid_moves,
 		const Position& origional_bishop_square)
 	{
 		const Position destination_square = bishop_square + diagonal_offset;
@@ -84,7 +84,7 @@ constexpr const std::uint64_t Legal_move_generator::bishop_reachable_squares(con
 		explore_diagonal(destination_square, diagonal_offset, occupied_squares, valid_moves, origional_bishop_square);
 	}
 
-	std::uint64_t valid_moves{};
+	Bitboard valid_moves{};
 	for(const auto& direction : bishop_moves)
 	{
 		explore_diagonal(bishop_square, direction, occupied_squares, valid_moves, bishop_square);

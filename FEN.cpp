@@ -4,6 +4,11 @@
 
 using namespace engine;
 
+FEN::FEN(const Board& board)
+{
+	
+}
+
 std::string_view FEN::state_string() const
 {
 	return state_string_;

@@ -15,7 +15,7 @@ namespace engine
 {
 	struct Side_position
 	{
-		std::array<uint64_t, 6> pieces{};
+		std::array<Bitboard, 6> pieces{};
 		bool can_castle_left, can_castle_right;
 		//uint64_t occupied_squares{};
 	};
@@ -105,7 +105,7 @@ namespace engine
 		Side_position black;
 		Side_position white;
 
-		uint64_t occupied_squares{};
+		Bitboard occupied_squares{};
 	};
 }
 
