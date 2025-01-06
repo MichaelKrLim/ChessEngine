@@ -17,7 +17,7 @@ namespace engine
 	{
 		std::array<uint64_t, 6> pieces{};
 		bool can_castle_left, can_castle_right;
-		uint64_t occupied_squares{};
+		//uint64_t occupied_squares{};
 	};
 	struct Board
 	{
