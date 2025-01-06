@@ -22,7 +22,7 @@ namespace engine
 	struct Board
 	{
 		//TODO - add castling rights and pawns for en passant
-		explicit inline Board(engine::FEN fen)
+		explicit inline Board(FEN fen)
 		{
 			const auto FEN_string = fen.state_string();
 			const auto to_absolute_index = [](std::size_t board_index)
