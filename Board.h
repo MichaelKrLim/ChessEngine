@@ -9,23 +9,26 @@
 #include <array>
 #include <cctype>
 #include <cstdint>
-#include <ranges>
+#include <iostream>
+#include <string>
 
 namespace engine
 {
 	struct Side_position
 	{
-		std::array<Bitboard, 6> pieces{};
+		std::array<std::uint64_t, 6> pieces{};
 		bool can_castle_left, can_castle_right;
-		//uint64_t occupied_squares{};
+		uint64_t occupied_squares{};
 	};
+
 	struct Board
 	{
 		//TODO - add castling rights and pawns for en passant
-		explicit inline Board(const std::string& FEN_string)
+		explicit inline Board(const std::string& FEN_string, const FEN& fen)
 		{
-			*this = FEN.from_string(FEN_string);
+			*this = fen.from_string(FEN_string);
 		}
+		inline Board() = default;
 
 		inline void output() const
 		{
@@ -36,6 +39,7 @@ namespace engine
 					constexpr std::array<char, 8> map = {'k', 'p', 'n', 'b', 'r', 'q'};
 					return map[static_cast<int>(piece)];
 				};
+
 				std::array<char, board_size*board_size> board;
 				std::ranges::fill(board, ' ');
 				for(std::size_t piece{0}; piece<number_of_piece_types; ++piece)
@@ -56,6 +60,7 @@ namespace engine
 				}
 				return board;
 			};
+
 			const auto board = enumerate_pieces();
 			for(int rank{board_size-1}; rank>=0; --rank)
 			{
@@ -70,7 +75,7 @@ namespace engine
 		Side_position black{};
 		Side_position white{};
 
-		Bitboard occupied_squares{};
+		std::uint64_t occupied_squares{};
 	};
 }
 

@@ -96,7 +96,7 @@ Engine::weightmap_type Engine::black_weightmaps_ = Engine::generate_black_weight
 
 Engine::weightmap_type Engine::generate_black_weightmap()
 {
-	weightmap_type white_weightmaps_copy = white_weightmaps;
+	weightmap_type white_weightmaps_copy = white_weightmaps_;
 	for(auto& weightmap : white_weightmaps_copy)
 	{
 		for(std::uint8_t rank{0}; rank<board_size/2; ++rank)
@@ -115,7 +115,7 @@ Engine::weightmap_type Engine::generate_black_weightmap()
 void Engine::output_weights() const
 {
 	std::cout << "white: \n";
-	for(const auto& weightmap : white_weightmaps)
+	for(const auto& weightmap : white_weightmaps_)
 	{
 		for(int i{0}; i<weightmap.size(); ++i)
 		{
@@ -126,7 +126,7 @@ void Engine::output_weights() const
 		std::cout << "\n";
 	}
 	std::cout << "black: \n";
-	for(const auto& weightmap : black_weightmaps)
+	for(const auto& weightmap : black_weightmaps_)
 	{
 		for(int i{0}; i<weightmap.size(); ++i)
 		{

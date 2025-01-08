@@ -10,6 +10,6 @@ int main()
 	engine::Engine engine;
 	//engine.output_weights();
 	std::cout << "\n";
-	engine::Board board("rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R");
+	engine::Board board("rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R", engine::FEN());
 	board.output();
 }

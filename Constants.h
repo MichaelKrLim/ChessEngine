@@ -10,7 +10,7 @@ namespace engine
 		white, black
 	};
 
-	const static std::uint8_t board_size = 8;
+	constexpr std::uint8_t board_size = 8;
 }
 
 #endif // Constants_h_INCLUDED
