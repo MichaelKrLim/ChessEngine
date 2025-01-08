@@ -7,7 +7,7 @@
 
 using namespace engine;
 
-std::array<std::array<int, board_size*board_size>, 6> Engine::white_weightmaps =
+std::array<std::array<int, board_size*board_size>, 6> Engine::white_weightmaps_ =
 {{
 	{{
 		//Piece::pawn
@@ -78,7 +78,7 @@ std::array<std::array<int, board_size*board_size>, 6> Engine::white_weightmaps =
 	}},
 }};
 
-std::array<int, 6> Engine::piece_values =
+std::array<int, 6> Engine::piece_values_ =
 {
 	//Piece::pawn
 	1,
@@ -92,7 +92,7 @@ std::array<int, 6> Engine::piece_values =
 	9
 };
 
-Engine::weightmap_type Engine::black_weightmaps = Engine::generate_black_weightmap();
+Engine::weightmap_type Engine::black_weightmaps_ = Engine::generate_black_weightmap();
 
 Engine::weightmap_type Engine::generate_black_weightmap()
 {

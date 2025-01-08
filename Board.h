@@ -22,44 +22,9 @@ namespace engine
 	struct Board
 	{
 		//TODO - add castling rights and pawns for en passant
-		explicit inline Board(FEN fen)
+		explicit inline Board(const std::string& FEN_string)
 		{
-			const auto FEN_string = fen.state_string();
-			const auto to_absolute_index = [](std::size_t board_index)
-			{
-				const auto rank = board_index/engine::board_size;
-				const auto file = board_index%engine::board_size;
-				return (board_size-1-rank)*board_size+file;
-			};
-			
-			std::size_t board_index{};
-			for(std::size_t i{0}; i<FEN_string.size(); ++i)
-			{
-				const auto add_piece = [&](Side_position& side)
-				{
-					std::size_t piece_type_index = static_cast<std::size_t> (fen.to_piece(std::tolower(FEN_string[i])));
-					side.pieces[piece_type_index] |= 1ULL << to_absolute_index(board_index);
-					side.occupied_squares |= side.pieces[piece_type_index];
-				};
-
-				if(FEN_string[i] == '/')
-					continue;
-				else if(std::isdigit(FEN_string[i]))
-				{
-					board_index+=FEN_string[i]-'0';
-				}
-				else if(std::isupper(FEN_string[i]))
-				{
-					add_piece(white);
-					++board_index;
-				}
-				else
-				{
-					add_piece(black);
-					++board_index;
-				}
-			}
-			occupied_squares = black.occupied_squares | white.occupied_squares;
+			*this = FEN.from_string(FEN_string);
 		}
 
 		inline void output() const
@@ -102,8 +67,8 @@ namespace engine
 			}
 		}
 
-		Side_position black;
-		Side_position white;
+		Side_position black{};
+		Side_position white{};
 
 		Bitboard occupied_squares{};
 	};

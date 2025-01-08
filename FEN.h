@@ -2,10 +2,10 @@
 #define FEN_h_INCLUDED
 
 #include "Pieces.h"
+#include "Bitboard.h"
 
 #include <iostream>
 #include <string>
-#include <string_view>
 
 namespace engine 
 {
@@ -13,17 +13,10 @@ namespace engine
 	{
 		public:
 
-		explicit FEN(const std::string& state_string) : state_string_(state_string) {};
-		explicit FEN(const Board& board);
-
-		[[nodiscard]] std::string_view state_string() const;
 		[[nodiscard]] Piece to_piece(const char& to_convert) const;
-		static FEN from_input();
-
-		private:
-
-		std::string state_string_;
-
+		[[nodiscard]] char to_piece(const Piece& to_convert) const;
+		[[nodiscard]] std::string from_board(const Board& board) const;
+		[[nodiscard]] Board from_string(const std::string& str) const;
 	};
 }
 

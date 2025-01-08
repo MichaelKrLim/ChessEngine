@@ -21,10 +21,11 @@ namespace engine
 
 	private:
 
-		static std::array<int, 6> piece_values;
+		static std::array<int, 6> piece_values_;
 		using weightmap_type = std::array<std::array<int, board_size*board_size>, 6>;
-		static weightmap_type white_weightmaps;
-		static weightmap_type black_weightmaps;
+		static weightmap_type white_weightmaps_;
+		static weightmap_type black_weightmaps_;
+		static FEN FEN_;
 
 		[[nodiscard]] static weightmap_type generate_black_weightmap();
 	};
