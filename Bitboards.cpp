@@ -15,6 +15,25 @@ const std::unordered_map<Piece, std::uint64_t> Bitboards::get(const Side_positio
     
 }
 
+// official-stockfish (2024). Stockfish/src/bitboard.cpp at 9766db8139ce8815110c15bdde8381d0564a63fa · official-stockfish/Stockfish. [online] GitHub. Available at: https://github.com/official-stockfish/Stockfish/blob/9766db8139ce8815110c15bdde8381d0564a63fa/src/bitboard.cpp [Accessed 9 Jan. 2025].
+std::string Bitboards::output(Bitboard b) 
+{
+
+    std::string s = "+---+---+---+---+---+---+---+---+\n";
+
+    for (std::size_t r = 7; r >= 0; --r)
+    {
+        for (std::size_t f = 0; f <= 7; ++f)
+            s += b & (1ULL << f+r*board_size) ? "| X " : "|   ";
+
+        s += "| " + std::to_string(1 + r) + "\n+---+---+---+---+---+---+---+---+\n";
+    }
+    s += "  a   b   c   d   e   f   g   h\n";
+
+    return s;
+}
+
+
 //raw cgpt to fix
 const std::uint64_t Bitboards::pawn_legal_moves(const std::uint64_t& white_pawns, const std::uint64_t black_pawns,
 	const std::uint64_t& occupied_squares, const bool& is_white_to_move

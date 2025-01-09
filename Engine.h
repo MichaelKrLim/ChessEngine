@@ -12,11 +12,9 @@ namespace engine
 	{
 		public:
 
-		[[nodiscard]] double white_material_value() const;
-		[[nodiscard]] double black_material_value() const;
+		[[nodiscard]] double material_value(const Side& side) const;
 		[[nodiscard]] double evaluate() const;
 		void output_weights() const;
-		void output_board() const;
 
 		private:
 

@@ -138,12 +138,25 @@ void Engine::output_weights() const
 	}
 }
 
-double Engine::white_material_value() const
+double Engine::material_value(const Side& side) const
 {
-	//TODO
-}
-
-double Engine::black_material_value() const
-{
-	//TODO
+	const auto value = ()(const weightmap_type& weightmap, const std::uint64_t& bitboards)
+	{
+		int total{0};
+		for(std::size_t piece_index{0}; piece_index < 6; ++piece_index)
+		{
+			for(std::size_t shift{0}; shift<board_size*board_size-1; ++position)
+			{
+				const Position current_position(shift);
+				total += (bitboards[piece_index] & (1ULL << shift))? weightmap[current_position.rank_][current_position.file_];
+			}
+		}
+	};
+	switch(side)
+	{
+		case Side::white:
+			return value(white_weightmaps_);
+		case Side::black:
+			return value(black_weightmaps_);
+	}
 }
