@@ -12,9 +12,7 @@
 
 namespace engine 
 {
-	inline bool is_occupied(const std::uint64_t bitboard, const Position& square) { return bitboard & (1<<square.rank_*board_size+square.file_); }
-
-	class Bitboards
+	class Move_generator
 	{
 		public:
 

@@ -5,6 +5,7 @@
 
 #include "Constants.h"
 #include "FEN.h"
+#include "Move_generator.h"
 
 namespace engine
 {
@@ -23,6 +24,7 @@ namespace engine
 		static weightmap_type white_weightmaps_;
 		static weightmap_type black_weightmaps_;
 		static FEN FEN_();
+		static Move_generator move_generator_();
 
 		[[nodiscard]] static weightmap_type generate_black_weightmap();
 	};

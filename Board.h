@@ -23,7 +23,6 @@ namespace engine
 
 	struct Board
 	{
-		//TODO - add castling rights and pawns for en passant
 		explicit inline Board(const std::string& FEN_string, const FEN& fen)
 		{
 			*this = fen.from_string(FEN_string);

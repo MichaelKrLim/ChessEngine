@@ -1,48 +1,29 @@
-#include "Bitboards.h"
+#include "Move_generator.h"
 
 #include "Constants.h"
 #include "Position.h"
 
 using namespace engine;
 
-constexpr Bitboards::Bitboards()
+constexpr Move_generator::Move_generator()
 {
 	cast_magic();
 }
 
-const std::unordered_map<Piece, std::uint64_t> Bitboards::get(const Side_position &, const bool &is_white_to_move) const
+const std::unordered_map<Piece, std::uint64_t> Move_generator::get(const Side_position &, const bool &is_white_to_move) const
 {
     
 }
 
-// official-stockfish (2024). Stockfish/src/bitboard.cpp at 9766db8139ce8815110c15bdde8381d0564a63fa · official-stockfish/Stockfish. [online] GitHub. Available at: https://github.com/official-stockfish/Stockfish/blob/9766db8139ce8815110c15bdde8381d0564a63fa/src/bitboard.cpp [Accessed 9 Jan. 2025].
-std::string Bitboards::output(Bitboard b) 
-{
-
-    std::string s = "+---+---+---+---+---+---+---+---+\n";
-
-    for (std::size_t r = 7; r >= 0; --r)
-    {
-        for (std::size_t f = 0; f <= 7; ++f)
-            s += b & (1ULL << f+r*board_size) ? "| X " : "|   ";
-
-        s += "| " + std::to_string(1 + r) + "\n+---+---+---+---+---+---+---+---+\n";
-    }
-    s += "  a   b   c   d   e   f   g   h\n";
-
-    return s;
-}
-
-
 //raw cgpt to fix
-const std::uint64_t Bitboards::pawn_legal_moves(const std::uint64_t& white_pawns, const std::uint64_t black_pawns,
+const std::uint64_t Move_generator::pawn_legal_moves(const std::uint64_t& white_pawns, const std::uint64_t black_pawns,
 	const std::uint64_t& occupied_squares, const bool& is_white_to_move
 ) const
 {
 
 }
 
-const std::uint64_t Bitboards::knight_legal_moves(const Position& knight_square, const std::uint64_t& occupied_squares) const
+const std::uint64_t Move_generator::knight_legal_moves(const Position& knight_square, const std::uint64_t& occupied_squares) const
 {
 	std::uint64_t valid_moves{0};
 	for(const auto& move : knight_moves)
@@ -55,7 +36,7 @@ const std::uint64_t Bitboards::knight_legal_moves(const Position& knight_square,
 	return valid_moves;
 }
 
-const std::uint64_t Bitboards::king_legal_moves(const Position& king_square, const std::uint64_t& occupied_squares) const
+const std::uint64_t Move_generator::king_legal_moves(const Position& king_square, const std::uint64_t& occupied_squares) const
 {
 	std::uint64_t valid_moves{0};
 	for(const auto& move : king_moves)
@@ -68,7 +49,7 @@ const std::uint64_t Bitboards::king_legal_moves(const Position& king_square, con
 	return valid_moves;
 }
 
-constexpr const std::uint64_t Bitboards::rook_reachable_squares(const Position& rook_square, const std::uint64_t& occupied_squares) const
+constexpr const std::uint64_t Move_generator::rook_reachable_squares(const Position& rook_square, const std::uint64_t& occupied_squares) const
 {
 	std::uint64_t valid_moves{};
 	for(int del_rank{0}; del_rank < board_size; ++del_rank)
@@ -85,7 +66,7 @@ constexpr const std::uint64_t Bitboards::rook_reachable_squares(const Position& 
 	return valid_moves;
 }
 
-constexpr const std::uint64_t Bitboards::bishop_reachable_squares(const Position& bishop_square, const std::uint64_t& occupied_squares) const
+constexpr const std::uint64_t Move_generator::bishop_reachable_squares(const Position& bishop_square, const std::uint64_t& occupied_squares) const
 {
 	const auto explore_diagonal = [](this auto&& rec, const Position& bishop_square, const Position& diagonal_offset,
 		const std::uint64_t occupied_squares, std::uint64_t& valid_moves,
@@ -107,7 +88,7 @@ constexpr const std::uint64_t Bitboards::bishop_reachable_squares(const Position
 	return valid_moves;
 }
 
-constexpr void Bitboards::initialise_attack_table()
+constexpr void Move_generator::initialise_attack_table()
 {
 	for(const auto& moves : bishop_moves())
 	{
@@ -115,7 +96,7 @@ constexpr void Bitboards::initialise_attack_table()
 	}
 }
 
-constexpr void Bitboards::cast_magic()
+constexpr void Move_generator::cast_magic()
 {
 
 }
