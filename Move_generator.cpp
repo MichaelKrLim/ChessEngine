@@ -7,7 +7,8 @@ using namespace engine;
 
 constexpr Move_generator::Move_generator()
 {
-	cast_magic();
+	initialise_attack_table();
+	initialise_magic();
 }
 
 const std::unordered_map<Piece, std::uint64_t> Move_generator::get(const Side_position &, const bool &is_white_to_move) const

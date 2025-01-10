@@ -22,7 +22,7 @@ namespace engine
 		private:
 
 		constexpr void initialise_attack_table();
-		constexpr void cast_magic();
+		constexpr void initialise_magic();
 
 		const std::uint64_t pawn_legal_moves(const std::uint64_t& white_pawns, const std::uint64_t black_pawns,
 			const std::uint64_t& occupied_squares, const bool& is_white_to_move

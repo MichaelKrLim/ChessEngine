@@ -7,17 +7,15 @@ namespace engine
     {
         public:
 
-        inline Bitboard(const Bitboard& bb) const : data_(bb) {}
-        Biboard() = default;
+        inline Bitboard(std::uint64_t& data) const : data_(data) {}
+        Bitboard() = default;
 
-        inline operator std::uint64_t() const { return value; }
+        inline operator std::uint64_t() const { return data_; }
 
-        inline Bitboard& operator=(std::uint64_t data) { data_ = data; return *this; }
-        inline 
+        inline Bitboard& operator=(std::uint64_t data) const { data_ = data; return *this; }
 
-        bool is_occupied(const std::uint64_t bitboard, const Position& square) const
-
-	    std::string pretty_string() 
+        bool is_occupied(const Position& square) const
+	    std::string pretty_string() const
 
         private:
 
