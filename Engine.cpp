@@ -140,7 +140,7 @@ void Engine::output_weights() const
 
 double Engine::material_value(const Side& side) const
 {
-	const auto value = ()(const weightmap_type& weightmap, const std::uint64_t& bitboards)
+	const auto value = [](const weightmap_type& weightmap, const std::uint64_t& bitboards)
 	{
 		int total{0};
 		for(std::size_t piece_index{0}; piece_index < 6; ++piece_index)
