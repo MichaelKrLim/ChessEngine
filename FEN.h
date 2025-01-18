@@ -15,8 +15,8 @@ namespace engine
 
 		FEN() = default;
 
-		Piece to_piece(const char& to_convert) const;
-		char to_piece(const int& to_convert) const;
+		constexpr Piece to_piece(const char& to_convert) const;
+		constexpr char to_piece(const int& to_convert) const;
 		[[nodiscard]] std::string from_board(const Board& board) const;
 		[[nodiscard]] Board from_string(const std::string& FEN_string) const;
 	};

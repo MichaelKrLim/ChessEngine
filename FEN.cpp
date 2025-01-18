@@ -1,6 +1,6 @@
-#include "FEN.h"
-#include "Bitboards.h"
+#include "Bitboard.h"
 #include "Board.h"
+#include "FEN.h"
 
 #include <array>
 
@@ -57,7 +57,7 @@ Board FEN::from_string(const std::string& FEN_string) const
 		const auto add_piece = [&](Side_position& side)
 		{
 			std::size_t piece_type_index = static_cast<std::size_t>(to_piece(std::tolower(FEN_string[i])));
-			side.pieces[piece_type_index] |= 1ULL << to_shift(board_index);
+			side.pieces[piece_type_index] |= (1ULL << to_shift(board_index));
 			side.occupied_squares |= side.pieces[piece_type_index];
 		};
 
@@ -80,35 +80,24 @@ Board FEN::from_string(const std::string& FEN_string) const
 	return board;
 }
 
-Piece FEN::to_piece(const char& to_convert) const
+constexpr Piece FEN::to_piece(const char& to_convert) const
 {
 	constexpr auto to_piece = []()
 	{
-		std::array<Piece, 256> map = {};
-		map['p'] = Piece::pawn;
-		map['n'] = Piece::knight;
-		map['b'] = Piece::bishop;
-		map['q'] = Piece::queen;
-		map['k'] = Piece::king;
-		map['r'] = Piece::rook;
-		return map;
-	}();
-
+		std::array<Piece, 256> to_piece = {};
+		to_piece['p'] = Piece::pawn;
+		to_piece['n'] = Piece::knight;
+		to_piece['b'] = Piece::bishop;
+		to_piece['q'] = Piece::queen;
+		to_piece['k'] = Piece::king;
+		to_piece['r'] = Piece::rook;
+		return to_piece;
+	};
 	return to_piece[to_convert];
 }
 
-char FEN::to_piece(const int& to_convert) const
+constexpr char FEN::to_piece(const int& to_convert) const
 {	
-	constexpr auto to_piece = []()
-	{
-		std::array<char, 6> to_piece{};
-		to_piece[static_cast<int>(Piece::pawn)] = 'p';
-		to_piece[static_cast<int>(Piece::knight)] = 'n';
-		to_piece[static_cast<int>(Piece::bishop)] = 'b';
-		to_piece[static_cast<int>(Piece::queen)] = 'q';
-		to_piece[static_cast<int>(Piece::king)] = 'k';
-		to_piece[static_cast<int>(Piece::rook)] = 'r';
-		return to_piece;
-	}();
+	constexpr std::array<char, 6> to_piece{'p', 'n', 'b', 'q', 'k', 'r'};
 	return to_piece[to_convert];
 }

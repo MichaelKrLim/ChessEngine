@@ -16,7 +16,7 @@ namespace engine
 	{
 		public:
 
-		constexpr Bitboards();
+		constexpr Move_generator();
 		[[nodiscard]] const std::unordered_map<Piece, std::uint64_t> get(const Side_position&, const bool& is_white_to_move) const;
 		
 		private:

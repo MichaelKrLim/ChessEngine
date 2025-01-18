@@ -13,14 +13,15 @@ add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 add_executable(
 	engine
 	main.cpp
-	Engine.cpp Engine.h
+	Engine.h Engine.cpp
 	Position.h
 	Constants.h
 	FEN.h FEN.cpp
 	Board.h
 	Move.h
 	Pieces.h
-	Bitboards.h Bitboards.cpp
+	Bitboard.h Bitboard.cpp
+	Move_generator.h Move_generator.cpp
 )
 
 set_property(TARGET engine PROPERTY CXX_STANDARD 23)

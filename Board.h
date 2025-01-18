@@ -12,13 +12,15 @@
 #include <iostream>
 #include <string>
 
+#include "Bitboard.h"
+
 namespace engine
 {
 	struct Side_position
 	{
-		std::array<std::uint64_t, 6> pieces{};
+		std::array<Bitboard, 6> pieces{};
 		bool can_castle_left, can_castle_right;
-		uint64_t occupied_squares{};
+		Bitboard occupied_squares{};
 	};
 
 	struct Board

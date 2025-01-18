@@ -1,3 +1,4 @@
+#include "Bitboard.h"
 #include "Engine.h"
 #include "Position.h"
 #include "Pieces.h"
@@ -7,7 +8,7 @@
 
 using namespace engine;
 
-std::array<std::array<int, board_size*board_size>, 6> Engine::white_weightmaps_ =
+Engine::weightmap_type Engine::white_weightmaps_ =
 {{
 	{{
 		//Piece::pawn
@@ -138,25 +139,20 @@ void Engine::output_weights() const
 	}
 }
 
-double Engine::material_value(const Side& side) const
+double Engine::material_value() const
 {
-	const auto value = [](const weightmap_type& weightmap, const std::uint64_t& bitboards)
+	const auto value = [](const weightmap_type& weightmaps, const std::array<Bitboard, 6>& bitboards)
 	{
-		int total{0};
+		double total{0};
 		for(std::size_t piece_index{0}; piece_index < 6; ++piece_index)
 		{
-			for(std::size_t shift{0}; shift<board_size*board_size-1; ++position)
+			for(std::size_t shift{0}; shift<board_size*board_size-1; ++shift)
 			{
-				const Position current_position(shift);
-				total += (bitboards[piece_index] & (1ULL << shift))? weightmap[current_position.rank_][current_position.file_];
+				total += ((bitboards[piece_index] & (1ULL << shift))>0)? weightmaps[piece_index][shift] : 0;
 			}
 		}
+		return total;
 	};
-	switch(side)
-	{
-		case Side::white:
-			return value(white_weightmaps_);
-		case Side::black:
-			return value(black_weightmaps_);
-	}
+	
+	return value(white_weightmaps_, board_.white.pieces) - value(black_weightmaps_, board_.black.pieces);
 }

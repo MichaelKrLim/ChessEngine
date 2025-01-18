@@ -1,11 +1,11 @@
 #ifndef Engine_h_INCLUDED
 #define Engine_h_INCLUDED
 
-#include <array>
-
 #include "Constants.h"
 #include "FEN.h"
 #include "Move_generator.h"
+
+#include <array>
 
 namespace engine
 {
@@ -13,18 +13,19 @@ namespace engine
 	{
 		public:
 
-		[[nodiscard]] double material_value(const Side& side) const;
+		[[nodiscard]] double material_value() const;
 		[[nodiscard]] double evaluate() const;
 		void output_weights() const;
 
 		private:
 
-		static std::array<int, 6> piece_values_;
 		using weightmap_type = std::array<std::array<int, board_size*board_size>, 6>;
 		static weightmap_type white_weightmaps_;
-		static weightmap_type black_weightmaps_;
+		static weightmap_type black_weightmaps_;	
+		static std::array<int, 6> piece_values_;
 		static FEN FEN_();
 		static Move_generator move_generator_();
+		static Board board_;
 
 		[[nodiscard]] static weightmap_type generate_black_weightmap();
 	};

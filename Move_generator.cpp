@@ -13,7 +13,7 @@ constexpr Move_generator::Move_generator()
 
 const std::unordered_map<Piece, std::uint64_t> Move_generator::get(const Side_position &, const bool &is_white_to_move) const
 {
-    
+
 }
 
 //raw cgpt to fix

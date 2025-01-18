@@ -4,12 +4,14 @@
 
 #include <iostream>
 
-// opening posiiton - "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R"
+using namespace engine;
+
+// opening position - "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R"
 int main()
 {
-	engine::Engine engine;
+	Engine engine;
 	//engine.output_weights();
 	std::cout << "\n";
-	engine::Board board("rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R", engine::FEN());
-	board.output();
+	Board board("rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R", engine::FEN());
+	std::cout << board.white.pieces[0].pretty_string();
 }
