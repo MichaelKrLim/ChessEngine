@@ -22,12 +22,12 @@ std::string FEN::from_board(const Board& board) const
 					consecutive_empty = 0;
 				};
 				const Position current_position(rank, file);
-				if(is_occupied(board.white.pieces[piece_index], current_position))
+				if(board.white.pieces[piece_index].is_occupied(current_position))
 				{	
 					output_empty_positions(consecutive_empty, Side::white);
 					fen += std::toupper(to_piece(piece_index));
 				}
-				else if(is_occupied(board.black.pieces[piece_index], current_position))
+				else if(board.black.pieces[piece_index].is_occupied(current_position))
 				{
 					output_empty_positions(consecutive_empty, Side::black);
 					fen += to_piece(piece_index);
@@ -92,7 +92,7 @@ constexpr Piece FEN::to_piece(const char& to_convert) const
 		to_piece['k'] = Piece::king;
 		to_piece['r'] = Piece::rook;
 		return to_piece;
-	};
+	}();
 	return to_piece[to_convert];
 }
 
