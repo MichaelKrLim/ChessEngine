@@ -37,12 +37,12 @@ namespace engine
 		return position.rank_<8 && position.file_<8;
 	}
 
-	inline constexpr bool is_valid_destination(const Position& board_index, const uint64_t& occupied_squares)
+	inline constexpr bool is_valid_destination(const Position& board_index, const Bitboard& occupied_squares)
 	{
 		if(!is_on_board(board_index))
 			return false;
 
-		bool square_is_occupied = (1 << to_index(Position{board_index}) & occupied_squares);
+		bool square_is_occupied = (occupied_squares & 1 << to_index(Position(board_index))) > 0;
 		return square_is_occupied;
 	}
 }

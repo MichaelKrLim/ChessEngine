@@ -1,9 +1,9 @@
 #ifndef Engine_h_INCLUDED
 #define Engine_h_INCLUDED
 
+#include "Board.h"
 #include "Constants.h"
-#include "FEN.h"
-#include "Move_generator.h"
+//#include "Move_generator.h"
 
 #include <array>
 
@@ -23,9 +23,8 @@ namespace engine
 		static weightmap_type white_weightmaps_;
 		static weightmap_type black_weightmaps_;	
 		static std::array<int, 6> piece_values_;
-		static FEN FEN_();
-		static Move_generator move_generator_();
-		static Board board_;
+		//const static Move_generator move_generator_{};
+		Board board_;
 
 		[[nodiscard]] static weightmap_type generate_black_weightmap();
 	};

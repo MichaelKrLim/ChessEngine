@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.23)
 project(engine VERSION 0.0.1)
 
-# for intellisense
+# produces compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # for windows
@@ -10,13 +10,10 @@ set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 
-add_executable(
-	engine
-	main.cpp
+add_executable(${PROJECT_NAME} main.cpp
 	Engine.h Engine.cpp
 	Position.h
 	Constants.h
-	FEN.h FEN.cpp
 	Board.h
 	Move.h
 	Pieces.h

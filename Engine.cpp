@@ -8,6 +8,8 @@
 
 using namespace engine;
 
+//Move_generator Engine::move_generator_ = Move_generator();
+
 Engine::weightmap_type Engine::white_weightmaps_ =
 {{
 	{{
@@ -145,12 +147,10 @@ double Engine::material_value() const
 	{
 		double total{0};
 		for(std::size_t piece_index{0}; piece_index < 6; ++piece_index)
-		{
 			for(std::size_t shift{0}; shift<board_size*board_size-1; ++shift)
-			{
-				total += ((bitboards[piece_index] & (1ULL << shift))>0)? weightmaps[piece_index][shift] : 0;
-			}
-		}
+				if((bitboards[piece_index] & (1ULL << shift)) > 0)
+					total += weightmaps[piece_index][shift];
+
 		return total;
 	};
 	

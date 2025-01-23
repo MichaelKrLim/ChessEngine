@@ -7,10 +7,10 @@ using namespace	engine;
 std::string	Bitboard::pretty_string() const	
 {
 	std::string s = "+---+---+---+---+---+---+---+---+\n";
-	for	(std::size_t r = 7;	r >= 0;	--r)
+	for(int r = 7;	r >= 0;	--r)
 	{
-		for	(std::size_t f = 0; f <= 7; ++f)
-			s += data_ & (1ULL << f+r*board_size) ? "| X " : "|   ";
+		for(std::size_t f = 0; f <= 7; ++f)
+			s += (data_ & (1ULL << (f+r*board_size)))? "| X " : "|   ";
 
 		s += "| " + std::to_string(1 + r) + "\n+---+---+---+---+---+---+---+---+\n";
 	}
