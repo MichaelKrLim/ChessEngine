@@ -13,6 +13,7 @@ const std::unordered_map<Piece, Bitboard> Move_generator::get(const Side_positio
 {
 	std::unordered_map<Piece, Bitboard> legal_moves;
 	legal_moves[Piece::pawn] = pawn_legal_moves(side.pieces[static_cast<std::size_t>(Piece::knight)], side.occupied_squares, active_player);
+	legal_moves[Piece::knight] = knight_legal_moves(side.pieces[static_cast<std::size_t>(Piece::knight)], side.occupied_squares);
 }
 
 const Bitboard Move_generator::pawn_legal_moves(const Bitboard& white_pawns, const Bitboard& occupied_squares, const Side& active_player) const
@@ -41,9 +42,10 @@ const Bitboard Move_generator::pawn_legal_moves(const Bitboard& white_pawns, con
 	return valid_moves;
 }
 
-const Bitboard Move_generator::knight_legal_moves(const Bitboard& side, const Bitboard& occupied_squares) const
+const Bitboard Move_generator::knight_legal_moves(const Bitboard& knight_bb, const Bitboard& occupied_squares) const
 {
 	Bitboard valid_moves{0};
+	
 	for(const auto& move : knight_moves)
 	{
 		const auto [del_rank, del_file] = move;
