@@ -35,6 +35,8 @@ namespace engine
 		bool is_occupied(const std::uint64_t& position) const;
 		void hash(const int& magic);
 		std::string pretty_string() const;
+		template <typename Callable>
+		void for_each_piece(Callable&& f) const;
 
 		private:
 
@@ -42,8 +44,20 @@ namespace engine
 
 		friend std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard);
 	};
+	
+	template <typename Callable>
+	void Bitboard::for_each_piece(Callable&& f) const 
+	{
+		const auto data_c = data_;
+		while(data_c > 0)
+		{
+			const auto index = std::countr_zero(data_c);
+			f(index);
+			data_c &= data_c - 1;
+		}
+	}
 
-	   inline std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard) { return os << std::bitset<64>(bitboard.data_); }
+	inline std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard) { return os << std::bitset<64>(bitboard.data_); }
 }
 
 #endif // Bitboard_h_INCLUDED

@@ -19,7 +19,7 @@ namespace engine
 		public:
 
 		constexpr Move_generator();
-		[[nodiscard]] const std::unordered_map<Piece, Bitboard> get(const Side_position& side, const Side& active_player) const;
+		[[nodiscard]] const std::vector<Move> get(const Side_position& side, const Side& active_player) const;
 		
 		private:
 
