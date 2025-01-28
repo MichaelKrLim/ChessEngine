@@ -1,8 +1,8 @@
 #ifndef Position_h_INCLUDED
 #define Position_h_INCLUDED
 
+#include "Bitboard.h"
 #include "Constants.h"
-
 
 #include <cassert>
 #include <cstdint>

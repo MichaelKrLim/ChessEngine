@@ -4,6 +4,7 @@
 #include "Bitboard.h"
 #include "Constants.h"
 #include "Pieces.h"
+#include "Position.h"
 
 #include <algorithm>
 #include <array>

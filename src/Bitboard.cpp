@@ -1,5 +1,6 @@
 #include "Bitboard.h"
 #include "Constants.h"
+#include "Position.h"
 
 using namespace	engine;
 
@@ -21,7 +22,7 @@ std::string	Bitboard::pretty_string() const
 
 bool Bitboard::is_occupied(const Position& square) const
 {
-	return data_ & (1<<square.rank_*board_size+square.file_); 
+	return data_ & (1<<(square.rank_*board_size+square.file_)); 
 }
 
 bool Bitboard::is_occupied(const std::uint64_t& position) const

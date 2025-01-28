@@ -120,7 +120,7 @@ void Engine::output_weights() const
 	std::cout << "white: \n";
 	for(const auto& weightmap : white_weightmaps_)
 	{
-		for(int i{0}; i<weightmap.size(); ++i)
+		for(std::size_t i{0}; i<weightmap.size(); ++i)
 		{
 			if(i%board_size==0)
 				std::cout << "\n";
@@ -131,7 +131,7 @@ void Engine::output_weights() const
 	std::cout << "black: \n";
 	for(const auto& weightmap : black_weightmaps_)
 	{
-		for(int i{0}; i<weightmap.size(); ++i)
+		for(std::size_t i{0}; i<weightmap.size(); ++i)
 		{
 			if(i%board_size==0)
 				std::cout << "\n";

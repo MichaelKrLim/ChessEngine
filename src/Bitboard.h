@@ -1,8 +1,7 @@
 #ifndef	Bitboard_h_INCLUDED
 #define	Bitboard_h_INCLUDED
 
-#include "Position.h"
-
+#include <bit>
 #include <bitset>
 #include <cstdint>
 #include <ostream>
@@ -10,6 +9,7 @@
 
 namespace engine
 {
+	class Position;
 	class Bitboard
 	{
 		public:
@@ -48,7 +48,7 @@ namespace engine
 	template <typename Callable>
 	void Bitboard::for_each_piece(Callable&& f) const 
 	{
-		const auto data_c = data_;
+		auto data_c = data_;
 		while(data_c > 0)
 		{
 			const auto index = std::countr_zero(data_c);
