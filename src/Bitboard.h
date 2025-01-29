@@ -37,6 +37,7 @@ namespace engine
 		std::string pretty_string() const;
 		template <typename Callable>
 		void for_each_piece(Callable&& f) const;
+		Position lsb_index() const;
 
 		private:
 

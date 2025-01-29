@@ -34,3 +34,9 @@ void Bitboard::hash(const int& magic)
 {
 	data_ *= magic;
 }
+
+Position Bitboard::lsb_index() const
+{
+	const auto index = std::countr_zero(data_);
+	return Position{index/board_size, index%board_size};
+}
