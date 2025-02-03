@@ -97,7 +97,7 @@ const Move_generator::moves_type Move_generator::king_legal_moves(const Bitboard
 	return legal_moves;
 }
 
-constexpr const Bitboard Move_generator::rook_reachable_squares(const Position& original_square, const Bitboard& occupied_squares) const
+constexpr Bitboard Move_generator::rook_reachable_squares(const Position& original_square, const Bitboard& occupied_squares)
 {
 	Bitboard valid_moves{};
 	for(int del_rank{0}; del_rank < board_size; ++del_rank)
@@ -114,7 +114,7 @@ constexpr const Bitboard Move_generator::rook_reachable_squares(const Position& 
 	return valid_moves;
 }
 
-constexpr const Bitboard Move_generator::bishop_reachable_squares(const Position& bishop_square, const Bitboard& occupied_squares) const
+constexpr Bitboard Move_generator::bishop_reachable_squares(const Position& bishop_square, const Bitboard& occupied_squares)
 {
 	const auto explore_diagonal = [](this auto&& rec, const Position& bishop_square, const Position& diagonal_offset,
 		const Bitboard occupied_squares, Bitboard& valid_moves,
@@ -134,61 +134,6 @@ constexpr const Bitboard Move_generator::bishop_reachable_squares(const Position
 		explore_diagonal(bishop_square, direction, occupied_squares, valid_moves, bishop_square);
 	}
 	return valid_moves;
-}
-
-constexpr std::array<Bitboard, 4096> blocker_configurations(const Position& rook_square, const bool& bishop)
-{
-	Bitboard current_configuration{};
-	std::array<Bitboard, 4096> blocker_configurations{};
-	const auto add_blocker = [&](const Position& blocker_position) constexpr -> bool
-	{
-		if(is_on_board(blocker_position))
-		{
-			current_configuration |= to_index(blocker_position);
-			return true;
-		}
-		else
-			return false;
-	};
-	auto index{0};
-	for(std::size_t first_offset{}; add_blocker(rook_square+(bishop? Position{1*first_offset, -1*first_offset} : Position{first_offset, 0})); ++first_offset)
-	{
-		for(std::size_t second_offset{}; add_blocker(rook_square+(bishop? Position{-1*second_offset, -1*second_offset} : Position{second_offset, 0})); ++second_offset)
-		{
-			for(std::size_t third_offset{}; add_blocker(rook_square+(bishop? Position{1*third_offset, 1*third_offset} : Position{0, third_offset})); ++third_offset)
-			{
-				for(std::size_t fourth_offset{}; add_blocker(rook_square+(bishop? Position{-1*fourth_offset, 1*fourth_offset} : Position{0, fourth_offset})); ++fourth_offset)
-				{
-					blocker_configurations[index] = current_configuration;
-					++index;
-					current_configuration = 0;
-				}
-			}
-		}
-	}
-	return std::span<Bitboard>(blocker_configurations, index+1);
-}
-
-constexpr void Move_generator::initialise_attack_table()
-{
-	std::size_t index{0};
-	for(std::size_t rank{0}; rank<board_size; ++rank)
-	{
-		for(std::size_t file{0}; file<board_size; ++file)
-		{
-			const Position current_square = Position{rank, file};
-			for(const auto& blocker_configuration : blocker_configurations(current_square, false))
-			{
-				attack_table_[index] = rook_reachable_squares(current_square, blocker_configuration);
-				++index;
-			}
-			for(const auto& blocker_configuration : blocker_configurations(current_square, true))
-			{
-				attack_table_[index] = bishop_reachable_squares(current_square, blocker_configuration);
-				++index;
-			}
-		}
-	}
 }
 
 constexpr void Move_generator::cast_magic()

@@ -23,7 +23,7 @@ namespace engine
 		inline Bitboard operator~()                            const { return Bitboard(~data_); }
 		inline Bitboard operator<<(const std::uint64_t& value) const { return Bitboard(data_ << value); }
 		
-		inline Bitboard& operator|=(const std::uint64_t& value) { data_ |= value; return *this; }
+		inline Bitboard& operator|=(const std::size_t& value) { data_ |= value; return *this; }
 		inline Bitboard& operator|=(const Bitboard& bitboard)   { data_ |= bitboard.data_; return *this; }
 		inline void operator=(const std::uint64_t& data) { data_ = data; }
 

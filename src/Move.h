@@ -35,11 +35,11 @@ namespace engine
 		}
 		constexpr Position from_square() const
 		{
-			return Position((move_data_>>6)&board_size*board_size-1);
+			return Position((move_data_>>6)&(board_size*board_size-1));
 		}
 		constexpr Position destination_square() const
 		{
-			return Position(move_data_&board_size*board_size-1);
+			return Position(move_data_&(board_size*board_size-1));
 		}
 
 		private:
