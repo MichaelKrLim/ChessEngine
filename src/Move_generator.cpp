@@ -25,7 +25,7 @@ constexpr Move_generator::Move_generator()
 	initialise_attack_table();
 	cast_magic();
 }
-//fix to return MOVES.
+
 const std::array<Move_generator::moves_type, number_of_piece_types> Move_generator::get(const Side_position& side, const Side& active_player) const
 {
 	std::array<moves_type, number_of_piece_types> legal_moves{};

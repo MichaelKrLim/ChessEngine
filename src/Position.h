@@ -22,7 +22,8 @@ namespace engine
 			rank_ = board_index/board_size;
 			file_ = board_index%board_size;
 		}
-		explicit constexpr Position(const int& rank, const int& file) : rank_(rank), file_(file) {}
+   		template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
+    	explicit constexpr Position(T rank, T file) : rank_(static_cast<int>(rank)), file_(static_cast<int>(file)) {}
 
 		std::uint8_t rank_{}, file_{};
 	};

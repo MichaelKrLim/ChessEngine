@@ -25,6 +25,8 @@ namespace engine
 		private:
 
 		consteval static std::array<Bitboard, 5000> create_attack_table();
+		template <std::size_t size>
+		consteval static std::array<Bitboard, size> Move_generator::blocker_configurations(const Position& square, const bool& bishop);
 		constexpr void cast_magic();
 
 		const moves_type pawn_legal_moves(const Bitboard& pawn_bb, const Bitboard& occupied_squares, const Side& active_player) const;
@@ -63,32 +65,8 @@ namespace engine
 		}};
 	};
 
-	consteval std::array<Bitboard, 5000> Move_generator::create_attack_table()
-	{
-		std::array<Bitboard, 5000> attack_table{};
-		std::size_t index{0};
-		for(std::size_t rank{0}; rank<board_size; ++rank)
-		{
-			for(std::size_t file{0}; file<board_size; ++file)
-			{
-				const Position current_square = Position{rank, file};
-				for(const auto& blocker_configuration : blocker_configurations<4096>(current_square, false))
-				{
-					attack_table[index] = rook_reachable_squares(current_square, blocker_configuration);
-					++index;
-				}
-				for(const auto& blocker_configuration : blocker_configurations<512>(current_square, true))
-				{
-					attack_table[index] = bishop_reachable_squares(current_square, blocker_configuration);
-					++index;
-				}
-			}
-		}
-		return attack_table;
-	}
-
 	template <std::size_t size>
-	consteval std::array<Bitboard, size> blocker_configurations(const Position& square, const bool& bishop)
+	consteval std::array<Bitboard, size> Move_generator::blocker_configurations(const Position& square, const bool& bishop)
 	{
 		Bitboard current_configuration{};
 		std::array<Bitboard, size> blocker_configurations{};
@@ -118,6 +96,30 @@ namespace engine
 			}
 		}
 		return blocker_configurations;
+	}
+
+	consteval std::array<Bitboard, 5000> Move_generator::create_attack_table()
+	{
+		std::array<Bitboard, 5000> attack_table{};
+		std::size_t index{0};
+		for(std::size_t rank{0}; rank<board_size; ++rank)
+		{
+			for(std::size_t file{0}; file<board_size; ++file)
+			{
+				const Position current_square = Position{rank, file};
+				for(const auto& blocker_configuration : blocker_configurations<4096>(current_square, false))
+				{
+					attack_table[index] = rook_reachable_squares(current_square, blocker_configuration);
+					++index;
+				}
+				for(const auto& blocker_configuration : blocker_configurations<512>(current_square, true))
+				{
+					attack_table[index] = bishop_reachable_squares(current_square, blocker_configuration);
+					++index;
+				}
+			}
+		}
+		return attack_table;
 	}
 }
 
