@@ -20,9 +20,67 @@ namespace std
 	};
 }
 
+template <std::size_t size>
+consteval std::array<Bitboard, size> Move_generator::blocker_configurations(const Position& square, const bool& bishop)
+{
+	Bitboard current_configuration{};
+	std::array<Bitboard, size> blocker_configurations{};
+	const auto add_blocker = [&](const Position& blocker_position) constexpr -> bool
+	{
+		if(is_on_board(blocker_position))
+		{
+			current_configuration |= to_index(blocker_position);
+			return true;
+		}
+		else
+			return false;
+	};
+	std::size_t index{0};
+	for(std::size_t first_offset{}; add_blocker(square+(bishop? Position{1*first_offset, -1*first_offset} : Position{first_offset, 0})); ++first_offset)
+	{
+		for(std::size_t second_offset{}; add_blocker(square+(bishop? Position{-1*second_offset, -1*second_offset} : Position{second_offset, 0})); ++second_offset)
+		{
+			for(std::size_t third_offset{}; add_blocker(square+(bishop? Position{1*third_offset, 1*third_offset} : Position{0, third_offset})); ++third_offset)
+			{
+				for(std::size_t fourth_offset{}; add_blocker(square+(bishop? Position{-1*fourth_offset, 1*fourth_offset} : Position{0, fourth_offset})); ++fourth_offset)
+				{
+					blocker_configurations[index++] = current_configuration;
+					current_configuration = 0;
+				}
+			}
+		}
+	}
+	return blocker_configurations;
+}
+
+consteval std::array<Bitboard, 5000> Move_generator::create_attack_table()
+{
+	std::array<Bitboard, 5000> attack_table{};
+	std::size_t index{0};
+	for(std::size_t rank{0}; rank<board_size; ++rank)
+	{
+		for(std::size_t file{0}; file<board_size; ++file)
+		{
+			const Position current_square = Position{rank, file};
+			for(const auto& blocker_configuration : blocker_configurations<4096>(current_square, false))
+			{
+				attack_table[index] = rook_reachable_squares(current_square, blocker_configuration);
+				++index;
+			}
+			for(const auto& blocker_configuration : blocker_configurations<512>(current_square, true))
+			{
+				attack_table[index] = bishop_reachable_squares(current_square, blocker_configuration);
+				++index;
+			}
+		}	
+	}
+	return attack_table;
+}
+
+constexpr std::array<Bitboard, 5000> Move_generator::attack_table_ = create_attack_table();
+
 constexpr Move_generator::Move_generator()
 {
-	initialise_attack_table();
 	cast_magic();
 }
 
