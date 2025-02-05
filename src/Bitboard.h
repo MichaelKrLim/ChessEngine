@@ -2,16 +2,17 @@
 #define	Bitboard_h_INCLUDED
 
 #include "Constants.h"
+#include "Position.h"
 
 #include <bit>
+#include <bitset>
 #include <cstdint>
 #include <ostream>
 #include <string>
 
 namespace engine
 {
-	struct Position;
-	class Bitboard
+	struct Bitboard
 	{
 		public:
 
@@ -32,9 +33,9 @@ namespace engine
 		constexpr inline bool operator< (const std::uint64_t& value) const { return data_ < value; }
 		constexpr inline bool operator==(const std::uint64_t& value) const { return data_ == value; }
 		constexpr inline bool operator!=(const std::uint64_t& value) const { return data_ != value; }
-		
+
 		[[nodiscard]] constexpr bool is_occupied(const Position& position) const;
-		[[nodiscard]] constexpr std::string pretty_string() const;
+		[[nodiscard]] std::string pretty_string() const;
 		[[nodiscard]] constexpr Position lsb_index() const;
 		constexpr void hash(const int& magic);
 		template <typename Callable>
@@ -44,7 +45,7 @@ namespace engine
 
 		std::uint64_t data_{0};
 
-		constexpr friend std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard);
+		friend std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard);
 	};
 	
 	template <typename Callable>
@@ -59,7 +60,7 @@ namespace engine
 		}
 	}
 
-	constexpr std::string Bitboard::pretty_string() const
+	std::string Bitboard::pretty_string() const
 	{
 		std::string s = "+---+---+---+---+---+---+---+---+\n";
 		for(int r = 7;	r >= 0;	--r)
@@ -77,7 +78,7 @@ namespace engine
 	constexpr void Bitboard::hash(const int& magic) { data_ *= magic; }
 	constexpr Position Bitboard::lsb_index() const { return Position{static_cast<std::size_t>(std::countr_zero(data_))}; }
 	
-	constexpr std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard) { return os << bitboard.pretty_string(); }
+	std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard) { return os << bitboard.pretty_string(); }
 }
 
 #endif // Bitboard_h_INCLUDED

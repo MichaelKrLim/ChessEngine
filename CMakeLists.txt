@@ -29,7 +29,8 @@ set(common_sources
 	src/Board.h
 	src/Move.h
 	src/Pieces.h
-	src/Bitboard.h src/Bitboard.cpp
+	src/Bitboard.h
+	src/utility.h
 	src/Move_generator.h src/Move_generator.cpp
 )
 

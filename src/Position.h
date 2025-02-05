@@ -1,7 +1,6 @@
 #ifndef Position_h_INCLUDED
 #define Position_h_INCLUDED
 
-#include "Bitboard.h"
 #include "Constants.h"
 
 #include <cassert>
@@ -9,6 +8,7 @@
 
 namespace engine
 {
+	struct Bitboard;
 	struct Position
 	{
 		constexpr Position operator+(const Position& to_add) const
@@ -36,15 +36,6 @@ namespace engine
 	constexpr bool is_on_board(const Position& position)
 	{
 		return position.rank_<8 && position.file_<8;
-	}
-
-	constexpr bool is_valid_destination(const Position& board_index, const Bitboard& occupied_squares)
-	{
-		if(!is_on_board(board_index))
-			return false;
-
-		bool square_is_occupied = (occupied_squares & 1 << to_index(Position(board_index))) > 0;
-		return square_is_occupied;
 	}
 }
 
