@@ -1,9 +1,6 @@
 #include "Move_generator.h"
 #include "Position.h"
 
-#include <bit>
-#include <span>
-
 using namespace engine;
 
 namespace std 
@@ -53,9 +50,9 @@ consteval std::array<Bitboard, size> Move_generator::blocker_configurations(cons
 	return blocker_configurations;
 }
 
-consteval std::array<Bitboard, 5000> Move_generator::create_attack_table()
+consteval std::array<Bitboard, 107520> Move_generator::create_attack_table()
 {
-	std::array<Bitboard, 5000> attack_table{};
+	std::array<Bitboard, 107520> attack_table{};
 	std::size_t index{0};
 	for(std::size_t rank{0}; rank<board_size; ++rank)
 	{
@@ -77,7 +74,7 @@ consteval std::array<Bitboard, 5000> Move_generator::create_attack_table()
 	return attack_table;
 }
 
-constexpr std::array<Bitboard, 5000> Move_generator::attack_table_ = create_attack_table();
+constexpr std::array<Bitboard, 107520> Move_generator::attack_table_ = create_attack_table();
 
 constexpr Move_generator::Move_generator()
 {

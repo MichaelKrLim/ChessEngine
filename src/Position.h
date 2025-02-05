@@ -5,7 +5,7 @@
 #include "Constants.h"
 
 #include <cassert>
-#include <cstdint>
+#include <type_traits>
 
 namespace engine
 {
@@ -22,23 +22,23 @@ namespace engine
 			rank_ = board_index/board_size;
 			file_ = board_index%board_size;
 		}
-   		template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
-    	explicit constexpr Position(T rank, T file) : rank_(static_cast<int>(rank)), file_(static_cast<int>(file)) {}
+		template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
+		explicit constexpr Position(T rank, T file) : rank_(static_cast<int>(rank)), file_(static_cast<int>(file)) {}
 
 		std::uint8_t rank_{}, file_{};
 	};
 
-	inline constexpr std::size_t to_index(const Position& position)
+	constexpr std::size_t to_index(const Position& position)
 	{
 		return board_size*position.rank_+position.file_;
 	}
 
-	inline constexpr bool is_on_board(const Position& position)
+	constexpr bool is_on_board(const Position& position)
 	{
 		return position.rank_<8 && position.file_<8;
 	}
 
-	inline constexpr bool is_valid_destination(const Position& board_index, const Bitboard& occupied_squares)
+	constexpr bool is_valid_destination(const Position& board_index, const Bitboard& occupied_squares)
 	{
 		if(!is_on_board(board_index))
 			return false;

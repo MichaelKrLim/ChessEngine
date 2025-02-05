@@ -4,11 +4,9 @@
 #include "Bitboard.h"
 #include "Board.h"
 #include "Constants.h"
-#include "Move.h"
 #include "Pieces.h"
 
 #include <array>
-#include <cstdint>
 #include <unordered_map>
 #include <vector>
 
@@ -24,9 +22,9 @@ namespace engine
 		
 		private:
 
-		consteval static std::array<Bitboard, 5000> create_attack_table();
+		consteval static std::array<Bitboard, 107520> create_attack_table();
 		template <std::size_t size>
-		consteval static std::array<Bitboard, size> Move_generator::blocker_configurations(const Position& square, const bool& bishop);
+		consteval static std::array<Bitboard, size> blocker_configurations(const Position& square, const bool& bishop);
 		constexpr void cast_magic();
 
 		const moves_type pawn_legal_moves(const Bitboard& pawn_bb, const Bitboard& occupied_squares, const Side& active_player) const;
@@ -46,7 +44,7 @@ namespace engine
 
 		constexpr static std::array<Magic_square, 64> bishop_magic_squares_;
 		constexpr static std::array<Magic_square, 64> rook_magic_squares_;
-		const static std::array<Bitboard, 5000> attack_table_;
+		const static std::array<Bitboard, 107520> attack_table_;
 
 		constexpr static std::array<Position, 8> knight_moves_ =
 		{{
@@ -55,13 +53,13 @@ namespace engine
 		}};
 		constexpr static std::array<Position, 4> bishop_moves_ =
 		{{
-			Position{1, 1}, Position{1, -1},
+			Position{1,  1}, Position{1,  -1},
 			Position{-1, 1}, Position{-1, -1}
 		}};
 		constexpr static std::array<Position, 8> king_moves_ =
 		{{
-			Position{1, 0}, Position{-1, 0}, Position{0, 1}, Position{0, -1},
-			Position{1, 1}, Position{-1, 1}, Position{1, -1},Position{-1, -1}
+			Position{1, 0}, Position{-1, 0}, Position{0,  1}, Position{0,  -1},
+			Position{1, 1}, Position{-1, 1}, Position{1, -1}, Position{-1, -1}
 		}};
 	};
 }

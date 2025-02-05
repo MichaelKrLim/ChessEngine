@@ -1,54 +1,54 @@
 #ifndef	Bitboard_h_INCLUDED
 #define	Bitboard_h_INCLUDED
 
+#include "Constants.h"
+
 #include <bit>
-#include <bitset>
 #include <cstdint>
 #include <ostream>
 #include <string>
 
 namespace engine
 {
-	class Position;
+	struct Position;
 	class Bitboard
 	{
 		public:
 
-		explicit inline Bitboard(const std::uint64_t& data) : data_(data) {}
+		explicit constexpr inline Bitboard(const std::uint64_t& data) : data_(data) {}
 		inline Bitboard() = default;
 
-		inline Bitboard operator& (const std::uint64_t& value) const { return Bitboard(data_ & value); }
-		inline Bitboard operator& (const Bitboard& bitboard)   const { return Bitboard(data_ & bitboard.data_); }	
-		inline Bitboard operator| (const Bitboard& bitboard)   const { return Bitboard(data_ | bitboard.data_); }
-		inline Bitboard operator~()                            const { return Bitboard(~data_); }
-		inline Bitboard operator<<(const std::uint64_t& value) const { return Bitboard(data_ << value); }
+		constexpr inline Bitboard operator& (const std::uint64_t& value) const { return Bitboard(data_ & value); }
+		constexpr inline Bitboard operator& (const Bitboard& bitboard)   const { return Bitboard(data_ & bitboard.data_); }	
+		constexpr inline Bitboard operator| (const Bitboard& bitboard)   const { return Bitboard(data_ | bitboard.data_); }
+		constexpr inline Bitboard operator~()                            const { return Bitboard(~data_); }
+		constexpr inline Bitboard operator<<(const std::uint64_t& value) const { return Bitboard(data_ << value); }
 		
-		inline Bitboard& operator|=(const std::size_t& value)  { data_ |= value; return *this; }
-		inline Bitboard& operator|=(const Bitboard& bitboard)  { data_ |= bitboard.data_; return *this; }
-		inline void      operator= (const std::uint64_t& data) { data_ = data; }
+		constexpr inline Bitboard& operator|=(const std::size_t& value)  { data_ |= value; return *this; }
+		constexpr inline Bitboard& operator|=(const Bitboard& bitboard)  { data_ |= bitboard.data_; return *this; }
+		constexpr inline void      operator= (const std::uint64_t& data) { data_ = data; }
 
-		inline bool operator> (const std::uint64_t& value) const { return data_ > value; }
-		inline bool operator< (const std::uint64_t& value) const { return data_ < value; }
-		inline bool operator==(const std::uint64_t& value) const { return data_ == value; }
-		inline bool operator!=(const std::uint64_t& value) const { return data_ != value; }
+		constexpr inline bool operator> (const std::uint64_t& value) const { return data_ > value; }
+		constexpr inline bool operator< (const std::uint64_t& value) const { return data_ < value; }
+		constexpr inline bool operator==(const std::uint64_t& value) const { return data_ == value; }
+		constexpr inline bool operator!=(const std::uint64_t& value) const { return data_ != value; }
 		
-		[[nodiscard]] bool is_occupied(const Position& square) const;
-		[[nodiscard]] bool is_occupied(const std::uint64_t& position) const;
-		[[nodiscard]] std::size_t hash(const int& magic);
-		[[nodiscard]] std::string pretty_string() const;
+		[[nodiscard]] constexpr bool is_occupied(const Position& position) const;
+		[[nodiscard]] constexpr std::string pretty_string() const;
+		[[nodiscard]] constexpr Position lsb_index() const;
+		constexpr void hash(const int& magic);
 		template <typename Callable>
-		void for_each_piece(Callable&& f) const;
-		[[nodiscard]] Position lsb_index() const;
+		constexpr void for_each_piece(Callable&& f) const;
 
 		private:
 
 		std::uint64_t data_{0};
 
-		friend std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard);
+		constexpr friend std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard);
 	};
 	
 	template <typename Callable>
-	void Bitboard::for_each_piece(Callable&& f) const 
+	constexpr void Bitboard::for_each_piece(Callable&& f) const 
 	{
 		auto data_c = data_;
 		while(data_c > 0)
@@ -59,7 +59,25 @@ namespace engine
 		}
 	}
 
-	inline std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard) { return os << std::bitset<64>(bitboard.data_); }
+	constexpr std::string Bitboard::pretty_string() const
+	{
+		std::string s = "+---+---+---+---+---+---+---+---+\n";
+		for(int r = 7;	r >= 0;	--r)
+		{
+			for(std::size_t f = 0; f <= 7; ++f)
+				s += (data_ & (1ULL << (f+r*board_size)))? "| X " : "|   ";
+
+			s += "| " + std::to_string(1 + r) + "\n+---+---+---+---+---+---+---+---+\n";
+		}
+		s += "  a   b   c   d   e   f   g   h\n";
+		return s;
+	}
+
+	constexpr bool Bitboard::is_occupied(const Position& square) const { return data_ & (1<<(square.rank_*board_size+square.file_)); }
+	constexpr void Bitboard::hash(const int& magic) { data_ *= magic; }
+	constexpr Position Bitboard::lsb_index() const { return Position{static_cast<std::size_t>(std::countr_zero(data_))}; }
+	
+	constexpr std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard) { return os << bitboard.pretty_string(); }
 }
 
 #endif // Bitboard_h_INCLUDED
