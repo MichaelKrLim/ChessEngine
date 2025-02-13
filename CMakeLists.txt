@@ -30,7 +30,7 @@ set(common_sources
 	src/Move.h
 	src/Pieces.h
 	src/Bitboard.h
-	src/utility.h
+	src/Utility.h
 	src/Move_generator.h src/Move_generator.cpp
 )
 

@@ -1,5 +1,5 @@
-#ifndef UTILITY_CPP_INCLUDED
-#define UTILITY_CPP_INCLUDED
+#ifndef Utility_h_INCLUDED
+#define Utility_h_INCLUDED
 
 #include "Bitboard.h"
 #include "Position.h"

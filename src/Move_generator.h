@@ -46,6 +46,30 @@ namespace engine
 		constexpr static std::array<Magic_square, 64> rook_magic_squares_;
 		const static std::array<Bitboard, 107520> attack_table_;
 
+		constexpr static std::array<std::uint8_t, board_size*board_size> rook_rellevant_bits = 
+		{
+			12, 11, 11, 11, 11, 11, 11, 12,
+			11, 10, 10, 10, 10, 10, 10, 11,
+			11, 10, 10, 10, 10, 10, 10, 11,
+			11, 10, 10, 10, 10, 10, 10, 11,
+			11, 10, 10, 10, 10, 10, 10, 11,
+			11, 10, 10, 10, 10, 10, 10, 11,
+			11, 10, 10, 10, 10, 10, 10, 11,
+			12, 11, 11, 11, 11, 11, 11, 12
+		};
+
+		constexpr static std::array<std::uint8_t, board_size*board_size> bishop_rellevant_bits = 
+		{
+			6, 5, 5, 5, 5, 5, 5, 6,
+			5, 5, 5, 5, 5, 5, 5, 5,
+			5, 5, 7, 7, 7, 7, 5, 5,
+			5, 5, 7, 9, 9, 7, 5, 5,
+			5, 5, 7, 9, 9, 7, 5, 5,
+			5, 5, 7, 7, 7, 7, 5, 5,
+			5, 5, 5, 5, 5, 5, 5, 5,
+			6, 5, 5, 5, 5, 5, 5, 6
+		};
+
 		constexpr static std::array<Position, 8> knight_moves_ =
 		{{
 			Position{2, 1}, Position{2, -1}, Position{-2, 1}, Position{-2, -1},
