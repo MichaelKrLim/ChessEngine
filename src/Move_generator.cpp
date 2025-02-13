@@ -18,6 +18,20 @@ namespace std
 	};
 }
 
+template<std::size_t I, std::size_t ...Is>
+consteval void permute(const auto&& add_blocker, const auto&& f, const std::size_t x_scalar, const std::size_t y_scalar)
+{
+	add_blocker(Position{x_scalar*I, y_scalar*I});
+	f();
+	permute<Is...>(add_blocker, f, x_scalar, y_scalar);
+}
+
+consteval void permute(const auto&& add_blocker, const auto&& f, const std::size_t x_scalar, const std::size_t y_scalar)
+{
+	const auto Is = std::make_index_sequence<board_size>{};
+	permute(f, x_scalar, y_scalar, Is...);
+}
+
 template <std::size_t size>
 consteval std::array<Bitboard, size> Move_generator::blocker_configurations(const Position& square, const bool& bishop)
 {
@@ -28,14 +42,18 @@ consteval std::array<Bitboard, size> Move_generator::blocker_configurations(cons
 		if(is_on_board(blocker_position))
 			current_configuration |= to_index(blocker_position);
 	};
-	std::size_t index{0};
-	auto permute = [] <std::size_t... I> (auto&& f, std::size_t x_scalar, std::size_t y_scalar, std::size_t i, std::index_sequence<I...> = std::make_index_sequence<board_size>{})
+	auto permute = [] (this auto&& rec, auto&& f, std::size_t x_scalar, std::size_t y_scalar, std::size_t i = 0, std::index_sequence<I...> = std::make_index_sequence<1, board_size>{})
 	{
-		add_blocker(Position{x_scalar*i, y_scalar*i})
-			f();
-		permute(f, x_scalar, y_scalar, std::index_sequence<I...>)
+		add_blocker(Position{x_scalar*i, y_scalar*i});
+		f();
+		rec(f, x_scalar, y_scalar, I...);
 	};
-	permute(permute(permute(permute(add_blocker, bishop? -1:0, bishop? 1:1), bishop? 1:0, bishop? 1:1), bishop? -1:1, bishop? -1:0), bishop? 1:1, bishop? -1:0);
+	permute(permute(permute(permute([&]()
+	{
+		static std::size_t index{0};
+		blocker_configurations[index++] = current_configuration;
+		current_configuration = 0;
+	}, bishop? -1:0, bishop? 1:1), bishop? 1:0, bishop? 1:1), bishop? -1:1, bishop? -1:0), bishop? 1:1, bishop? -1:0);
 	return blocker_configurations;
 }
 
@@ -43,6 +61,11 @@ consteval std::array<Bitboard, 107520> Move_generator::create_attack_table()
 {
 	std::array<Bitboard, 107520> attack_table{};
 	std::size_t index{0};
+	auto consteval_for = [] <std::size_t... I> (this auto&& rec, auto&& f, std::size_t i, std::index_sequence<I...> = std::make_index_sequence<board_size>{})
+	{
+		f();
+		rec(f, I...);
+	};
 	for(std::size_t rank{0}; rank<board_size; ++rank)
 	{
 		for(std::size_t file{0}; file<board_size; ++file)
