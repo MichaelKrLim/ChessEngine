@@ -18,67 +18,54 @@ namespace std
 	};
 }
 
-template<std::size_t I, std::size_t ...Is>
-consteval void permute(const auto&& add_blocker, const auto&& f, const std::size_t x_scalar, const std::size_t y_scalar)
-{
-	add_blocker(Position{x_scalar*I, y_scalar*I});
-	f();
-	permute<Is...>(add_blocker, f, x_scalar, y_scalar);
-}
-
-consteval void permute(const auto&& add_blocker, const auto&& f, const std::size_t x_scalar, const std::size_t y_scalar)
-{
-	const auto Is = std::make_index_sequence<board_size>{};
-	permute(f, x_scalar, y_scalar, Is...);
-}
-
 template <std::size_t size>
 consteval std::array<Bitboard, size> Move_generator::blocker_configurations(const Position& square, const bool& bishop)
 {
 	Bitboard current_configuration{};
 	std::array<Bitboard, size> blocker_configurations{};
-	const auto add_blocker = [&](const Position& blocker_position)
+	const auto add_blocker = [&](const Position& blocker_position) constexpr -> bool
 	{
 		if(is_on_board(blocker_position))
+		{
 			current_configuration |= to_index(blocker_position);
+			return true;
+		}
+		else
+			return false;
 	};
-	auto permute = [] (this auto&& rec, auto&& f, std::size_t x_scalar, std::size_t y_scalar, std::size_t i = 0, std::index_sequence<I...> = std::make_index_sequence<1, board_size>{})
+	std::size_t index{0};
+	for(std::size_t first_offset{}; add_blocker(square+(bishop? Position{1*first_offset, -1*first_offset} : Position{first_offset, 0})); ++first_offset)
 	{
-		add_blocker(Position{x_scalar*i, y_scalar*i});
-		f();
-		rec(f, x_scalar, y_scalar, I...);
-	};
-	permute(permute(permute(permute([&]()
-	{
-		static std::size_t index{0};
-		blocker_configurations[index++] = current_configuration;
-		current_configuration = 0;
-	}, bishop? -1:0, bishop? 1:1), bishop? 1:0, bishop? 1:1), bishop? -1:1, bishop? -1:0), bishop? 1:1, bishop? -1:0);
+		for(std::size_t second_offset{}; add_blocker(square+(bishop? Position{-1*second_offset, -1*second_offset} : Position{second_offset, 0})); ++second_offset)
+		{
+			for(std::size_t third_offset{}; add_blocker(square+(bishop? Position{1*third_offset, 1*third_offset} : Position{0, third_offset})); ++third_offset)
+			{
+				for(std::size_t fourth_offset{}; add_blocker(square+(bishop? Position{-1*fourth_offset, 1*fourth_offset} : Position{0, fourth_offset})); ++fourth_offset)
+				{
+					blocker_configurations[index++] = current_configuration;
+					current_configuration = 0;
+				}
+			}
+		}
+	}
 	return blocker_configurations;
 }
 
-consteval std::array<Bitboard, 107520> Move_generator::create_attack_table()
+consteval std::array<Bitboard, 5000> Move_generator::create_attack_table()
 {
-	std::array<Bitboard, 107520> attack_table{};
+	std::array<Bitboard, 5000> attack_table{};
 	std::size_t index{0};
-	auto consteval_for = [] <std::size_t... I> (this auto&& rec, auto&& f, std::size_t i, std::index_sequence<I...> = std::make_index_sequence<board_size>{})
-	{
-		f();
-		rec(f, I...);
-	};
 	for(std::size_t rank{0}; rank<board_size; ++rank)
 	{
 		for(std::size_t file{0}; file<board_size; ++file)
 		{
-			constexpr Position current_square = Position{rank, file};
-			constexpr std::size_t number_of_configurations = (1 << rook_rellevant_bits[to_index(current_square)]); //2^n
-			for(const auto& blocker_configuration : blocker_configurations<number_of_configurations>(current_square, false))
+			const Position current_square = Position{rank, file};
+			for(const auto& blocker_configuration : blocker_configurations<4096>(current_square, false))
 			{
 				attack_table[index] = rook_reachable_squares(current_square, blocker_configuration);
 				++index;
 			}
-			constexpr std::size_t number_of_configurations = (1 << bishop_rellevant_bits[to_index(current_square)]);
-			for(const auto& blocker_configuration : blocker_configurations<number_of_configurations>(current_square, true))
+			for(const auto& blocker_configuration : blocker_configurations<512>(current_square, true))
 			{
 				attack_table[index] = bishop_reachable_squares(current_square, blocker_configuration);
 				++index;

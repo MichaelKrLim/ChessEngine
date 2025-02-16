@@ -17,7 +17,7 @@ namespace engine
 		public:
 
 		explicit constexpr inline Bitboard(const std::uint64_t& data) : data_(data) {}
-		inline Bitboard() = default;
+		constexpr inline Bitboard() = default;
 
 		constexpr inline Bitboard operator& (const std::uint64_t& value) const { return Bitboard(data_ & value); }
 		constexpr inline Bitboard operator& (const Bitboard& bitboard)   const { return Bitboard(data_ & bitboard.data_); }	
