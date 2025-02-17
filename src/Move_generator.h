@@ -10,29 +10,29 @@
 #include <unordered_map>
 #include <vector>
 
-namespace engine 
+namespace engine
 {
 	class Move_generator
 	{
 		public:
 
-		constexpr Move_generator();
+		Move_generator();
 		using moves_type = std::unordered_map<Position, std::vector<Position>>;
 		[[nodiscard]] const std::array<moves_type, number_of_piece_types> get(const Side_position& side, const Side& active_player) const;
 		
 		private:
 
-		consteval static std::array<Bitboard, 107520> create_attack_table();
+		static std::array<Bitboard, 107520> create_attack_table();
 		template <std::size_t size>
-		consteval static std::array<Bitboard, size> blocker_configurations(const Position& square, const bool& bishop);
-		constexpr void cast_magic();
+		static std::array<Bitboard, size> blocker_configurations(const Position& square, const bool& bishop);
+		void cast_magic();
 
-		const moves_type pawn_legal_moves(const Bitboard& pawn_bb, const Bitboard& occupied_squares, const Side& active_player) const;
-		const moves_type king_legal_moves(const Bitboard& king_bb, const Bitboard& occupied_squares) const;
-		const moves_type knight_legal_moves(const Bitboard& knight_bb, const Bitboard& occupied_squares) const;
+		[[nodiscard]] static const moves_type pawn_legal_moves(const Bitboard& pawn_bb, const Bitboard& occupied_squares, const Side& active_player);
+		[[nodiscard]] static const moves_type king_legal_moves(const Bitboard& king_bb, const Bitboard& occupied_squares);
+		[[nodiscard]] static const moves_type knight_legal_moves(const Bitboard& knight_bb, const Bitboard& occupied_squares);
 
-		constexpr static Bitboard rook_reachable_squares(const Position& square, const Bitboard& occupied_squares);
-		constexpr static Bitboard bishop_reachable_squares(const Position& square, const Bitboard& occupied_squares);
+		[[nodiscard]] static const Bitboard rook_reachable_squares(const Position& square, const Bitboard& occupied_squares);
+		[[nodiscard]] static const Bitboard bishop_reachable_squares(const Position& square, const Bitboard& occupied_squares);
 
 		struct Magic_square
 		{
@@ -42,8 +42,8 @@ namespace engine
 			const int shift;
 		};
 
-		constexpr static std::array<Magic_square, 64> bishop_magic_squares_;
-		constexpr static std::array<Magic_square, 64> rook_magic_squares_;
+		//static std::array<Magic_square, 64> bishop_magic_squares_;
+		//static std::array<Magic_square, 64> rook_magic_squares_;
 		const static std::array<Bitboard, 107520> attack_table_;
 
 		constexpr static std::array<std::uint8_t, board_size*board_size> rook_rellevant_bits = 
@@ -86,8 +86,69 @@ namespace engine
 			Position{1, 1}, Position{-1, 1}, Position{1, -1}, Position{-1, -1}
 		}};
 	};
+
+	inline std::array<Bitboard, 107520> Move_generator::create_attack_table()
+	{
+		std::array<Bitboard, 107520> attack_table{};
+		std::size_t index{0};
+		for(std::size_t rank{0}; rank<board_size; ++rank)
+		{
+			for(std::size_t file{0}; file<board_size; ++file)
+			{
+				const Position current_square = Position{rank, file};
+				for(const auto& blocker_configuration : blocker_configurations<4096>(current_square, false))
+				{
+					attack_table[index] = rook_reachable_squares(current_square, blocker_configuration);
+					++index;
+				}
+				for(const auto& blocker_configuration : blocker_configurations<512>(current_square, true))
+				{
+					attack_table[index] = bishop_reachable_squares(current_square, blocker_configuration);
+					++index;
+				}
+			}	
+		}
+		return attack_table;
+	}
+
+	template <std::size_t size>
+	inline std::array<Bitboard, size> Move_generator::blocker_configurations(const Position& square, const bool& bishop)
+	{
+		Bitboard current_configuration{};
+		std::array<Bitboard, size> blocker_configurations{};
+		const auto add_blocker = [&](const Position& blocker_position) constexpr -> bool
+		{
+			if(is_on_board(blocker_position))
+			{
+				current_configuration |= to_index(blocker_position);
+				return true;
+			}
+			else
+				return false;
+		};
+		std::size_t index{0};
+		for(std::size_t first_offset{}; add_blocker(square+(bishop? Position{1*first_offset, -1*first_offset} : Position{first_offset, 0})); ++first_offset)
+		{
+			for(std::size_t second_offset{}; add_blocker(square+(bishop? Position{-1*second_offset, -1*second_offset} : Position{second_offset, 0})); ++second_offset)
+			{
+				for(std::size_t third_offset{}; add_blocker(square+(bishop? Position{1*third_offset, 1*third_offset} : Position{0, third_offset})); ++third_offset)
+				{
+					for(std::size_t fourth_offset{}; add_blocker(square+(bishop? Position{-1*fourth_offset, 1*fourth_offset} : Position{0, fourth_offset})); ++fourth_offset)
+					{
+						blocker_configurations[index++] = current_configuration;
+						current_configuration = 0;
+					}
+				}
+			}
+		}
+		return blocker_configurations;
+	}
+
+	//inline const std::array<Bitboard, 107520> Move_generator::attack_table_ = create_attack_table();
+
+	inline Move_generator::Move_generator()
+	{
+		cast_magic();
+	}
 }
-
-
-
 #endif // Bitboards_h_INCLUDED

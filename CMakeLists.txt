@@ -17,9 +17,9 @@ add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 
 #for doctest
 CPMAddPackage(
-    NAME doctest
-    GIT_REPOSITORY https://github.com/doctest/doctest.git
-    GIT_TAG v2.4.11
+	NAME doctest
+	GIT_REPOSITORY https://github.com/doctest/doctest.git
+	GIT_TAG v2.4.11
 )
 
 set(common_sources
@@ -35,19 +35,19 @@ set(common_sources
 )
 
 if(ENGINE_BUILD_TESTS)
-    file(GLOB test_sources CONFIGURE_DEPENDS src/*.tests.cpp)
-    add_executable(tests
-        ${test_sources}
-        ${common_sources}
-        src/test_main.cpp
-    )
-    target_link_libraries(tests PRIVATE doctest)
-    target_compile_definitions(tests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
+	file(GLOB test_sources CONFIGURE_DEPENDS src/*.tests.cpp)
+	add_executable(tests
+		${test_sources}
+		${common_sources}
+		src/test_main.cpp
+	)
+	target_link_libraries(tests PRIVATE doctest)
+	target_compile_definitions(tests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
 	if(MSVC)
 		target_compile_options(tests PRIVATE /W4)
 	endif()
-    set_property(TARGET tests PROPERTY CXX_STANDARD 23)
-    set_property(TARGET tests PROPERTY CXX_EXTENSIONS OFF)
+	set_property(TARGET tests PROPERTY CXX_STANDARD 23)
+	set_property(TARGET tests PROPERTY CXX_EXTENSIONS OFF)
 endif()
 
 add_executable(${PROJECT_NAME} src/main.cpp

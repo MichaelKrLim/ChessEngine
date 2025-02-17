@@ -11,10 +11,8 @@ namespace engine
 	struct Bitboard;
 	struct Position
 	{
-		constexpr Position operator+(const Position& to_add) const
-		{
-			return Position{rank_ + to_add.rank_, file_ + to_add.file_};
-		}
+		constexpr bool operator==(const Position& rhs) const { return rank_ == rhs.rank_ && file_ == rhs.file_; }
+		constexpr Position operator+(const Position& to_add) const { return Position{rank_ + to_add.rank_, file_ + to_add.file_}; }
 		
 		constexpr Position() = default;
 		explicit constexpr Position(const std::size_t& board_index)
@@ -22,8 +20,8 @@ namespace engine
 			rank_ = board_index/board_size;
 			file_ = board_index%board_size;
 		}
-		template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
-		explicit constexpr Position(T rank, T file) : rank_(static_cast<int>(rank)), file_(static_cast<int>(file)) {}
+		template <typename T, typename L, typename = std::enable_if_t<std::is_integral<T>::value>, typename = std::enable_if_t<std::is_integral<L>::value>>
+		explicit constexpr Position(T rank, L file) : rank_(static_cast<int>(rank)), file_(static_cast<int>(file)) {}
 
 		std::uint8_t rank_{}, file_{};
 	};

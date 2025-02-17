@@ -5,13 +5,15 @@
 #include <cstdint>
 #include <cmath>
 
+using namespace engine;
+
 TEST_SUITE("Bitboard")
 {
 	std::uint64_t data{0b1101101010101};
-	engine::Bitboard from_uint64_t_bb{data};
+	Bitboard from_uint64_t_bb{data};
 	TEST_CASE("Initialisation")
 	{
-		engine::Bitboard default_bb{};
+		Bitboard default_bb{};
 		CHECK (default_bb == 0);
 		CHECK(from_uint64_t_bb == data);
 	}
@@ -25,9 +27,9 @@ TEST_SUITE("Bitboard")
 	TEST_CASE("Member functions")
 	{
 		int extracted{0};
-		const auto extract_bit = [&extracted](const auto& index)
+		const auto extract_bit = [&extracted](const Position& position)
 		{
-			extracted += std::pow(2,index);
+			extracted += std::pow(2, to_index(position));
 		};
 		from_uint64_t_bb.for_each_piece(extract_bit);
 		CHECK(extracted == data);
