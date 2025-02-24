@@ -1,7 +1,6 @@
 #include "Bitboard.h"
 #include "Engine.h"
 #include "Position.h"
-#include "Pieces.h"
 
 #include <array>
 #include <iostream>
@@ -154,5 +153,6 @@ double Engine::material_value() const
 		return total;
 	};
 	
-	return value(white_weightmaps_, board_.white.pieces) - value(black_weightmaps_, board_.black.pieces);
+	return value(white_weightmaps_,board_.sides[static_cast<std::uint8_t>(Side::white)].pieces) -
+		   value(black_weightmaps_, board_.sides[static_cast<std::uint8_t>(Side::black)].pieces);
 }
