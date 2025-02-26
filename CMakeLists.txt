@@ -8,10 +8,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # for CPM
 include(cmake/CPM.cmake)
 
-# for windows
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
-set(CMAKE_CXX_FLAGS "-Wall -Werror -pedantic ")
+# set(CMAKE_CXX_FLAGS "-Wall -Werror -pedantic ")
+
+# for windows
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 
@@ -87,4 +88,3 @@ add_executable(${PROJECT_NAME} src/main.cpp
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_EXTENSIONS OFF)
-

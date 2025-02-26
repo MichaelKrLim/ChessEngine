@@ -1,5 +1,5 @@
 #include "Board.h"
-#include "Move_generator.cpp"
+#include "Move_generator.h"
 
 #include <iostream>
 
