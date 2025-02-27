@@ -98,7 +98,6 @@ namespace
 						configuration |= (1ULL << to_index(d4));
 						
 						blocker_configurations.push_back(configuration);
-						std::cerr << configuration.pretty_string() << "\n";
 					}
 		return blocker_configurations;
 
@@ -131,7 +130,6 @@ namespace
 			if(!is_valid_destination(destination_square, occupied_squares))
 				return;
 			valid_moves |= (1 << to_index(destination_square));
-
 			rec(destination_square, diagonal_offset, occupied_squares, valid_moves, original_bishop_square);
 		};
 

@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <cmath>
+#include <sstream>
 
 using namespace engine;
 
@@ -31,5 +32,12 @@ TEST_SUITE("Bitboard")
 		};
 		bb.for_each_piece(extract_bit);
 		CHECK(extracted == data);
+	}
+	TEST_CASE("Output operator")
+	{
+		Bitboard bb{0b01101010};
+		std::ostringstream oss{};
+		oss << bb;
+		CHECK(bb.pretty_string()==oss.str());
 	}
 }
