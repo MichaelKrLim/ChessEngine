@@ -68,35 +68,40 @@ namespace
 		Position{1, 1}, Position{-1, 1}, Position{1, -1}, Position{-1, -1}
 	}};
 
-	std::vector<Bitboard> blocker_configurations(const Position& square, const bool& bishop)
+	std::vector<Bitboard> blocker_configurations(const Position& square, const bool& is_bishop)
 	{
-		Bitboard current_configuration{};
 		std::vector<Bitboard> blocker_configurations{};
-		const auto add_blocker = [&](const Position& blocker_position) constexpr -> bool
+		std::array<Position, 4> directions{};
+		if(is_bishop)
+			directions = bishop_moves_;
+		else
+			directions = {Position{0, 1}, Position{1, 0}, Position{-1, 0}, Position{0, -1}};
+		std::vector<std::vector<Position>> rays(directions.size());
+		for(std::uint8_t direction{0}; direction < 4; ++direction)
 		{
-			if(is_on_board(blocker_position))
+			for(std::uint8_t offset{1}; ; ++offset)
 			{
-				current_configuration |= to_index(blocker_position);
-				return true;
-			}
-			else
-				return false;
-		};
-		for(std::size_t first_offset{}; add_blocker(square+(bishop? Position{1*first_offset, -1*first_offset} : Position{first_offset, 0})); ++first_offset)
-		{
-			for(std::size_t second_offset{}; add_blocker(square+(bishop? Position{-1*second_offset, -1*second_offset} : Position{second_offset, 0})); ++second_offset)
-			{
-				for(std::size_t third_offset{}; add_blocker(square+(bishop? Position{1*third_offset, 1*third_offset} : Position{0, third_offset})); ++third_offset)
-				{
-					for(std::size_t fourth_offset{}; add_blocker(square+(bishop? Position{-1*fourth_offset, 1*fourth_offset} : Position{0, fourth_offset})); ++fourth_offset)
-					{
-						blocker_configurations.push_back(current_configuration);
-						current_configuration = 0;
-					}
-				}
+				Position blocker_position = square + Position{ directions[direction].rank_*offset, directions[direction].file_*offset};
+				if(!is_on_board(blocker_position)) break;
+				rays[direction].push_back(blocker_position);
 			}
 		}
+		for(const auto& d1 : rays[0])
+			for(const auto& d2 : rays[1])
+				for(const auto& d3 : rays[2])
+					for(const auto& d4 : rays[3])
+					{
+						Bitboard configuration{0ULL};
+						configuration |= (1ULL << to_index(d1));
+						configuration |= (1ULL << to_index(d2));
+						configuration |= (1ULL << to_index(d3));
+						configuration |= (1ULL << to_index(d4));
+						
+						blocker_configurations.push_back(configuration);
+						std::cerr << configuration.pretty_string() << "\n";
+					}
 		return blocker_configurations;
+
 	}
 
 	const Bitboard rook_reachable_squares(const Position& original_square, const Bitboard& occupied_squares)
@@ -214,8 +219,8 @@ namespace
 		{
 			for(std::size_t k{0}; k < 100000000; ++k) 
 			{
-				std::cerr << k << "\n"; //////////////////////////////////////////////////////////
-				std::vector<Bitboard> used{};
+				//std::cerr << k << "\n"; //////////////////////////////////////////////////////////
+				std::vector<Bitboard> used{4096};
 				const std::uint64_t magic = random_uint64_fewbits();
 				if(std::popcount((mask * magic) & 0xFF00000000000000ULL) < 6)
 					continue;

@@ -27,7 +27,7 @@ namespace engine
 		inline constexpr Bitboard 		operator~ () 						 const { return Bitboard(~data_); }
 		inline constexpr Bitboard 		operator<<(std::uint64_t shift) 	 const { return Bitboard(data_ << shift); }
 		inline constexpr Bitboard 		operator>>(std::uint64_t shift) 	 const { return Bitboard(data_ >> shift); }
-		inline constexpr std::uint64_t  operator*(std::uint64_t multiplier)  const { return data_*multiplier; }
+		inline constexpr std::uint64_t  operator* (std::uint64_t multiplier) const { return data_*multiplier; }
 		
 		inline constexpr Bitboard& operator|= (std::size_t value) 		 { data_ |= value; return *this; }
 		inline constexpr Bitboard& operator|= (const Bitboard& bitboard) { data_ |= bitboard.data_; return *this; }
