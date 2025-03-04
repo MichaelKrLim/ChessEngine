@@ -70,23 +70,23 @@ namespace
 
 	std::vector<Bitboard> blocker_configurations(const Position& square, const bool& is_bishop)
 	{
+ 		std::cerr << "\nEntering... " << (is_bishop?"with bishop": "with rook") << " at " << square;
 		std::vector<Bitboard> blocker_configurations{};
-		std::array<Position, 4> directions{};
-		if(is_bishop)
-			directions = bishop_moves_;
-		else
-			directions = {Position{0, 1}, Position{1, 0}, Position{-1, 0}, Position{0, -1}};
+		std::array<Position, 4> rook_moves;
+		if(!is_bishop)
+			rook_moves = {Position{0, 1}, Position{1, 0}, Position{-1, 0}, Position{0, -1}};
+		const std::array<Position, 4>& directions = is_bishop? bishop_moves_ : rook_moves;
 		std::array<std::vector<Position>, 4> rays{};
 		for(std::uint8_t direction{0}; direction < 4; ++direction)
 		{
 			for(std::uint8_t offset{1}; ; ++offset)
 			{
-				Position blocker_position = square + Position{ directions[direction].rank_*offset, directions[direction].file_*offset};
+				Position blocker_position = square + Position{directions[direction].rank_*offset, directions[direction].file_*offset};
 				if(!is_on_board(blocker_position)) break;
-				rays[direction].push_back(blocker_position);
+				else rays[direction].push_back(blocker_position);
 			}
 		}
-		const auto generate_configurations = [&blocker_configurations](this auto&& rec, const std::array<std::vector<Position>, 4>& rays, Bitboard current_configuration, size_t ray_index) -> void
+		const auto generate_configurations = [&blocker_configurations, &rays](this auto&& rec, Bitboard current_configuration, size_t ray_index) -> void
 		{
 			if(ray_index == 4)
 			{
@@ -96,20 +96,28 @@ namespace
 			
 			if(rays[ray_index].empty())
 			{
-				rec(rays, current_configuration, ray_index + 1);
+				rec(current_configuration, ray_index+1);
 				return;
 			}
 			
-			for(const auto& blocker : rays[ray_index])
+			for(const auto& target_square : rays[ray_index])
 			{
 				Bitboard new_configuration = current_configuration;
-				new_configuration.add_piece(to_index(blocker));
-				rec(rays, new_configuration, ray_index + 1);
+				new_configuration.add_piece(to_index(target_square));
+				rec(new_configuration, ray_index+1);
 			}
 		};
 		
-		generate_configurations(rays, Bitboard{0ULL}, 0);
-		for(const auto& a : blocker_configurations) std::cerr << a << "\n";
+		generate_configurations(Bitboard{0ULL}, 0);
+		for(const auto& direction : rays)
+		{
+			Bitboard bb{};
+			for(const auto& b : direction)
+			{
+				bb.add_piece(to_index(b));
+			}
+			std::cerr << "\n" << bb;
+		}
 		return blocker_configurations;
 	}
 
@@ -230,11 +238,8 @@ namespace
 				for(std::size_t i{0}; !fail && i < (std::size_t{1} << n); ++i) 
 				{
 					const std::size_t magic_index = magic_hash(blocker_configurations[i], magic, rellevant_bits);
-					std::cerr << used[magic_index] << "a";
-					std::cerr << attack_table[magic_index] << "b";
 					if(used[magic_index] == 0ULL) used[magic_index] = attack_table[i];
 					else if(used[magic_index] != attack_table[i]) fail = true;
-					std::cerr << attack_table[i];
 				}
 				if(!fail) return Magic_square{&attack_table, mask, magic, static_cast<std::uint8_t>(64-rellevant_bits)};
 			}
