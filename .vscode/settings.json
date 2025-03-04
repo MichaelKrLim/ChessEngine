@@ -51,7 +51,11 @@
         "numbers": "cpp",
         "ranges": "cpp",
         "span": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "charconv": "cpp",
+        "ctime": "cpp",
+        "format": "cpp",
+        "text_encoding": "cpp"
     },
     "C_Cpp.default.compilerPath": "/usr/bin/gcc-13"
 }

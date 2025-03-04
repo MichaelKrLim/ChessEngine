@@ -38,12 +38,14 @@ namespace engine
 		inline constexpr bool operator> (std::uint64_t value) const { return data_ > value; }
 		inline constexpr bool operator< (std::uint64_t value) const { return data_ < value; }
 		inline constexpr bool operator==(std::uint64_t value) const { return data_ == value; }
+		inline constexpr bool operator! () const { return data_ == 0; }
 		inline constexpr bool operator!=(Bitboard bitboard)   const { return data_ == bitboard.data_; };
 		inline constexpr bool operator!=(std::uint64_t value) const { return data_ != value; }
 
 		[[nodiscard]] constexpr bool is_occupied(const Position& position) const;
 		[[nodiscard]] std::string pretty_string() const;
 		[[nodiscard]] constexpr Position lsb_index() const;
+		constexpr void add_piece(const std::size_t index);
 		constexpr void for_each_piece(std::function<void (const Position& original_square)>&& f) const;
 
 		private:
@@ -53,6 +55,11 @@ namespace engine
 		friend std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard);
 	};
 	
+	inline constexpr void Bitboard::add_piece(const std::size_t index)
+	{
+		data_ |= 1ULL << index;
+	}
+
 	inline constexpr void Bitboard::for_each_piece(std::function<void (const Position& original_square)>&& f) const 
 	{
 		auto data_c = data_;

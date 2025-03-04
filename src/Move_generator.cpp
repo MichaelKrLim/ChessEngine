@@ -24,9 +24,9 @@ namespace
 		std::uint8_t shift;
 	};
 
-	static std::array<Magic_square, 64> bishop_magic_squares_;
-	static std::array<Magic_square, 64> rook_magic_squares_;
-	static std::vector<std::vector<Bitboard>> attack_table_;
+	static std::array<Magic_square, 64> bishop_magic_squares_{};
+	static std::array<Magic_square, 64> rook_magic_squares_{};
+	static std::vector<std::vector<Bitboard>> attack_table_{};
 
 	constexpr static std::array<std::uint8_t, board_size*board_size> rook_rellevant_bits = 
 	{
@@ -52,17 +52,17 @@ namespace
 		6, 5, 5, 5, 5, 5, 5, 6
 	};
 
-	constexpr static std::array<Position, 8> knight_moves_ =
+	constexpr std::array<Position, 8> knight_moves_ =
 	{{
 		Position{2, 1}, Position{2, -1}, Position{-2, 1}, Position{-2, -1},
 		Position{1, 2}, Position{1, -2}, Position{-1, 2}, Position{-1, -2}
 	}};
-	constexpr static std::array<Position, 4> bishop_moves_ =
+	constexpr std::array<Position, 4> bishop_moves_ =
 	{{
 		Position{1,  1}, Position{1,  -1},
 		Position{-1, 1}, Position{-1, -1}
 	}};
-	constexpr static std::array<Position, 8> king_moves_ =
+	constexpr std::array<Position, 8> king_moves_ =
 	{{
 		Position{1, 0}, Position{-1, 0}, Position{0,  1}, Position{0,  -1},
 		Position{1, 1}, Position{-1, 1}, Position{1, -1}, Position{-1, -1}
@@ -76,7 +76,7 @@ namespace
 			directions = bishop_moves_;
 		else
 			directions = {Position{0, 1}, Position{1, 0}, Position{-1, 0}, Position{0, -1}};
-		std::vector<std::vector<Position>> rays(directions.size());
+		std::array<std::vector<Position>, 4> rays{};
 		for(std::uint8_t direction{0}; direction < 4; ++direction)
 		{
 			for(std::uint8_t offset{1}; ; ++offset)
@@ -86,21 +86,31 @@ namespace
 				rays[direction].push_back(blocker_position);
 			}
 		}
-		for(const auto& d1 : rays[0])
-			for(const auto& d2 : rays[1])
-				for(const auto& d3 : rays[2])
-					for(const auto& d4 : rays[3])
-					{
-						Bitboard configuration{0ULL};
-						configuration |= (1ULL << to_index(d1));
-						configuration |= (1ULL << to_index(d2));
-						configuration |= (1ULL << to_index(d3));
-						configuration |= (1ULL << to_index(d4));
-						
-						blocker_configurations.push_back(configuration);
-					}
+		const auto generate_configurations = [&blocker_configurations](this auto&& rec, const std::array<std::vector<Position>, 4>& rays, Bitboard current_configuration, size_t ray_index) -> void
+		{
+			if(ray_index == 4)
+			{
+				blocker_configurations.push_back(current_configuration);
+				return;
+			}
+			
+			if(rays[ray_index].empty())
+			{
+				rec(rays, current_configuration, ray_index + 1);
+				return;
+			}
+			
+			for(const auto& blocker : rays[ray_index])
+			{
+				Bitboard new_configuration = current_configuration;
+				new_configuration.add_piece(to_index(blocker));
+				rec(rays, new_configuration, ray_index + 1);
+			}
+		};
+		
+		generate_configurations(rays, Bitboard{0ULL}, 0);
+		for(const auto& a : blocker_configurations) std::cerr << a << "\n";
 		return blocker_configurations;
-
 	}
 
 	const Bitboard rook_reachable_squares(const Position& original_square, const Bitboard& occupied_squares)
@@ -112,7 +122,7 @@ namespace
 			{
 				const Position destination_square = original_square + Position{del_rank, del_file};
 				if(is_valid_destination(destination_square, occupied_squares))
-					valid_moves |= (1 << to_index(destination_square));
+					valid_moves.add_piece(to_index(destination_square));
 				else 
 					return valid_moves;
 			}
@@ -122,22 +132,16 @@ namespace
 
 	const Bitboard bishop_reachable_squares(const Position& bishop_square, const Bitboard& occupied_squares)
 	{
-		const auto explore_diagonal = [](this auto&& rec, const Position& bishop_square, const Position& diagonal_offset,
-			const Bitboard occupied_squares, Bitboard& valid_moves,
-			const Position& original_bishop_square)
+		Bitboard valid_moves{};
+		const auto explore_diagonal = [&](this auto&& rec, const Position& bishop_square, const Position& diagonal_offset)
 		{
 			const Position destination_square = bishop_square + diagonal_offset;
 			if(!is_valid_destination(destination_square, occupied_squares))
 				return;
-			valid_moves |= (1 << to_index(destination_square));
-			rec(destination_square, diagonal_offset, occupied_squares, valid_moves, original_bishop_square);
+			valid_moves.add_piece(to_index(destination_square));
+			rec(destination_square, diagonal_offset);
 		};
-
-		Bitboard valid_moves{};
-		for(const auto& direction : bishop_moves_)
-		{
-			explore_diagonal(bishop_square, direction, occupied_squares, valid_moves, bishop_square);
-		}
+		for(const auto& direction : bishop_moves_) explore_diagonal(bishop_square, direction);
 		return valid_moves;
 	}
 
@@ -154,7 +158,7 @@ namespace
 				for(const auto& blocker_configuration : blocker_configurations(current_square, false))
 					current_moves.push_back(rook_reachable_squares(current_square, blocker_configuration));
 				attack_table.push_back(current_moves);
-				rook_magic_squares_[current_index].attack_table = &attack_table[current_index];
+				rook_magic_squares_[current_index].attack_table = &attack_table.back();
 			}
 		}
 		for(std::size_t rank{0}; rank<board_size; ++rank)
@@ -167,7 +171,7 @@ namespace
 				for(const auto& blocker_configuration : blocker_configurations(current_square, true))
 					current_moves.push_back(bishop_reachable_squares(current_square, blocker_configuration));
 				attack_table.push_back(current_moves);
-				bishop_magic_squares_[current_index].attack_table = &attack_table[current_index];
+				bishop_magic_squares_[current_index].attack_table = &attack_table.back();
 			}
 		}
 		return attack_table;
@@ -223,11 +227,14 @@ namespace
 				if(std::popcount((mask * magic) & 0xFF00000000000000ULL) < 6)
 					continue;
 				bool fail{false};
-				for(std::size_t i{0}; !fail && i < (std::size_t{1} << n); i++) 
+				for(std::size_t i{0}; !fail && i < (std::size_t{1} << n); ++i) 
 				{
 					const std::size_t magic_index = magic_hash(blocker_configurations[i], magic, rellevant_bits);
+					std::cerr << used[magic_index] << "a";
+					std::cerr << attack_table[magic_index] << "b";
 					if(used[magic_index] == 0ULL) used[magic_index] = attack_table[i];
 					else if(used[magic_index] != attack_table[i]) fail = true;
+					std::cerr << attack_table[i];
 				}
 				if(!fail) return Magic_square{&attack_table, mask, magic, static_cast<std::uint8_t>(64-rellevant_bits)};
 			}
@@ -259,7 +266,7 @@ namespace
 		moves_type legal_moves{};
 		const auto rank = 0xFF;
 		const auto pawn_direction = active_player == Side::white ? 1 : -1;
-		const auto starting_rank = active_player == Side::white ? 1 : 6;
+		const auto starting_rank  = active_player == Side::white ? 1 : 6;
 		const auto promotion_rank = active_player == Side::white ? 7 : 0;
 		const auto promotion_mask = rank << (promotion_rank*board_size);
 
