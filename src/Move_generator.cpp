@@ -70,7 +70,6 @@ namespace
 
 	std::vector<Bitboard> blocker_configurations(const Position& square, const bool& is_bishop)
 	{
- 		std::cerr << "\nEntering... " << (is_bishop?"with bishop": "with rook") << " at " << square;
 		std::vector<Bitboard> blocker_configurations{};
 		std::array<Position, 4> rook_moves;
 		if(!is_bishop)
@@ -109,15 +108,6 @@ namespace
 		};
 		
 		generate_configurations(Bitboard{0ULL}, 0);
-		for(const auto& direction : rays)
-		{
-			Bitboard bb{};
-			for(const auto& b : direction)
-			{
-				bb.add_piece(to_index(b));
-			}
-			std::cerr << "\n" << bb;
-		}
 		return blocker_configurations;
 	}
 
@@ -140,16 +130,13 @@ namespace
 
 	const Bitboard bishop_reachable_squares(const Position& bishop_square, const Bitboard& occupied_squares)
 	{
-		Bitboard valid_moves{};
-		const auto explore_diagonal = [&](this auto&& rec, const Position& bishop_square, const Position& diagonal_offset)
+		Bitboard valid_moves{0ULL};
+		for(const auto& [dr, df] : bishop_moves_) 
 		{
-			const Position destination_square = bishop_square + diagonal_offset;
-			if(!is_valid_destination(destination_square, occupied_squares))
-				return;
-			valid_moves.add_piece(to_index(destination_square));
-			rec(destination_square, diagonal_offset);
-		};
-		for(const auto& direction : bishop_moves_) explore_diagonal(bishop_square, direction);
+			const Position offset{dr, df};
+			for(Position current_move{bishop_square+offset}; is_on_board(current_move) && !(occupied_squares & (1ULL << to_index(current_move))); current_move+=offset)
+				valid_moves |= (1ULL << to_index(current_move));
+		}
 		return valid_moves;
 	}
 
@@ -174,7 +161,7 @@ namespace
 			for(std::size_t file{0}; file<board_size; ++file)
 			{
 				const Position current_square = Position{rank, file};
-				const auto current_index = to_index(current_square);
+				const std::size_t current_index = to_index(current_square);
 				std::vector<Bitboard> current_moves{};
 				for(const auto& blocker_configuration : blocker_configurations(current_square, true))
 					current_moves.push_back(bishop_reachable_squares(current_square, blocker_configuration));
@@ -224,23 +211,26 @@ namespace
 
 	const Magic_square find_magic(const Position& square, std::uint64_t mask, const std::vector<Bitboard>& blocker_configurations, const std::uint8_t rellevant_bits, const std::vector<Bitboard>& attack_table)
 	{
+		if(attack_table.size() > 1000)
+			for(const auto& el : attack_table) std::cerr << el << "\n";
 		const std::size_t n = std::popcount(mask);
 		try
 		{
 			for(std::size_t k{0}; k < 100000000; ++k) 
 			{
 				//std::cerr << k << "\n"; //////////////////////////////////////////////////////////
-				std::vector<Bitboard> used{4096};
+				std::vector<Bitboard> used(1 << n);
 				const std::uint64_t magic = random_uint64_fewbits();
 				if(std::popcount((mask * magic) & 0xFF00000000000000ULL) < 6)
 					continue;
 				bool fail{false};
-				for(std::size_t i{0}; !fail && i < (std::size_t{1} << n); ++i) 
+				for(std::size_t i{0}; !fail && i < attack_table.size(); ++i) 
 				{
+					std::cerr << attack_table.size() << ' ' << i << ' ';
 					const std::size_t magic_index = magic_hash(blocker_configurations[i], magic, rellevant_bits);
 					if(used[magic_index] == 0ULL) used[magic_index] = attack_table[i];
 					else if(used[magic_index] != attack_table[i]) fail = true;
-				}
+				} std::cerr << "we made it!!";
 				if(!fail) return Magic_square{&attack_table, mask, magic, static_cast<std::uint8_t>(64-rellevant_bits)};
 			}
 			throw std::runtime_error("could not find magic find_magic(...)");
@@ -261,7 +251,9 @@ namespace
 				const Position current_square{rank, file};
 				const std::size_t current_index{to_index(current_square)};
 				bishop_magic_squares_[current_index] = find_magic(current_square, bishop_mask(current_square), blocker_configurations(current_square, true),  bishop_rellevant_bits[to_index(current_square)], *bishop_magic_squares_[current_index].attack_table);
+				for(const auto& el : *bishop_magic_squares_[current_index].attack_table) std::cerr << el << "\n";
 				rook_magic_squares_[current_index]   = find_magic(current_square, rook_mask(current_square),   blocker_configurations(current_square, false), rook_rellevant_bits[to_index(current_square)],   *rook_magic_squares_[current_index].attack_table);
+				std::cerr << "found magics for index " << current_square << "\n";
 			}
 		}
 	}

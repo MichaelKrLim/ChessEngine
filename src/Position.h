@@ -16,6 +16,8 @@ namespace engine
 
 		constexpr bool operator==(const Position& rhs) const { return rank_ == rhs.rank_ && file_ == rhs.file_; }
 		constexpr Position operator+(const Position& to_add) const { return Position{rank_ + to_add.rank_, file_ + to_add.file_}; }
+		
+		constexpr Position operator+=(const Position& to_add) { rank_ += to_add.rank_; file_ += to_add.file_; return *this; }
 
 		constexpr Position() = default;
 		constexpr Position(const Position&) = default;
