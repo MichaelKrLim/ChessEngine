@@ -16,19 +16,7 @@ namespace
 {
 	using namespace engine;
 
-	struct Magic_square
-	{
-		const std::vector<Bitboard>* attack_table;
-		std::uint64_t mask;
-		std::uint64_t magic;
-		std::uint8_t shift;
-	};
-
-	static std::array<Magic_square, 64> bishop_magic_squares_{};
-	static std::array<Magic_square, 64> rook_magic_squares_{};
-	static std::vector<std::vector<Bitboard>> attack_table_{};
-
-	constexpr static std::array<std::uint8_t, board_size*board_size> rook_rellevant_bits = 
+	constexpr static std::array<std::uint8_t, board_size*board_size> rook_relevant_bits = 
 	{
 		12, 11, 11, 11, 11, 11, 11, 12,
 		11, 10, 10, 10, 10, 10, 10, 11,
@@ -40,7 +28,7 @@ namespace
 		12, 11, 11, 11, 11, 11, 11, 12
 	};
 
-	constexpr static std::array<std::uint8_t, board_size*board_size> bishop_rellevant_bits = 
+	constexpr static std::array<std::uint8_t, board_size*board_size> bishop_relevant_bits = 
 	{
 		6, 5, 5, 5, 5, 5, 5, 6,
 		5, 5, 5, 5, 5, 5, 5, 5,
@@ -67,6 +55,14 @@ namespace
 		Position{1, 0}, Position{-1, 0}, Position{0,  1}, Position{0,  -1},
 		Position{1, 1}, Position{-1, 1}, Position{1, -1}, Position{-1, -1}
 	}};
+
+	struct Magic_square
+	{
+		std::vector<Bitboard> attack_table;
+		std::uint64_t mask;
+		std::uint64_t magic;
+		std::uint8_t shift;
+	};
 
 	std::vector<Bitboard> blocker_configurations(const Position& square, const bool& is_bishop)
 	{
@@ -140,38 +136,6 @@ namespace
 		return valid_moves;
 	}
 
-	std::vector<std::vector<Bitboard>> create_attack_tables()
-	{
-		std::vector<std::vector<Bitboard>> attack_table{};
-		for(std::size_t rank{0}; rank<board_size; ++rank)
-		{
-			for(std::size_t file{0}; file<board_size; ++file)
-			{
-				const Position current_square = Position{rank, file};
-				const auto current_index = to_index(current_square);
-				std::vector<Bitboard> current_moves{};
-				for(const auto& blocker_configuration : blocker_configurations(current_square, false))
-					current_moves.push_back(rook_reachable_squares(current_square, blocker_configuration));
-				attack_table.push_back(current_moves);
-				rook_magic_squares_[current_index].attack_table = &attack_table.back();
-			}
-		}
-		for(std::size_t rank{0}; rank<board_size; ++rank)
-		{
-			for(std::size_t file{0}; file<board_size; ++file)
-			{
-				const Position current_square = Position{rank, file};
-				const std::size_t current_index = to_index(current_square);
-				std::vector<Bitboard> current_moves{};
-				for(const auto& blocker_configuration : blocker_configurations(current_square, true))
-					current_moves.push_back(bishop_reachable_squares(current_square, blocker_configuration));
-				attack_table.push_back(current_moves);
-				bishop_magic_squares_[current_index].attack_table = &attack_table.back();
-			}
-		}
-		return attack_table;
-	}
-
 	const std::uint64_t rook_mask(const Position& square)
 	{
 		std::uint64_t result{0ULL};
@@ -211,14 +175,11 @@ namespace
 
 	const Magic_square find_magic(const Position& square, std::uint64_t mask, const std::vector<Bitboard>& blocker_configurations, const std::uint8_t rellevant_bits, const std::vector<Bitboard>& attack_table)
 	{
-		if(attack_table.size() > 1000)
-			for(const auto& el : attack_table) std::cerr << el << "\n";
 		const std::size_t n = std::popcount(mask);
 		try
 		{
 			for(std::size_t k{0}; k < 100000000; ++k) 
 			{
-				//std::cerr << k << "\n"; //////////////////////////////////////////////////////////
 				std::vector<Bitboard> used(1 << n);
 				const std::uint64_t magic = random_uint64_fewbits();
 				if(std::popcount((mask * magic) & 0xFF00000000000000ULL) < 6)
@@ -226,14 +187,13 @@ namespace
 				bool fail{false};
 				for(std::size_t i{0}; !fail && i < attack_table.size(); ++i) 
 				{
-					std::cerr << attack_table.size() << ' ' << i << ' ';
 					const std::size_t magic_index = magic_hash(blocker_configurations[i], magic, rellevant_bits);
 					if(used[magic_index] == 0ULL) used[magic_index] = attack_table[i];
 					else if(used[magic_index] != attack_table[i]) fail = true;
-				} std::cerr << "we made it!!";
-				if(!fail) return Magic_square{&attack_table, mask, magic, static_cast<std::uint8_t>(64-rellevant_bits)};
+				}
+				if(!fail) return Magic_square{attack_table, mask, magic, static_cast<std::uint8_t>(64-rellevant_bits)};
 			}
-			throw std::runtime_error("could not find magic find_magic(...)");
+			throw std::runtime_error("could not find magic in: find_magic(...)");
 		}
 		catch(std::runtime_error& r)
 		{
@@ -242,21 +202,43 @@ namespace
 		}
 	}
 
-	void cast_magic()
+	const static std::array<Magic_square, 64> bishop_magic_squares_ = []()
 	{
-		for(std::size_t rank{0}; rank < board_size; ++rank)
+		std::array<Magic_square, 64> bishop_magic_squares{};
+		for(std::size_t rank{0}; rank<board_size; ++rank)
 		{
-			for(std::size_t file{0}; file < board_size; ++file)
+			for(std::size_t file{0}; file<board_size; ++file)
 			{
-				const Position current_square{rank, file};
-				const std::size_t current_index{to_index(current_square)};
-				bishop_magic_squares_[current_index] = find_magic(current_square, bishop_mask(current_square), blocker_configurations(current_square, true),  bishop_rellevant_bits[to_index(current_square)], *bishop_magic_squares_[current_index].attack_table);
-				for(const auto& el : *bishop_magic_squares_[current_index].attack_table) std::cerr << el << "\n";
-				rook_magic_squares_[current_index]   = find_magic(current_square, rook_mask(current_square),   blocker_configurations(current_square, false), rook_rellevant_bits[to_index(current_square)],   *rook_magic_squares_[current_index].attack_table);
-				std::cerr << "found magics for index " << current_square << "\n";
+				const Position current_square = Position{rank, file};
+				const std::size_t current_index = to_index(current_square);
+				std::vector<Bitboard> current_moves{};
+				const auto current_blocker_configurations = blocker_configurations(current_square, true);
+				for(const auto& blocker_configuration : current_blocker_configurations)
+					current_moves.push_back(bishop_reachable_squares(current_square, blocker_configuration));
+				bishop_magic_squares[current_index] = find_magic(current_square, bishop_mask(current_square), current_blocker_configurations,  bishop_relevant_bits[to_index(current_square)], current_moves);
 			}
 		}
-	}
+		return bishop_magic_squares;
+	}();
+
+	const static std::array<Magic_square, 64> rook_magic_squares_ = []()
+	{
+		std::array<Magic_square, 64> rook_magic_squares{};
+		for(std::size_t rank{0}; rank<board_size; ++rank)
+		{
+			for(std::size_t file{0}; file<board_size; ++file)
+			{
+				const Position current_square = Position{rank, file};
+				const auto current_index = to_index(current_square);
+				std::vector<Bitboard> current_moves{};
+				const auto current_blocker_configurations = blocker_configurations(current_square, false);
+				for(const auto& blocker_configuration : current_blocker_configurations)
+					current_moves.push_back(rook_reachable_squares(current_square, blocker_configuration));
+				rook_magic_squares[current_index] = find_magic(current_square, rook_mask(current_square), current_blocker_configurations, rook_relevant_bits[to_index(current_square)], current_moves);
+			}
+		}
+		return rook_magic_squares;
+	}();
 
 	const moves_type pawn_legal_moves(const Bitboard& pawns_bb, const Bitboard& occupied_squares, const Side& active_player)
 	{
@@ -326,22 +308,22 @@ namespace
 	{
 		const std::uint64_t square_index = to_index(original_square);
 		std::uint64_t magic_index{occupied_squares};
-		const std::vector<Bitboard>* attack_table = bishop_magic_squares_[square_index].attack_table;
+		const std::vector<Bitboard>& attack_table = bishop_magic_squares_[square_index].attack_table;
 		magic_index 							 &= bishop_magic_squares_[square_index].mask;
 		magic_index 							 *= bishop_magic_squares_[square_index].magic;
 		magic_index 							>>= bishop_magic_squares_[square_index].shift;
-		return (*attack_table)[magic_index];
+		return attack_table[magic_index];
 	}
 
 	const Bitboard rook_legal_moves_bb(const Position& original_square, const Bitboard& occupied_squares)
 	{
 		const std::uint64_t square_index = to_index(original_square);
 		std::uint64_t magic_index{occupied_squares};
-		const std::vector<Bitboard>* attack_table = rook_magic_squares_[square_index].attack_table;
+		const std::vector<Bitboard>& attack_table = rook_magic_squares_[square_index].attack_table;
 		magic_index 							 &= rook_magic_squares_[square_index].mask;
 		magic_index 							 *= rook_magic_squares_[square_index].magic;
 		magic_index 							>>= rook_magic_squares_[square_index].shift;
-		return (*attack_table)[magic_index];
+		return attack_table[magic_index];
 	}
 
 	const moves_type rook_legal_moves(const Bitboard& rook_bb, const Bitboard& occupied_squares)
@@ -357,12 +339,12 @@ namespace
 		return legal_moves;
 	}
 
-	const moves_type bishop_legal_moves(const Bitboard& bishop_bb, const Bitboard& occupied_squares)
+	const moves_type bishop_legal_moves(const Bitboard& bishop_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares)
 	{
 		moves_type legal_moves{};
-		bishop_bb.for_each_piece([&legal_moves, occupied_squares](const Position& original_square)
+		bishop_bb.for_each_piece([&legal_moves, &current_sides_occupied_squares, occupied_squares](const Position& original_square)
 		{
-			bishop_legal_moves_bb(original_square, occupied_squares).for_each_piece([&legal_moves, &original_square](const auto& destination_square)
+			(bishop_legal_moves_bb(original_square, occupied_squares) & ~current_sides_occupied_squares).for_each_piece([&legal_moves, &original_square](const auto& destination_square)
 			{
 				legal_moves[original_square].push_back(destination_square);
 			});
@@ -370,12 +352,13 @@ namespace
 		return legal_moves;
 	}
 
-	const moves_type queen_legal_moves(const Bitboard& queen_bb, const Bitboard& occupied_squares)
+	const moves_type queen_legal_moves(const Bitboard& queen_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares)
 	{
 		moves_type legal_moves{};
-		queen_bb.for_each_piece([&legal_moves, occupied_squares](const Position& original_square)
+		queen_bb.for_each_piece([&legal_moves, &current_sides_occupied_squares, occupied_squares](const Position& original_square)
 		{
-			(bishop_legal_moves_bb(original_square, occupied_squares) | rook_legal_moves_bb(original_square, occupied_squares)).for_each_piece([&legal_moves, &original_square](const auto& destination_square)
+			auto queen_legal_moves_bb = bishop_legal_moves_bb(original_square, occupied_squares) | rook_legal_moves_bb(original_square, occupied_squares);
+			(queen_legal_moves_bb & ~current_sides_occupied_squares).for_each_piece([&legal_moves, &original_square](const auto& destination_square)
 			{
 				legal_moves[original_square].push_back(destination_square);
 			});
@@ -391,20 +374,14 @@ namespace engine
 		std::array<moves_type, number_of_piece_types> legal_moves{};
 		const auto side_index = board.is_white_to_move? static_cast<std::uint8_t>(Side::white) : static_cast<std::uint8_t>(Side::black);
 		const auto& pieces = board.sides[side_index].pieces;
-		const auto& occupied_squares = board.sides[side_index].occupied_squares;
-		legal_moves[static_cast<std::uint8_t>(Piece::pawn)]   = pawn_legal_moves(pieces[static_cast<std::size_t>(Piece::pawn)], occupied_squares, static_cast<Side>(side_index));
-		legal_moves[static_cast<std::uint8_t>(Piece::knight)] = knight_legal_moves(pieces[static_cast<std::size_t>(Piece::knight)], occupied_squares);
-		legal_moves[static_cast<std::uint8_t>(Piece::king)]   = king_legal_moves(pieces[static_cast<std::uint8_t>(Piece::king)], occupied_squares);
+		const auto& occupied_squares = board.occupied_squares;
+		//legal_moves[static_cast<std::uint8_t>(Piece::pawn)]   = pawn_legal_moves(pieces[static_cast<std::size_t>(Piece::pawn)], occupied_squares, static_cast<Side>(side_index));
+		//legal_moves[static_cast<std::uint8_t>(Piece::knight)] = knight_legal_moves(pieces[static_cast<std::size_t>(Piece::knight)], occupied_squares);
+		//legal_moves[static_cast<std::uint8_t>(Piece::king)]   = king_legal_moves(pieces[static_cast<std::uint8_t>(Piece::king)], occupied_squares);
 
-		legal_moves[static_cast<std::uint8_t>(Piece::bishop)] = bishop_legal_moves(pieces[static_cast<std::uint8_t>(Piece::bishop)], occupied_squares);
-		legal_moves[static_cast<std::uint8_t>(Piece::rook)]   = rook_legal_moves(pieces[static_cast<std::uint8_t>(Piece::rook)], occupied_squares);
-		legal_moves[static_cast<std::uint8_t>(Piece::queen)]  = queen_legal_moves(pieces[static_cast<std::uint8_t>(Piece::queen)], occupied_squares);
+		legal_moves[static_cast<std::uint8_t>(Piece::bishop)]   = bishop_legal_moves(pieces[static_cast<std::uint8_t>(Piece::bishop)], occupied_squares, board.sides[side_index].occupied_squares);
+		//legal_moves[static_cast<std::uint8_t>(Piece::rook)]   = rook_legal_moves(pieces[static_cast<std::uint8_t>(Piece::rook)], occupied_squares);
+		//legal_moves[static_cast<std::uint8_t>(Piece::queen)]  = queen_legal_moves(pieces[static_cast<std::uint8_t>(Piece::queen)], occupied_squares, board.sides[side_index].occupied_squares);
 		return legal_moves;
-	}
-
-	void initialise_move_generator()
-	{
-		create_attack_tables();
-		cast_magic();
 	}
 }

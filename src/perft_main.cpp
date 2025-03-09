@@ -9,7 +9,9 @@ int main()
 {
 	int depth;
 	std::string fen;
-	std::cin >> depth >> fen;
+	char skip;
+	std::cin >> depth >> skip;
+	std::getline(std::cin, fen, '"');
 	Board base_position{fen};
 	const auto count_ancestor_nodes = [](this auto&& rec, int depth, const Board& board, int num_branches) -> int
 	{
@@ -33,17 +35,17 @@ int main()
 	};
 
 	const std::array<std::unordered_map<Position, std::vector<Position>>, number_of_piece_types> initial_moves = legal_moves(base_position);
-	for(std::size_t piece_index{0}; piece_index < number_of_piece_types; ++piece_index)
+	for(const auto& moves : initial_moves)
 	{
-		for(const auto& [origin_square, destination_squares] : initial_moves[piece_index])
+		for(const auto& [origin_square, destination_squares] : moves)
 		{
 			for(const auto& destination_square : destination_squares)
 			{
 				Board new_board{base_position};
 				new_board.make(Move::make(origin_square, destination_square, Move_type::normal));
-				std::cout << origin_square << destination_square << ' ' << count_ancestor_nodes(depth-1, new_board, 0);
+				std::cout << origin_square << destination_square << ' ' << count_ancestor_nodes(depth-1, new_board, 0) << "\n";
 			}
 		}
 	}
-	std::cout << "\n" << count_ancestor_nodes(depth, base_position, 0);
+	std::cout << count_ancestor_nodes(depth, base_position, 0) << "\n";
 }

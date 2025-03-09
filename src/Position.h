@@ -50,7 +50,7 @@ namespace engine
 
 	inline std::ostream& operator<<(std::ostream& os, const Position& position)
 	{
-		return os << "Position{rank_: "+std::to_string(position.rank_)+", file_: "+std::to_string(position.file_)+'}';
+		return os << static_cast<char>('a'+position.file_) << position.rank_+1;
 	}
 }
 
