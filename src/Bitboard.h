@@ -45,7 +45,7 @@ namespace engine
 		[[nodiscard]] constexpr bool is_occupied(const Position& position) const;
 		[[nodiscard]] std::string pretty_string() const;
 		[[nodiscard]] constexpr Position lsb_index() const;
-		constexpr void add_piece(const std::size_t index);
+		constexpr void add_piece(const Position& index);
 		constexpr void for_each_piece(std::function<void (const Position& original_square)>&& f) const;
 
 		private:
@@ -54,10 +54,15 @@ namespace engine
 
 		friend std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard);
 	};
-	
-	inline constexpr void Bitboard::add_piece(const std::size_t index)
+
+	inline constexpr void Bitboard::add_piece(const Position& square)
 	{
-		data_ |= 1ULL << index;
+		data_ |= (1ULL << to_index(square));
+	}
+
+	constexpr bool is_free(const Position& square, const Bitboard& occupied_squares)
+	{
+		return !(occupied_squares & (1ULL << to_index(square)));
 	}
 
 	inline constexpr void Bitboard::for_each_piece(std::function<void (const Position& original_square)>&& f) const 
