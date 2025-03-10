@@ -45,6 +45,7 @@ namespace engine
 		[[nodiscard]] constexpr bool is_occupied(const Position& position) const;
 		[[nodiscard]] std::string pretty_string() const;
 		[[nodiscard]] constexpr Position lsb_index() const;
+		[[nodiscard]] constexpr std::uint8_t popcount() const { return std::popcount(data_); }
 		constexpr void add_piece(const Position& index);
 		constexpr void for_each_piece(std::function<void (const Position& original_square)>&& f) const;
 
