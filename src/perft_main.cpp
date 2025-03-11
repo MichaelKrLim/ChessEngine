@@ -13,7 +13,7 @@ int main()
 	std::cin >> depth >> skip;
 	std::getline(std::cin, fen, '"');
 	Board base_position{fen};
-	const auto count_ancestor_nodes = [](this auto&& rec, int depth, const Board& board, int num_branches) -> int
+	[[maybe_unused]]const auto count_ancestor_nodes = [](this auto&& rec, int depth, const Board& board, int num_branches) -> int
 	{
 		if(depth == 0)
 			return num_branches;
@@ -43,9 +43,9 @@ int main()
 			{
 				Board new_board{base_position};
 				new_board.make(Move::make(origin_square, destination_square, Move_type::normal));
-				std::cout << origin_square << destination_square << ' ' << count_ancestor_nodes(depth-1, new_board, 0) << "\n";
+				std::cout << origin_square << destination_square << "\n";// << ' ' << count_ancestor_nodes(depth-1, new_board, 0) << "\n";
 			}
 		}
 	}
-	std::cout << count_ancestor_nodes(depth, base_position, 0) << "\n";
+	//std::cout << count_ancestor_nodes(depth, base_position, 0) << "\n";
 }
