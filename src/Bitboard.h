@@ -39,7 +39,7 @@ namespace engine
 		inline constexpr bool operator< (std::uint64_t value) const { return data_ < value; }
 		inline constexpr bool operator==(std::uint64_t value) const { return data_ == value; }
 		inline constexpr bool operator! () const { return data_ == 0; }
-		inline constexpr bool operator!=(Bitboard bitboard)   const { return data_ == bitboard.data_; };
+		inline constexpr bool operator!=(Bitboard bitboard)   const { return data_ != bitboard.data_; };
 		inline constexpr bool operator!=(std::uint64_t value) const { return data_ != value; }
 
 		[[nodiscard]] constexpr bool is_occupied(const Position& position) const;

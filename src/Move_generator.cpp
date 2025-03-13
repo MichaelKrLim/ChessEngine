@@ -152,11 +152,13 @@ namespace
 			const std::uint64_t mask = is_bishop? bishop_mask(square) : rook_mask(square);
 			const auto& reachable_squares = is_bishop? bishop_reachable_squares : rook_reachable_squares;
 			const std::vector<Bitboard> blocker_configurations = generate_blocker_configurations(square, piece_type);
-			const std::vector<Bitboard> attacks = [&reachable_squares, &blocker_configurations, &square]()
+			const std::vector<Bitboard> attacks = [&reachable_squares, &blocker_configurations, &square, &is_bishop]()
 			{
 				std::vector<Bitboard> attacks{};
 				for(const auto& blocker_configuration : blocker_configurations)
+				{
 					attacks.push_back(reachable_squares(square, blocker_configuration));
+				}
 				return attacks;
 			}();
 			for(std::size_t k{0}; k < 100000000; ++k) 
@@ -168,11 +170,13 @@ namespace
 				for(std::size_t i{0}; !fail && i < blocker_configurations.size(); ++i) 
 				{
 					const std::uint64_t magic_index = magic_hash(blocker_configurations[i], magic, shift);
-					if(is_bishop && square == Position{0, 5}) std::cout << "magic index: " << magic_index 
-							<< "\nblocker configurations:\n" << blocker_configurations[i] 
-							<< "\nattacks\n" << used[magic_index];
+					//if(!is_bishop && square == Position{7, 0} && !fail) 
+					//std::cout << blocker_configurations[i] << "\n" 
+					//<<  attacks[i]<< "\n" 
+					//<< used[magic_index] << "\n" 
+					//<< (int) (used[magic_index] != attacks[i]) << "\n";
 					if(used[magic_index] == 0xFFFFFFFFFFFFFFFFULL) used[magic_index] = attacks[i];
-					else if(used[magic_index] != attacks[i]){if(is_bishop && square == Position{0,5})std::cerr << "failed at: " << k << "\n";fail = true;}
+					else if(used[magic_index] != attacks[i]) fail = true;
 				}
 				if(!fail) return Magic_square{used, mask, magic, std::uint8_t(64-relevant_bits)};
 			}
@@ -283,7 +287,6 @@ namespace
 		const auto& magic_square = bishop_magic_squares_[square_index];
 		const auto& attack_table = bishop_magic_squares_[square_index].attack_table;
 		std::uint64_t magic_index = magic_hash(occupied_squares & magic_square.mask, magic_square.magic, magic_square.shift);
-		std::cout << "magic_index: " << magic_index << "\nmasked key:\n" << (occupied_squares & magic_square.mask) << "\nretrieved attacks:\n" << attack_table[magic_index] << "\n";
 		return attack_table[magic_index];
 	}
 
