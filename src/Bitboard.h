@@ -16,31 +16,31 @@ namespace engine
 	{
 		public:
 
-		explicit inline constexpr Bitboard(const std::uint64_t& data) : data_(data) {}
-		inline constexpr Bitboard() = default;
+		explicit constexpr Bitboard(const std::uint64_t& data) : data_(data) {}
+		constexpr Bitboard() = default;
 
 		explicit operator size_t() const { return static_cast<size_t>(data_); }
 
-		inline constexpr Bitboard 		operator& (std::uint64_t value) 	 const { return Bitboard(data_ & value); }
-		inline constexpr Bitboard 		operator& (const Bitboard& bitboard) const { return Bitboard(data_ & bitboard.data_); }	
-		inline constexpr Bitboard 		operator| (const Bitboard& bitboard) const { return Bitboard(data_ | bitboard.data_); }
-		inline constexpr Bitboard 		operator~ () 						 const { return Bitboard(~data_); }
-		inline constexpr Bitboard 		operator<<(std::uint64_t shift) 	 const { return Bitboard(data_ << shift); }
-		inline constexpr Bitboard 		operator>>(std::uint64_t shift) 	 const { return Bitboard(data_ >> shift); }
-		inline constexpr std::uint64_t  operator* (std::uint64_t multiplier) const { return data_*multiplier; }
+		constexpr Bitboard 		operator& (std::uint64_t value) 	 const { return Bitboard(data_ & value); }
+		constexpr Bitboard 		operator& (const Bitboard& bitboard) const { return Bitboard(data_ & bitboard.data_); }	
+		constexpr Bitboard 		operator| (const Bitboard& bitboard) const { return Bitboard(data_ | bitboard.data_); }
+		constexpr Bitboard 		operator~ () 						 const { return Bitboard(~data_); }
+		constexpr Bitboard 		operator<<(std::uint64_t shift) 	 const { return Bitboard(data_ << shift); }
+		constexpr Bitboard 		operator>>(std::uint64_t shift) 	 const { return Bitboard(data_ >> shift); }
+		constexpr std::uint64_t  operator* (std::uint64_t multiplier) const { return data_*multiplier; }
 		
-		inline constexpr Bitboard& operator|= (std::size_t value) 		 { data_ |= value; return *this; }
-		inline constexpr Bitboard& operator|= (const Bitboard& bitboard) { data_ |= bitboard.data_; return *this; }
-		inline constexpr Bitboard& operator>>=(std::uint64_t shift) 	 { data_ = data_ >> shift; return *this; }
-		inline constexpr Bitboard& operator&= (std::uint64_t value) 	 { data_ = data_ & value; return *this; }
-		inline constexpr void      operator=  (std::uint64_t data)  	 { data_ = data; }
+		constexpr Bitboard& operator|= (std::size_t value) 		 { data_ |= value; return *this; }
+		constexpr Bitboard& operator|= (const Bitboard& bitboard) { data_ |= bitboard.data_; return *this; }
+		constexpr Bitboard& operator>>=(std::uint64_t shift) 	 { data_ = data_ >> shift; return *this; }
+		constexpr Bitboard& operator&= (std::uint64_t value) 	 { data_ = data_ & value; return *this; }
+		constexpr void      operator=  (std::uint64_t data)  	 { data_ = data; }
 
-		inline constexpr bool operator> (std::uint64_t value) const { return data_ > value; }
-		inline constexpr bool operator< (std::uint64_t value) const { return data_ < value; }
-		inline constexpr bool operator==(std::uint64_t value) const { return data_ == value; }
-		inline constexpr bool operator! () const { return data_ == 0; }
-		inline constexpr bool operator!=(Bitboard bitboard)   const { return data_ != bitboard.data_; };
-		inline constexpr bool operator!=(std::uint64_t value) const { return data_ != value; }
+		constexpr bool operator> (std::uint64_t value) const { return data_ > value; }
+		constexpr bool operator< (std::uint64_t value) const { return data_ < value; }
+		constexpr bool operator==(std::uint64_t value) const { return data_ == value; }
+		constexpr bool operator! () const { return data_ == 0; }
+		constexpr bool operator!=(Bitboard bitboard)   const { return data_ != bitboard.data_; };
+		constexpr bool operator!=(std::uint64_t value) const { return data_ != value; }
 
 		[[nodiscard]] constexpr bool is_occupied(const Position& position) const;
 		[[nodiscard]] std::string pretty_string() const;
@@ -56,7 +56,7 @@ namespace engine
 		friend std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard);
 	};
 
-	inline constexpr void Bitboard::add_piece(const Position& square)
+	constexpr void Bitboard::add_piece(const Position& square)
 	{
 		data_ |= (1ULL << to_index(square));
 	}
@@ -66,7 +66,7 @@ namespace engine
 		return !(occupied_squares & (1ULL << to_index(square)));
 	}
 
-	inline constexpr void Bitboard::for_each_piece(std::function<void (const Position& original_square)>&& f) const 
+	constexpr void Bitboard::for_each_piece(std::function<void (const Position& original_square)>&& f) const 
 	{
 		auto data_c = data_;
 		while(data_c > 0)
@@ -91,8 +91,8 @@ namespace engine
 		return s;
 	}
 
-	inline constexpr bool        Bitboard::is_occupied(const Position& square) const { return data_ & (1<<(square.rank_*board_size+square.file_)); }
-	inline constexpr Position    Bitboard::lsb_index() 						   const { return Position{static_cast<std::size_t>(std::countr_zero(data_))}; }
+	constexpr bool        Bitboard::is_occupied(const Position& square) const { return data_ & (1<<(square.rank_*board_size+square.file_)); }
+	constexpr Position    Bitboard::lsb_index() 						   const { return Position{static_cast<std::size_t>(std::countr_zero(data_))}; }
 
 	inline std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard) { return os << bitboard.pretty_string(); }
 }

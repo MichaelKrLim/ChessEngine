@@ -170,11 +170,6 @@ namespace
 				for(std::size_t i{0}; !fail && i < blocker_configurations.size(); ++i) 
 				{
 					const std::uint64_t magic_index = magic_hash(blocker_configurations[i], magic, shift);
-					//if(!is_bishop && square == Position{7, 0} && !fail) 
-					//std::cout << blocker_configurations[i] << "\n" 
-					//<<  attacks[i]<< "\n" 
-					//<< used[magic_index] << "\n" 
-					//<< (int) (used[magic_index] != attacks[i]) << "\n";
 					if(used[magic_index] == 0xFFFFFFFFFFFFFFFFULL) used[magic_index] = attacks[i];
 					else if(used[magic_index] != attacks[i]) fail = true;
 				}
@@ -217,7 +212,7 @@ namespace
 		return rook_magic_squares;
 	}();
 
-	[[maybe_unused]] const moves_type pawn_legal_moves(const Bitboard& pawns_bb, const Bitboard& occupied_squares, const Side& active_player)
+	const moves_type pawn_legal_moves(const Bitboard& pawns_bb, const Bitboard& occupied_squares, const Side& active_player)
 	{
 		moves_type legal_moves{};
 		const auto rank = 0xFF;
@@ -251,7 +246,7 @@ namespace
 		return legal_moves;
 	}
 
-	[[maybe_unused]] const moves_type knight_legal_moves(const Bitboard& knight_bb, const Bitboard& occupied_squares)
+	const moves_type knight_legal_moves(const Bitboard& knight_bb, const Bitboard& occupied_squares)
 	{
 		moves_type legal_moves{};
 		knight_bb.for_each_piece([occupied_squares, &legal_moves](const Position& original_square)
@@ -267,7 +262,7 @@ namespace
 		return legal_moves;
 	}
 
-	[[maybe_unused]] const moves_type king_legal_moves(const Bitboard& king_bb, const Bitboard& occupied_squares)
+	const moves_type king_legal_moves(const Bitboard& king_bb, const Bitboard& occupied_squares)
 	{
 		moves_type legal_moves{};
 		const Position original_square = king_bb.lsb_index();
@@ -299,7 +294,7 @@ namespace
 		return attack_table[magic_index];
 	}
 
-	[[maybe_unused]] const moves_type rook_legal_moves(const Bitboard& rook_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares)
+	const moves_type rook_legal_moves(const Bitboard& rook_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares)
 	{
 		moves_type legal_moves{};
 		rook_bb.for_each_piece([&legal_moves, &current_sides_occupied_squares, occupied_squares](const Position& original_square)
@@ -325,7 +320,7 @@ namespace
 		return legal_moves;
 	}
 
-	[[maybe_unused]] const moves_type queen_legal_moves(const Bitboard& queen_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares)
+	const moves_type queen_legal_moves(const Bitboard& queen_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares)
 	{
 		moves_type legal_moves{};
 		queen_bb.for_each_piece([&legal_moves, &current_sides_occupied_squares, occupied_squares](const Position& original_square)
@@ -348,13 +343,13 @@ namespace engine
 		const auto side_index = board.is_white_to_move? static_cast<std::uint8_t>(Side::white) : static_cast<std::uint8_t>(Side::black);
 		const auto& pieces = board.sides[side_index].pieces;
 		const auto& occupied_squares = board.occupied_squares;
-		//legal_moves[static_cast<std::uint8_t>(Piece::pawn)]   = pawn_legal_moves(pieces[static_cast<std::size_t>(Piece::pawn)], occupied_squares, static_cast<Side>(side_index));
+		legal_moves[static_cast<std::uint8_t>(Piece::pawn)]   = pawn_legal_moves(pieces[static_cast<std::size_t>(Piece::pawn)], occupied_squares, static_cast<Side>(side_index));
 		//legal_moves[static_cast<std::uint8_t>(Piece::knight)] = knight_legal_moves(pieces[static_cast<std::size_t>(Piece::knight)], occupied_squares);
 		//legal_moves[static_cast<std::uint8_t>(Piece::king)]   = king_legal_moves(pieces[static_cast<std::uint8_t>(Piece::king)], occupied_squares);
 
-		legal_moves[static_cast<std::uint8_t>(Piece::bishop)]  = bishop_legal_moves(pieces[static_cast<std::uint8_t>(Piece::bishop)], occupied_squares, board.sides[side_index].occupied_squares);
-		legal_moves[static_cast<std::uint8_t>(Piece::rook)]     = rook_legal_moves(pieces[static_cast<std::uint8_t>(Piece::rook)], occupied_squares, board.sides[side_index].occupied_squares);
-		legal_moves[static_cast<std::uint8_t>(Piece::queen)]  = queen_legal_moves(pieces[static_cast<std::uint8_t>(Piece::queen)], occupied_squares, board.sides[side_index].occupied_squares);
+		//legal_moves[static_cast<std::uint8_t>(Piece::bishop)]  = bishop_legal_moves(pieces[static_cast<std::uint8_t>(Piece::bishop)], occupied_squares, board.sides[side_index].occupied_squares);
+		//legal_moves[static_cast<std::uint8_t>(Piece::rook)]     = rook_legal_moves(pieces[static_cast<std::uint8_t>(Piece::rook)], occupied_squares, board.sides[side_index].occupied_squares);
+		//legal_moves[static_cast<std::uint8_t>(Piece::queen)]  = queen_legal_moves(pieces[static_cast<std::uint8_t>(Piece::queen)], occupied_squares, board.sides[side_index].occupied_squares);
 		return legal_moves;
 	}
 }

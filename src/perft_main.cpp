@@ -1,51 +1,48 @@
 #include "Move_generator.h"
 
-#include <iostream>
 #include <array>
+#include <iostream>
 
 using namespace engine;
 
-int main()
+int main(int argc, char* argv[])
 {
-	int depth;
-	std::string fen;
-	char skip;
-	std::cin >> depth >> skip;
-	std::getline(std::cin, fen, '"');
+	const auto depth = std::atoi(argv[1]);
+	const std::string_view fen{argv[2]};
 	Board base_position{fen};
-	[[maybe_unused]]const auto count_ancestor_nodes = [](this auto&& rec, int depth, const Board& board, int num_branches) -> int
+	const auto for_each_move = [](const Board& board, const std::function<void(const Position&, const Position&)>&& f)
 	{
-		if(depth == 0)
-			return num_branches;
-
 		for(const auto& all_moves : legal_moves(board))
 		{
 			for(const auto& [origin_square, destination_squares] : all_moves)
 			{
 				for(const auto& destination_square : destination_squares)
 				{
-					++num_branches;
-					Board new_board{board};
-					new_board.make(Move::make(origin_square, destination_square, Move_type::normal));
-					num_branches += rec(depth-1, new_board, num_branches);
+					f(origin_square, destination_square);
 				}
 			}
 		}
-		return num_branches;
+	};
+	const auto perft = [&for_each_move](this auto&& rec, int depth, const Board& board) -> unsigned long long
+	{
+		if(depth == 0)
+			return 1ULL;
+		unsigned long long nodes{0ULL};
+		for_each_move(board, [&](const Position& origin_square, const Position& destination_square)
+		{
+			Board new_board{board};
+			new_board.make(Move::make(origin_square, destination_square, Move_type::normal));
+			nodes += rec(depth-1, new_board);
+		});
+		return nodes;
 	};
 
 	const std::array<std::unordered_map<Position, std::vector<Position>>, number_of_piece_types> initial_moves = legal_moves(base_position);
-	for(const auto& moves : initial_moves)
+	for_each_move(base_position, [&](const Position& origin_square, const Position& destination_square)
 	{
-		for(const auto& [origin_square, destination_squares] : moves)
-		{
-			for(const auto& destination_square : destination_squares)
-			{
-				Board new_board{base_position};
-				new_board.make(Move::make(origin_square, destination_square, Move_type::normal));
-				std::cout << origin_square << destination_square << ' ' << count_ancestor_nodes(depth-1, new_board, 0) << "\n";
-			}
-		}
-	}
-	std::cout << count_ancestor_nodes(depth, base_position, 0) << "\n";
+		Board new_board{base_position};
+		new_board.make(Move::make(origin_square, destination_square, Move_type::normal));
+		std::cout << origin_square << destination_square << ' ' << perft(depth-1, new_board) << "\n";
+	});
+	std::cout << "\n" << perft(depth, base_position);
 }

@@ -33,7 +33,7 @@ namespace engine
 	{
 		public:
 
-		explicit inline Board(const std::string& fen_string)
+		explicit inline Board(const std::string_view& fen_string)
 		{
 			const auto to_shift = [](std::size_t board_index) -> std::size_t
 			{

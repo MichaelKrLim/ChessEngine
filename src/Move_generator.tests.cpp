@@ -13,7 +13,7 @@ using namespace engine;
 std::optional<std::string> get_diff(const std::string fen, const char depth)
 {
 	boost::process::ipstream pipe_stream;
-	const std::string command{"./perftree | ./perft fen "+fen+" depth "+depth};
+	const std::string command{"./perftree ./perft fen "+fen+" depth "+depth};
 	boost::process::child perft_process("./perft"); return {};
 }
 
