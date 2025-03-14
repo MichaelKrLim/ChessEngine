@@ -212,6 +212,7 @@ namespace engine
 					}
 				}
 			}
+			is_white_to_move = !is_white_to_move;
 		}
 
 		private:

@@ -1,6 +1,5 @@
 #include "Move_generator.h"
 
-#include <array>
 #include <iostream>
 
 using namespace engine;
@@ -37,7 +36,6 @@ int main(int argc, char* argv[])
 		return nodes;
 	};
 
-	const std::array<std::unordered_map<Position, std::vector<Position>>, number_of_piece_types> initial_moves = legal_moves(base_position);
 	for_each_move(base_position, [&](const Position& origin_square, const Position& destination_square)
 	{
 		Board new_board{base_position};
