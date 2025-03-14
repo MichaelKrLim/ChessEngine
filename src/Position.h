@@ -43,9 +43,9 @@ namespace engine
 		return position.rank_ < 8 && position.file_ < 8 && position.file_ > -1 && position.rank_ > -1;
 	}
 	
-	constexpr std::size_t algebraic_to_index(const std::string algebraic)
+	constexpr Position algebraic_to_index(const std::string algebraic)
 	{
-		return to_index(Position{algebraic[0]-'a', algebraic[1]-'0'});
+		return Position{algebraic[0]-'a', algebraic[1]-'0'};
 	}
 
 	inline std::ostream& operator<<(std::ostream& os, const Position& position)

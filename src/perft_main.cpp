@@ -8,6 +8,10 @@ int main(int argc, char* argv[])
 {
 	const auto depth = std::atoi(argv[1]);
 	const std::string_view fen{argv[2]};
+	const std::vector<Position> moves = [&argc, &argv]()
+	{
+		
+	}();
 	Board base_position{fen};
 	const auto for_each_move = [](const Board& board, const std::function<void(const Position&, const Position&)>&& f)
 	{

@@ -115,7 +115,7 @@ namespace engine
 					case 3:
 						if(fen_segment.size() == 1 && fen_segment[0] == '-') break;
 						assert(fen_segment.size()==2 && isalpha(fen_segment[0]) && isdigit(fen_segment[1]) && "Invalid FEN string");
-						en_passent_target_square = Position{algebraic_to_index(fen_segment)};
+						en_passent_target_square = algebraic_to_index(fen_segment);
 						std::size_t side_index;
 						if(en_passent_target_square.rank_ == white_en_passant_target_rank-1)
 							side_index = static_cast<std::uint8_t>(Side::white);

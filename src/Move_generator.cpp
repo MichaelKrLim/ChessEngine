@@ -212,57 +212,46 @@ namespace
 		return rook_magic_squares;
 	}();
 
-	const moves_type pawn_legal_moves(const Bitboard& pawns_bb, const Bitboard& occupied_squares, const Side& active_player)
+	const moves_type pawn_legal_moves(const Bitboard& pawns_bb, const Bitboard& occupied_squares, const Side& active_player, const Bitboard& current_side_occupied_squares)
 	{
 		moves_type legal_moves{};
-		const auto rank = 0xFF;
 		const auto pawn_direction = active_player == Side::white ? 1 : -1;
-		const auto starting_rank  = active_player == Side::white ? 1 : 6;
-		const auto promotion_rank = active_player == Side::white ? 7 : 0;
-		const auto promotion_mask = rank << (promotion_rank*board_size);
-
+		const auto initial_rank = active_player == Side::white ? 1 : 6;
 		pawns_bb.for_each_piece([&](const Position& original_square)
 		{
-			Bitboard pawn_bb{1ULL << to_index(original_square)};
-			Bitboard valid_moves{0};
-			Bitboard single_moves = (pawn_bb << board_size*pawn_direction) & ~occupied_squares;
-			valid_moves |= single_moves;
-
-			const auto rank_mask = rank << ((starting_rank+pawn_direction)*board_size);
-			Bitboard double_moves = (single_moves & rank_mask) << board_size*pawn_direction;
-			valid_moves |= double_moves;
-
-			Bitboard left_captures = (single_moves << -1) & occupied_squares & ~file_h;
-			Bitboard right_captures = (single_moves << 1) & occupied_squares & ~file_a;
-			valid_moves |= left_captures | right_captures;
-
-			Bitboard promotion_moves = single_moves & promotion_mask;
-			valid_moves |= promotion_moves;
-			valid_moves.for_each_piece([&legal_moves, &original_square](const Position& destination_square)
-			{
-				legal_moves[original_square].push_back(destination_square);
-			});
+			std::vector<Position> valid_moves{};
+			const Position single_move = Position{original_square.rank_+pawn_direction, original_square.file_};
+			if(is_valid_destination(single_move, occupied_squares)) valid_moves.push_back(single_move);
+			const Position double_move = Position{original_square.rank_+pawn_direction*2, original_square.file_};
+			if(is_valid_destination(double_move, occupied_squares) && original_square.rank_ == initial_rank) valid_moves.push_back(double_move);
+			const Position left_capture = Position{single_move.rank_, single_move.file_-1};
+			const Position right_capture = Position{single_move.rank_, single_move.file_+1};
+			const Bitboard enemy_pieces = occupied_squares & ~current_side_occupied_squares;
+			if(is_on_board(left_capture) && !is_free(left_capture, enemy_pieces)) valid_moves.push_back(left_capture);
+			if(is_on_board(right_capture) && !is_free(right_capture, enemy_pieces)) valid_moves.push_back(right_capture);
+			
+			legal_moves[original_square] = valid_moves;
 		});
 		return legal_moves;
 	}
 
-	const moves_type knight_legal_moves(const Bitboard& knight_bb, const Bitboard& occupied_squares)
+	const moves_type knight_legal_moves(const Bitboard& knight_bb, const Bitboard& occupied_squares, const Bitboard& current_side_occupied_squares)
 	{
 		moves_type legal_moves{};
-		knight_bb.for_each_piece([occupied_squares, &legal_moves](const Position& original_square)
+		knight_bb.for_each_piece([&](const Position& original_square)
 		{
 			for(const auto& move : knight_moves_)
 			{
 				const auto [del_rank, del_file] = move;
 				const Position destination_square(original_square.rank_+del_rank, original_square.file_+del_file);
-				if(is_valid_destination(destination_square, occupied_squares))
+				if(is_valid_destination(destination_square, occupied_squares & current_side_occupied_squares))
 					legal_moves[original_square].push_back(destination_square);
 			}
 		});
 		return legal_moves;
 	}
 
-	const moves_type king_legal_moves(const Bitboard& king_bb, const Bitboard& occupied_squares)
+	const moves_type king_legal_moves(const Bitboard& king_bb, const Bitboard& occupied_squares, const Bitboard& current_side_occupied_squares)
 	{
 		moves_type legal_moves{};
 		const Position original_square = king_bb.lsb_index();
@@ -270,7 +259,7 @@ namespace
 		{
 			const auto [del_rank, del_file] = move;
 			const Position destination_square(original_square.rank_+del_rank, original_square.file_+del_file);
-			if(is_valid_destination(destination_square, occupied_squares))
+			if(is_valid_destination(destination_square, occupied_squares & current_side_occupied_squares))
 				legal_moves[original_square].push_back(destination_square);
 		}
 		return legal_moves;
@@ -343,9 +332,9 @@ namespace engine
 		const auto side_index = board.is_white_to_move? static_cast<std::uint8_t>(Side::white) : static_cast<std::uint8_t>(Side::black);
 		const auto& pieces = board.sides[side_index].pieces;
 		const auto& occupied_squares = board.occupied_squares;
-		legal_moves[static_cast<std::uint8_t>(Piece::pawn)]   = pawn_legal_moves(pieces[static_cast<std::size_t>(Piece::pawn)], occupied_squares, static_cast<Side>(side_index));
-		legal_moves[static_cast<std::uint8_t>(Piece::knight)] = knight_legal_moves(pieces[static_cast<std::size_t>(Piece::knight)], occupied_squares);
-		legal_moves[static_cast<std::uint8_t>(Piece::king)]   = king_legal_moves(pieces[static_cast<std::uint8_t>(Piece::king)], occupied_squares);
+		legal_moves[static_cast<std::uint8_t>(Piece::pawn)]   = pawn_legal_moves(pieces[static_cast<std::size_t>(Piece::pawn)], occupied_squares, static_cast<Side>(side_index), board.sides[side_index].occupied_squares);
+		legal_moves[static_cast<std::uint8_t>(Piece::knight)] = knight_legal_moves(pieces[static_cast<std::size_t>(Piece::knight)], occupied_squares, board.sides[side_index].occupied_squares);
+		legal_moves[static_cast<std::uint8_t>(Piece::king)]   = king_legal_moves(pieces[static_cast<std::uint8_t>(Piece::king)], occupied_squares, board.sides[side_index].occupied_squares);
 
 		legal_moves[static_cast<std::uint8_t>(Piece::bishop)] = bishop_legal_moves(pieces[static_cast<std::uint8_t>(Piece::bishop)], occupied_squares, board.sides[side_index].occupied_squares);
 		legal_moves[static_cast<std::uint8_t>(Piece::rook)]   = rook_legal_moves(pieces[static_cast<std::uint8_t>(Piece::rook)], occupied_squares, board.sides[side_index].occupied_squares);
