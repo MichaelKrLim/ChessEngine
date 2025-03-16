@@ -10,7 +10,7 @@ include(cmake/CPM.cmake)
 
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
-# set(CMAKE_CXX_FLAGS "-Wall -Werror -pedantic ")
+set(CMAKE_CXX_FLAGS "-Wall -Werror -pedantic")
 
 # for windows
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
@@ -20,12 +20,31 @@ set(common_sources
 	src/Engine.h src/Engine.cpp
 	src/Position.h
 	src/Constants.h
-	src/Board.h
+	src/Board.h src/Board.cpp
 	src/Move.h
 	src/Pieces.h
 	src/Bitboard.h
 	src/Utility.h
+	src/Magic_util.h
 	src/Move_generator.h src/Move_generator.cpp
+)
+
+add_executable(generate_magics src/magic_main.cpp
+	src/Bitboard.h
+	src/Magic_util.h
+	src/Constants.h
+	src/Pieces.h
+	src/Position.h
+)
+
+set_property(TARGET generate_magics PROPERTY CXX_STANDARD 23)
+set_property(TARGET generate_magics PROPERTY CXX_EXTENSIONS OFF)
+
+add_custom_command(
+	TARGET generate_magics POST_BUILD
+	COMMAND ${CMAKE_BINARY_DIR}/generate_magics
+	COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/magic_squares.h ${CMAKE_SOURCE_DIR}/src
+	COMMENT "generating magics..."
 )
 
 if(ENGINE_BUILD_TESTS)
@@ -80,12 +99,14 @@ if(ENGINE_BUILD_TESTS)
 		COMMAND ${CMAKE_COMMAND} -E copy ${RUST_PACKAGE_DIRS}/perftree-src/target/release/perftree ${CMAKE_BINARY_DIR}
 		COMMENT "Copying Rust executable to project directory"
 	)
-	add_dependencies(tests build_rust perft)
+	add_dependencies(tests build_rust perft generate_magics)
 endif()
 
 add_executable(${PROJECT_NAME} src/main.cpp
 	${common_sources}
 )
+
+add_dependencies(engine generate_magics)
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_EXTENSIONS OFF)

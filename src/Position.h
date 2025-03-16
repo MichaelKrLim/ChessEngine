@@ -43,7 +43,7 @@ namespace engine
 		return position.rank_ < 8 && position.file_ < 8 && position.file_ > -1 && position.rank_ > -1;
 	}
 	
-	constexpr Position algebraic_to_index(const std::string algebraic)
+	constexpr Position algebraic_to_position(const std::string_view algebraic)
 	{
 		return Position{algebraic[0]-'a', algebraic[1]-'0'};
 	}

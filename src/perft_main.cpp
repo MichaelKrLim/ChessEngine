@@ -1,4 +1,5 @@
 #include "Move_generator.h"
+#include "Position.h"
 
 #include <iostream>
 
@@ -8,43 +9,31 @@ int main(int argc, char* argv[])
 {
 	const auto depth = std::atoi(argv[1]);
 	const std::string_view fen{argv[2]};
-	const std::vector<Position> moves = [&argc, &argv]()
-	{
-		
-	}();
 	Board base_position{fen};
-	const auto for_each_move = [](const Board& board, const std::function<void(const Position&, const Position&)>&& f)
+	for(int i{3}; i<argc; ++i)
 	{
-		for(const auto& all_moves : legal_moves(board))
-		{
-			for(const auto& [origin_square, destination_squares] : all_moves)
-			{
-				for(const auto& destination_square : destination_squares)
-				{
-					f(origin_square, destination_square);
-				}
-			}
-		}
-	};
-	const auto perft = [&for_each_move](this auto&& rec, int depth, const Board& board) -> unsigned long long
+		const std::string move = argv[i];
+		base_position.make(Move{algebraic_to_position(move.substr(0, 2)), algebraic_to_position(move.substr(2, 2))});
+	}
+	const auto perft = [](this auto&& rec, int depth, Board& board) -> unsigned long long
 	{
 		if(depth == 0)
 			return 1ULL;
 		unsigned long long nodes{0ULL};
-		for_each_move(board, [&](const Position& origin_square, const Position& destination_square)
+		for(const auto& move : legal_moves(board))
 		{
-			Board new_board{board};
-			new_board.make(Move::make(origin_square, destination_square, Move_type::normal));
-			nodes += rec(depth-1, new_board);
-		});
+			board.make(move);
+			nodes += rec(depth-1, board);
+			board.unmove();
+		}
 		return nodes;
 	};
 
-	for_each_move(base_position, [&](const Position& origin_square, const Position& destination_square)
+	for(const auto& move : legal_moves(base_position))
 	{
-		Board new_board{base_position};
-		new_board.make(Move::make(origin_square, destination_square, Move_type::normal));
-		std::cout << origin_square << destination_square << ' ' << perft(depth-1, new_board) << "\n";
-	});
+		base_position.make(move);
+		std::cout << move.from_square() << move.destination_square() << ' ' << perft(depth-1, base_position) << "\n";
+		base_position.unmove();
+	}
 	std::cout << "\n" << perft(depth, base_position);
 }
