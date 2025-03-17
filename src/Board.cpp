@@ -107,7 +107,7 @@ Board::Board(const std::string_view& fen_string)
 
 void Board::make(const Move& move)
 {
-	history.push(*this);
+	history.push(move);
 	Side_position& side = sides[static_cast<std::uint8_t>(side_to_move)];
 	auto& opposite_side = sides[static_cast<std::uint8_t>(side_to_move == Side::white? Side::black : Side::white)];
 	const auto destination_square = move.destination_square();
@@ -159,8 +159,19 @@ void Board::make(const Move& move)
 
 void Board::unmove()
 {
-	*this = history.top();
+	const bool is_white_to_move = side_to_move == Side::white;
+	const Move move = history.top();
 	history.pop();
+	const auto move_type = move.type();
+	--half_move_clock;
+	if(is_white_to_move) --full_move_clock;
+	side_to_move = is_white_to_move? Side::black : Side::white;
+	if(move.type() == Move_type::promotion)
+	{
+		Side_position& moved_side = sides[static_cast<std::uint8_t>(side_to_move)];
+		moved_side.pieces[static_cast<std::uint8_t>(move.promotion_piece())].remove_piece(move.destination_square());
+		moved_side.pieces[static_cast<std::uint8_t>(Piece::pawn)].add_piece(move.from_square());
+	}
 }
 
 Bitboard Board::occupied_squares() const noexcept

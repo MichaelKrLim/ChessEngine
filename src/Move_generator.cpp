@@ -27,27 +27,32 @@ namespace
 
 	const void pawn_legal_moves(std::vector<Move>& legal_moves, const Bitboard& pawns_bb, const Bitboard& occupied_squares, const Side& active_player, const Bitboard& current_side_occupied_squares)
 	{
-		const auto pawn_direction = active_player == Side::white ? 1 : -1;
+		const auto rank_move = 8;
+		const bool is_white = active_player == Side::white? true:false;
 		const auto initial_rank = active_player == Side::white ? 1 : 6;
-		const Bitboard single_moves = pawns_bb << (8*pawn_direction);
+		const auto pawn_direction = is_white? 1 : -1;
+		const Bitboard single_moves = is_white? (pawns_bb << rank_move) : (pawns_bb >> rank_move);
 		single_moves.for_each_piece([&](const Position& destination_square)
 		{
 			if(is_valid_destination(destination_square, occupied_squares))
 				legal_moves.push_back(Move{Position{destination_square.rank_-pawn_direction, destination_square.file_}, destination_square});
 		});
-		const Bitboard double_moves = (pawns_bb & rank_bb(initial_rank)) << (8*pawn_direction*2);
+		Bitboard pawns_to_move = pawns_bb & rank_bb(initial_rank);
+		const Bitboard double_moves = is_white? (pawns_to_move << (rank_move*2)) : (pawns_to_move >> (rank_move*2));
 		double_moves.for_each_piece([&](const Position& destination_square)
 		{
-			if(is_valid_destination(destination_square, occupied_squares) && destination_square.rank_ == (initial_rank+pawn_direction*2))
+			if(is_valid_destination(destination_square, occupied_squares) && is_free(Position{destination_square.rank_-pawn_direction, destination_square.file_}, occupied_squares))
 				legal_moves.push_back(Move{Position{destination_square.rank_-pawn_direction*2, destination_square.file_}, destination_square});
 		});
-		const auto right_captures = (pawns_bb & ~file_h) << (8*pawn_direction+1);
+		pawns_to_move = pawns_bb & ~file_h;
+		const Bitboard right_captures = is_white? (pawns_to_move << (rank_move+1)) : (pawns_to_move >> (rank_move+1));
 		right_captures.for_each_piece([&](const Position& destination_square)
 		{
 			if(is_on_board(destination_square) && !is_free(destination_square, occupied_squares & ~current_side_occupied_squares))
 				legal_moves.push_back(Move{Position{destination_square.rank_-pawn_direction, destination_square.file_-1}, destination_square});
 		});
-		const auto left_captures = (pawns_bb & ~file_a) << (8*pawn_direction-1);
+		pawns_to_move = pawns_bb & ~file_a;
+		const auto left_captures = is_white? (pawns_to_move << (rank_move-1)) : (pawns_to_move >> (rank_move-1));
 		left_captures.for_each_piece([&](const Position& destination_square)
 		{
 			if(is_on_board(destination_square) && !is_free(destination_square, occupied_squares & ~current_side_occupied_squares))

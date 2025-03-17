@@ -43,7 +43,7 @@ namespace engine
 		std::array<Side_position, 2> sides{};
 		int half_move_clock{}, full_move_clock{};
 		Side side_to_move{Side::white};
-		static std::stack<Board> history;
+		static std::stack<Move> history;
 
 		void make(const Move& move);
 		void unmove();

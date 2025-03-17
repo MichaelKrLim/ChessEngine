@@ -56,7 +56,7 @@ if(ENGINE_BUILD_TESTS)
 	CPMAddPackage(
 		NAME perftree
 		GIT_REPOSITORY https://github.com/agausmann/perftree.git
-		GIT_TAG v0.2.0
+		GIT_TAG 0f5bc12
 		DOWNLOAD_ONLY TRUE
 	)
 	CPMAddPackage(

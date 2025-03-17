@@ -44,7 +44,7 @@ namespace engine
 			return Position(move_data_ & (board_size*board_size-1));
 		}
 
-		inline constexpr Move_type move_type() const
+		inline constexpr Move_type type() const
 		{
 			return static_cast<Move_type>((move_data_ >> 13) & 0b11);
 		}
