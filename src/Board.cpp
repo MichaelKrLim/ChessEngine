@@ -141,18 +141,18 @@ void Board::make(const Move& move)
 	else
 	{
 		for(std::uint8_t i{0}; i<side.pieces.size(); ++i)
-		{
+		{bool entering{false};
 			bool moved{false};
 			side.pieces[i].for_each_piece([&](const Position& occupied_square) mutable
 			{
 				if(occupied_square == from_square)
-				{
+				{entering = true;
 					history.push(State_delta{move, static_cast<Piece>(i), piece_to_capture});
 					side.pieces[i] ^= (1ULL << to_index(occupied_square)) | (1ULL << to_index(destination_square));
 					moved = true;
 					return;
 				}
-			});
+			});assert(entering && "failed to find piece to move");
 			if(moved) break;
 		}
 	}
@@ -163,10 +163,13 @@ void Board::make(const Move& move)
 
 void Board::unmove()
 {
+	assert(history.size()>0 && "Tried to undo noexistent move");
 	const bool was_whites_move = side_to_move == Side::black;
 	const auto last_moved_side = was_whites_move? Side::white : Side::black;
+	
 	--half_move_clock;
 	if(!was_whites_move) --full_move_clock;
+	
 	const auto [move, moved_piece, captured_piece] = history.top();
 	history.pop();
 	const auto move_type = move.type();
