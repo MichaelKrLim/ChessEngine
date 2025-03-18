@@ -45,7 +45,7 @@ namespace engine
 	
 	constexpr Position algebraic_to_position(const std::string_view algebraic)
 	{
-		return Position{algebraic[0]-'a', algebraic[1]-'0'};
+		return Position{algebraic[1]-'0'-1, algebraic[0]-'a'};
 	}
 
 	inline std::ostream& operator<<(std::ostream& os, const Position& position)

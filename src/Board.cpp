@@ -163,7 +163,7 @@ void Board::make(const Move& move)
 
 void Board::unmove()
 {
-	//assert(history.size()>0 && "Tried to undo noexistent move");
+	assert(history.size()>0 && "Tried to undo noexistent move");
 	const bool was_whites_move = side_to_move == Side::black;
 	const auto last_moved_side = was_whites_move? Side::white : Side::black;
 	

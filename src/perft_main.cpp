@@ -15,10 +15,9 @@ int main(int argc, char* argv[])
 	{
 		std::istringstream iss{argv[3]};
 		std::string move{""};
-		while(std::getline(iss, move))
+		while(std::getline(iss, move, ' '))
 			base_position.make(Move{algebraic_to_position(move.substr(0, 2)), algebraic_to_position(move.substr(2, 2))});
 	}
-	std::cerr << (base_position.side_to_move == Side::white? 'w':'b') << "\n";
 	const auto perft = [](this auto&& rec, int depth, Board& board) -> unsigned long long
 	{
 		if(depth == 0)

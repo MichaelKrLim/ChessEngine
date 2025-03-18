@@ -84,8 +84,11 @@ namespace engine
 		for(const auto& [dr, df] : rook_moves_) 
 		{
 			const Position offset{dr, df};
-			for(Position target_square{rook_square+offset}; is_on_board(target_square) && is_free(target_square, occupied_squares); target_square+=offset)
+			for(Position target_square{rook_square+offset}; is_on_board(target_square); target_square+=offset)
+			{
 				valid_moves.add_piece(target_square);
+				if(!is_free(target_square, occupied_squares)) break;
+			}
 		}
 		return valid_moves;
 	}
@@ -96,8 +99,11 @@ namespace engine
 		for(const auto& [dr, df] : bishop_moves_) 
 		{
 			const Position offset{dr, df};
-			for(Position target_square{bishop_square+offset}; is_on_board(target_square) && is_free(target_square, occupied_squares); target_square+=offset)
+			for(Position target_square{bishop_square+offset}; is_on_board(target_square); target_square+=offset)
+			{	
 				valid_moves.add_piece(target_square);
+				if(!is_free(target_square, occupied_squares)) break;
+			}
 		}
 		return valid_moves;
 	}
