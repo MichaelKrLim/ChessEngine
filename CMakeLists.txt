@@ -44,7 +44,7 @@ add_custom_command(
 	TARGET generate_magics POST_BUILD
 	COMMAND ${CMAKE_BINARY_DIR}/generate_magics
 	COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/magic_squares.h ${CMAKE_SOURCE_DIR}/src
-	COMMENT "generating magics..."
+	COMMENT "Generating magics..."
 )
 
 if(ENGINE_BUILD_TESTS)

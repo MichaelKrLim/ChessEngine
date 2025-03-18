@@ -4,7 +4,7 @@
 
 using namespace engine;
 
-std::stack<Board> Board::history{};
+std::stack<Board::State_delta> Board::history{};
 
 Board::Board(const std::string_view& fen_string)
 {
@@ -107,44 +107,48 @@ Board::Board(const std::string_view& fen_string)
 
 void Board::make(const Move& move)
 {
-	history.push(move);
 	Side_position& side = sides[static_cast<std::uint8_t>(side_to_move)];
 	auto& opposite_side = sides[static_cast<std::uint8_t>(side_to_move == Side::white? Side::black : Side::white)];
 	const auto destination_square = move.destination_square();
 	const auto from_square = move.from_square();
-	if(move.move_type() == Move_type::promotion)
+	std::optional<Piece> piece_to_capture = std::nullopt;
+	if(!is_free(destination_square, occupied_squares()))
 	{
+		for(std::size_t i{0}; i<opposite_side.pieces.size(); ++i)
+		{
+			auto& piece_bb = opposite_side.pieces[i];
+			bool found{false};
+			piece_bb.for_each_piece([&destination_square, &piece_to_capture, &i, &found, &piece_bb](const Position& occupied_square) mutable
+			{
+				if(occupied_square == destination_square)
+				{
+					piece_to_capture = static_cast<Piece>(i);
+					piece_bb.remove_piece(destination_square);
+				}
+				found = true;
+				return;
+			});
+			if(found) break;
+		}
+	}
+	if(move.type() == Move_type::promotion)
+	{
+		history.push(State_delta{move, static_cast<Piece>(Piece::pawn), piece_to_capture});
 		Bitboard& pawn_bb = side.pieces[static_cast<std::uint8_t>(Piece::pawn)];
 		pawn_bb.remove_piece(from_square);
 		side.pieces[static_cast<std::uint8_t>(move.promotion_piece())].add_piece(destination_square);
 	}
 	else
 	{
-		if(!is_free(destination_square, occupied_squares()))
-		{
-			for(Bitboard& piece_bb : opposite_side.pieces)
-			{
-				bool found{false};
-				piece_bb.for_each_piece([&destination_square, &found, &piece_bb](const Position& occupied_square) mutable
-				{
-					if(occupied_square == destination_square)
-					{
-						piece_bb.remove_piece(destination_square);
-					}
-					found = true;
-					return;
-				});
-				if(found) break;
-			}
-		}
-		for(Bitboard& piece_bb : side.pieces)
+		for(std::uint8_t i{0}; i<side.pieces.size(); ++i)
 		{
 			bool moved{false};
-			piece_bb.for_each_piece([&](const Position& occupied_square) mutable
+			side.pieces[i].for_each_piece([&](const Position& occupied_square) mutable
 			{
 				if(occupied_square == from_square)
 				{
-					piece_bb ^= (1ULL << to_index(occupied_square)) | (1ULL << to_index(destination_square));
+					history.push(State_delta{move, static_cast<Piece>(i), piece_to_capture});
+					side.pieces[i] ^= (1ULL << to_index(occupied_square)) | (1ULL << to_index(destination_square));
 					moved = true;
 					return;
 				}
@@ -159,19 +163,38 @@ void Board::make(const Move& move)
 
 void Board::unmove()
 {
-	const bool is_white_to_move = side_to_move == Side::white;
-	const Move move = history.top();
+	const bool was_whites_move = side_to_move == Side::black;
+	const auto last_moved_side = was_whites_move? Side::white : Side::black;
+	--half_move_clock;
+	if(!was_whites_move) --full_move_clock;
+	const auto [move, moved_piece, captured_piece] = history.top();
 	history.pop();
 	const auto move_type = move.type();
-	--half_move_clock;
-	if(is_white_to_move) --full_move_clock;
-	side_to_move = is_white_to_move? Side::black : Side::white;
-	if(move.type() == Move_type::promotion)
+	Side_position& side_to_unmove = sides[static_cast<std::uint8_t>(last_moved_side)];
+	Side_position& current_side_to_move = sides[static_cast<std::uint8_t>(side_to_move)];
+	if(move_type == Move_type::promotion)
 	{
-		Side_position& moved_side = sides[static_cast<std::uint8_t>(side_to_move)];
-		moved_side.pieces[static_cast<std::uint8_t>(move.promotion_piece())].remove_piece(move.destination_square());
-		moved_side.pieces[static_cast<std::uint8_t>(Piece::pawn)].add_piece(move.from_square());
+		side_to_unmove.pieces[static_cast<std::uint8_t>(move.promotion_piece())].remove_piece(move.destination_square());
+		side_to_unmove.pieces[static_cast<std::uint8_t>(Piece::pawn)].add_piece(move.from_square());
 	}
+	if(move_type == Move_type::castling)
+	{
+		// TODO
+	}
+	else
+	{
+		if(move_type == Move_type::en_passant)
+		{
+			const auto direction = was_whites_move? 1 : -1;
+			const Position destination_square = move.destination_square();
+			const Position pawn_to_return = Position{destination_square.rank_-direction,destination_square.file_};
+			current_side_to_move.pieces[static_cast<std::uint8_t>(Piece::pawn)].add_piece(pawn_to_return);
+		}
+		side_to_unmove.pieces[static_cast<std::uint8_t>(moved_piece)] ^= (1ULL << to_index(move.destination_square())) | (1ULL << to_index(move.from_square()));
+		if(captured_piece)
+			current_side_to_move.pieces[static_cast<std::uint8_t>(captured_piece.value())].add_piece(move.destination_square());
+	}
+	side_to_move = last_moved_side;
 }
 
 Bitboard Board::occupied_squares() const noexcept

@@ -35,6 +35,15 @@ namespace engine
 
 	struct Board
 	{
+		private:
+
+		struct State_delta
+		{
+			const Move move;
+			const Piece piece;
+			std::optional<Piece> captured_piece;
+		};
+
 		public:
 
 		explicit Board(const std::string_view& fen_string);
@@ -43,7 +52,7 @@ namespace engine
 		std::array<Side_position, 2> sides{};
 		int half_move_clock{}, full_move_clock{};
 		Side side_to_move{Side::white};
-		static std::stack<Move> history;
+		static std::stack<State_delta> history;
 
 		void make(const Move& move);
 		void unmove();
