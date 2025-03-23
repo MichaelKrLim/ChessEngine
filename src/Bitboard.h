@@ -45,11 +45,21 @@ namespace engine
 
 		[[nodiscard]] constexpr bool is_occupied(const Position& position) const;
 		[[nodiscard]] std::string pretty_string() const;
-		[[nodiscard]] constexpr Position lsb_index() const;
+		[[nodiscard]] constexpr Position lsb_square() const;
 		[[nodiscard]] constexpr std::uint8_t popcount() const { return std::popcount(data_); }
 		constexpr void add_piece(const Position& index);
 		constexpr void remove_piece(const Position& square);
-		constexpr void for_each_piece(std::function<void (const Position& original_square)>&& f) const;
+		template <typename Function_type>
+		constexpr void for_each_piece(Function_type&& f) const
+		{
+			auto data_c = data_;
+			while(data_c > 0)
+			{
+				const std::size_t index = std::countr_zero(data_c);
+				f(Position{index});
+				data_c &= data_c - 1;
+			}
+		}
 
 		private:
 
@@ -78,17 +88,6 @@ namespace engine
 		data_ &= ~(1ULL << to_index(square));
 	}
 
-	constexpr void Bitboard::for_each_piece(std::function<void (const Position& original_square)>&& f) const 
-	{
-		auto data_c = data_;
-		while(data_c > 0)
-		{
-			const std::size_t index = std::countr_zero(data_c);
-			f(Position{index});
-			data_c &= data_c - 1;
-		}
-	}
-
 	inline std::string Bitboard::pretty_string() const
 	{
 		std::string s = "+---+---+---+---+---+---+---+---+\n";
@@ -104,7 +103,7 @@ namespace engine
 	}
 
 	constexpr bool        Bitboard::is_occupied(const Position& square) const { return data_ & (1<<(square.rank_*board_size+square.file_)); }
-	constexpr Position    Bitboard::lsb_index() 						   const { return Position{static_cast<std::size_t>(std::countr_zero(data_))}; }
+	constexpr Position    Bitboard::lsb_square() 						   const { return Position{static_cast<std::size_t>(std::countr_zero(data_))}; }
 
 	inline std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard) { return os << bitboard.pretty_string(); }
 }

@@ -1,4 +1,5 @@
 #include "Board.h"
+#include "Move_generator.h"
 
 #include <sstream>
 
@@ -102,13 +103,15 @@ Board::Board(const std::string_view& fen_string)
 
 	std::getline(iss, fen_segment, ' ');
 	full_move_clock = std::stoi(fen_segment);
-}
 
+	update_attack_maps();
+}
 
 void Board::make(const Move& move)
 {
+	const auto& history_size = history.size();
 	Side_position& side = sides[static_cast<std::uint8_t>(side_to_move)];
-	auto& opposite_side = sides[static_cast<std::uint8_t>(side_to_move == Side::white? Side::black : Side::white)];
+	auto& opposite_side = sides[static_cast<std::uint8_t>(!side_to_move)];
 	const auto destination_square = move.destination_square();
 	const auto from_square = move.from_square();
 	std::optional<Piece> piece_to_capture = std::nullopt;
@@ -133,7 +136,7 @@ void Board::make(const Move& move)
 	}
 	if(move.type() == Move_type::promotion)
 	{
-		history.push(State_delta{move, static_cast<Piece>(Piece::pawn), piece_to_capture});
+		history.push(State_delta{move, static_cast<Piece>(Piece::pawn), piece_to_capture, sides[static_cast<std::uint8_t>(Side::white)].attack_map, sides[static_cast<std::uint8_t>(Side::black)].attack_map});
 		Bitboard& pawn_bb = side.pieces[static_cast<std::uint8_t>(Piece::pawn)];
 		pawn_bb.remove_piece(from_square);
 		side.pieces[static_cast<std::uint8_t>(move.promotion_piece())].add_piece(destination_square);
@@ -147,7 +150,7 @@ void Board::make(const Move& move)
 			{
 				if(occupied_square == from_square)
 				{
-					history.push(State_delta{move, static_cast<Piece>(i), piece_to_capture});
+					history.push(State_delta{move, static_cast<Piece>(i), piece_to_capture, sides[static_cast<std::uint8_t>(Side::white)].attack_map, sides[static_cast<std::uint8_t>(Side::black)].attack_map});
 					side.pieces[i] ^= (1ULL << to_index(occupied_square)) | (1ULL << to_index(destination_square));
 					moved = true;
 					return;
@@ -158,19 +161,21 @@ void Board::make(const Move& move)
 	}
 	++half_move_clock;
 	if(side_to_move == Side::black) ++full_move_clock;
-	side_to_move = side_to_move == Side::white? Side::black : Side::white;
+	side_to_move = !side_to_move;
+	update_attack_maps();
+	assert(history.size() > history_size);
 }
 
 void Board::unmove()
 {
-	assert(history.size()>0 && "Tried to undo noexistent move");
+	assert(history.size() > 0 && "Tried to undo noexistent move");
 	const bool was_whites_move = side_to_move == Side::black;
 	const auto last_moved_side = was_whites_move? Side::white : Side::black;
 	
 	--half_move_clock;
 	if(!was_whites_move) --full_move_clock;
 	
-	const auto [move, moved_piece, captured_piece] = history.top();
+	const auto [move, moved_piece, captured_piece, white_attack_map, black_attack_map] = history.top();
 	history.pop();
 	const auto move_type = move.type();
 	Side_position& side_to_unmove = sides[static_cast<std::uint8_t>(last_moved_side)];
@@ -198,9 +203,35 @@ void Board::unmove()
 			current_side_to_move.pieces[static_cast<std::uint8_t>(captured_piece.value())].add_piece(move.destination_square());
 	}
 	side_to_move = last_moved_side;
+	sides[static_cast<std::uint8_t>(Side::white)].attack_map = white_attack_map;
+	sides[static_cast<std::uint8_t>(Side::black)].attack_map = black_attack_map;
 }
 
 Bitboard Board::occupied_squares() const noexcept
 {
 	return sides[static_cast<std::uint8_t>(Side::black)].occupied_squares() |= sides[static_cast<std::uint8_t>(Side::white)].occupied_squares();
+}
+
+void Board::update_attack_maps() noexcept
+{
+	const Side& side_to_move_copy = side_to_move;
+	side_to_move = Side::white;
+	auto& white_attack_map = sides[static_cast<std::uint8_t>(Side::white)].attack_map;
+	auto& black_attack_map = sides[static_cast<std::uint8_t>(Side::black)].attack_map;
+	Bitboard current_attack_map{0ULL};
+	side_to_move = Side::white;
+	for(const auto& move : legal_moves(*this))
+		current_attack_map.add_piece(move.destination_square());
+	white_attack_map = current_attack_map;
+	current_attack_map = 0ULL;
+	side_to_move = Side::black;
+	for(const auto& move : legal_moves(*this))
+		current_attack_map.add_piece(move.destination_square());
+	black_attack_map = current_attack_map;
+	side_to_move = side_to_move_copy;
+}
+
+bool Board::in_check() const noexcept
+{
+	return is_square_attacked(sides[static_cast<std::uint8_t>(side_to_move)].pieces[static_cast<std::uint8_t>(Piece::king)].lsb_square(), Side::black);
 }
