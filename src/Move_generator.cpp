@@ -74,14 +74,14 @@ namespace
 		});
 	}
 
-	const void king_legal_moves(std::vector<Move>& legal_moves, const Bitboard& king_bb, const Bitboard& our_occupied_squares)
+	const void king_legal_moves(std::vector<Move>& legal_moves, const Bitboard& king_bb, const Bitboard& our_occupied_squares, const Bitboard& enemy_attack_map = Bitboard{0ULL})
 	{
 		const Position original_square = king_bb.lsb_square();
 		for(const auto& move : king_moves_)
 		{
 			const auto [del_rank, del_file] = move;
 			const Position destination_square(original_square.rank_+del_rank, original_square.file_+del_file);
-			if(is_valid_destination(destination_square, our_occupied_squares))
+			if(is_valid_destination(destination_square, our_occupied_squares) && is_free(destination_square, enemy_attack_map))
 				legal_moves.push_back(Move{original_square, destination_square});
 		}
 	}
@@ -153,7 +153,7 @@ namespace engine
 			legal_moves.reserve(max_legal_moves);
 			pawn_legal_moves(legal_moves, pieces[static_cast<std::size_t>(Piece::pawn)], occupied_squares, static_cast<Side>(side_index), board.sides[side_index].occupied_squares());
 			knight_legal_moves(legal_moves, pieces[static_cast<std::size_t>(Piece::knight)], board.sides[side_index].occupied_squares());
-			king_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::king)], board.sides[side_index].occupied_squares());
+			king_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::king)], board.sides[side_index].occupied_squares(), board.enemy_attack_map);
 
 			bishop_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::bishop)], occupied_squares, board.sides[side_index].occupied_squares());
 			rook_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::rook)], occupied_squares, board.sides[side_index].occupied_squares());
@@ -162,16 +162,16 @@ namespace engine
 		else
 		{
 			legal_moves.reserve(king_max_adjacent_squares);
-			king_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::king)], board.sides[side_index].occupied_squares() & board.enemy_attack_map);
+			king_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::king)], board.sides[side_index].occupied_squares() & board.enemy_attack_map, board.enemy_attack_map);
 		}
 		return legal_moves;
 	}
 
-	const Bitboard generate_attack_map(const Board& board, const Side& side) noexcept
+	const Bitboard generate_attack_map(const Board& board) noexcept
 	{
 		std::vector<Move> legal_moves{};
 		Bitboard attack_map;
-		const auto side_index = static_cast<std::uint8_t>(side);
+		const auto side_index = static_cast<std::uint8_t>(board.side_to_move);
 		const auto& pieces = board.sides[side_index].pieces;
 		const auto occupied_squares = board.occupied_squares();
 		legal_moves.reserve(max_legal_moves);
@@ -187,5 +187,35 @@ namespace engine
 			attack_map.add_piece(move.destination_square());
 		}
 		return attack_map;
+	}
+
+	const std::vector<Position> generate_pinned_pieces(const Board& board) noexcept
+	{
+		std::vector<Position> pinned_pieces{};
+		const auto& side = sides[static_cast<std::uint8_t>(board.side_to_move)];
+		const auto& enemy_side = sides[static_cast<std::uint8_t>(!board.side_to_move)];
+		const auto& enemy_rooks = enemy_side.pieces[static_cast<std::uint8_t>(Piece::rook)];
+		const auto& enemy_bishops = enemy_side.pieces[static_cast<std::uint8_t>(Piece::bishop)];
+		const auto& pieces = board.sides[side_index].pieces;
+		const Position& king_square = pieces[static_cast<std::uint8_t>(Piece::king)].lsb_square();
+		for(const auto& move : rook_moves_)
+		{
+			for(std::nullopt<Position> pinnable_piece{std::nullopt}; std::size_t{0} offset, Position current_square{king_square+offset}; is_on_board(current_square); current_square+=offset)
+			{
+				if(found_pinnable_piece)
+				{
+					if(enemy_rooks.is_occupied(current_square))
+					{
+						pinned_pieces.push_back(pinnable_piece);
+					}
+					else continue;
+					break;
+				}
+				else if(other_side.occupied_squares().is_occupied(current_square))
+					break;
+				else if(side.occupied_squares().is_occupied(current_square))
+					pinnable_piece = current_square;
+			}
+		}
 	}
 }

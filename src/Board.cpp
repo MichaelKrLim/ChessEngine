@@ -127,8 +127,8 @@ void Board::make(const Move& move)
 				{
 					piece_to_capture = static_cast<Piece>(i);
 					piece_bb.remove_piece(destination_square);
+					found = true;
 				}
-				found = true;
 			});
 			if(found) break;
 		}
@@ -160,8 +160,9 @@ void Board::make(const Move& move)
 	}
 	++half_move_clock;
 	if(side_to_move == Side::black) ++full_move_clock;
-	enemy_attack_map = generate_attack_map(*this, side_to_move);
+	enemy_attack_map = generate_attack_map(*this);
 	side_to_move = !side_to_move;
+	pinned_pieces = generate_pinned_pieces(*this);
 	assert(history.size() > history_size);
 }
 

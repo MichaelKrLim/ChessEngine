@@ -15,7 +15,7 @@ namespace engine
 {
 	struct Side_position
 	{
-		std::array<Bitboard, 6> pieces{};
+		std::array<Bitboard, number_of_pieces> pieces{};
 		std::optional<Position> en_passent_target_square{std::nullopt};
 		std::array<bool, 2> castling_rights{false, false};
 

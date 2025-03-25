@@ -69,6 +69,7 @@ namespace engine
 	constexpr std::vector<Bitboard> generate_blocker_configurations(const Position& square, const Piece& piece_type)
 	{
 		std::vector<Bitboard> blocker_configurations{};
+		blocker_configurations.push_back(Bitboard{0ULL});
 		bool is_bishop = piece_type == Piece::bishop;
 		const std::uint64_t attack_mask = is_bishop? bishop_mask(square) : rook_mask(square);
 		for(std::uint64_t blockers = attack_mask; blockers != 0; blockers = (blockers - 1) & attack_mask) 

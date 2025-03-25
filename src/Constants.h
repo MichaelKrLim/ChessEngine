@@ -17,6 +17,7 @@ namespace engine
 	}
 
 	constexpr std::uint8_t board_size = 8,
+	number_of_pieces = 6;
 	white_en_passant_target_rank = 3,
 	black_en_passant_target_rank = 6,
 	max_legal_moves = 218,
