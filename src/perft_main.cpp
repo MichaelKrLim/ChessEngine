@@ -16,9 +16,10 @@ int main(int argc, char* argv[])
 	{
 		std::istringstream iss{argv[3]};
 		std::string move{""};
-		while(std::getline(iss, move, ' '))
+		while(std::getline(iss, move, ' ')){std::cerr << algebraic_to_position(move.substr(0, 2)) + algebraic_to_position(move.substr(2, 2)) << "\n";
 			base_position.make(Move{algebraic_to_position(move.substr(0, 2)), algebraic_to_position(move.substr(2, 2))});
 	}
+	std::cerr  << base_position.sides[static_cast<int>(Side::black)].pieces[static_cast<int>(Piece::pawn)] << "\n";
 	const auto perft = [](this auto&& rec, int depth, Board& board, const bool&& is_root) -> unsigned long long
 	{
 		std::uint64_t current_count, nodes{0};
