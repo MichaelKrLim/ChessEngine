@@ -4,7 +4,6 @@
 #include "Constants.h"
 
 #include <iostream>
-#include <string>
 #include <type_traits>
 
 namespace engine
@@ -52,6 +51,18 @@ namespace engine
 	{
 		return os << static_cast<char>('a'+position.file_) << position.rank_+1;
 	}
+}
+
+namespace std
+{
+	template <>
+	struct hash<engine::Position>
+	{
+		std::size_t operator()(const engine::Position& position) const 
+		{
+			return std::hash<int>{}(position.rank_) ^ (std::hash<int>{}(position.file_) << 1);
+		}
+	};
 }
 
 #endif // Position_h_INCLUDED

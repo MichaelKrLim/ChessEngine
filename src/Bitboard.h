@@ -6,7 +6,6 @@
 
 #include <bit>
 #include <cstdint>
-#include <functional>
 #include <ostream>
 #include <string>
 

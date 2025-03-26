@@ -104,7 +104,9 @@ Board::Board(const std::string_view& fen_string)
 	std::getline(iss, fen_segment, ' ');
 	full_move_clock = std::stoi(fen_segment);
 
-	enemy_attack_map = generate_attack_map(*this, !side_to_move);
+	side_to_move = !side_to_move;
+	enemy_attack_map = generate_attack_map(*this);
+	side_to_move = !side_to_move;
 }
 
 void Board::make(const Move& move)
@@ -162,7 +164,6 @@ void Board::make(const Move& move)
 	if(side_to_move == Side::black) ++full_move_clock;
 	enemy_attack_map = generate_attack_map(*this);
 	side_to_move = !side_to_move;
-	pinned_pieces = generate_pinned_pieces(*this);
 	assert(history.size() > history_size);
 }
 

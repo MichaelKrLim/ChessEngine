@@ -3,6 +3,8 @@
 
 #include "Bitboard.h"
 
+#include <vector>
+
 namespace engine
 {
 	struct Magic_square
@@ -17,6 +19,18 @@ namespace engine
 	{
 		return (key*magic) >> shift;
 	}
+
+	constexpr std::array<Position, 4> rook_moves_ =
+	{{
+		Position{1, 0}, Position{0, 1},
+		Position{-1, 0}, Position{0, -1}
+	}};
+
+	constexpr std::array<Position, 4> bishop_moves_ =
+	{{
+		Position{1,  1}, Position{1,  -1},
+		Position{-1, 1}, Position{-1, -1}
+	}};
 }
 
 #endif // Magic_util_h_INCLUDED

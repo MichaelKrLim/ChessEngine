@@ -35,17 +35,6 @@ namespace engine
 		6, 5, 5, 5, 5, 5, 5, 6
 	};
 
-	constexpr std::array<Position, 4> rook_moves_ =
-	{{
-		Position{1, 0}, Position{0, 1}, Position{-1, 0}, Position{0, -1}
-	}};
-
-	constexpr std::array<Position, 4> bishop_moves_ =
-	{{
-		Position{1,  1}, Position{1,  -1},
-		Position{-1, 1}, Position{-1, -1}
-	}};
-
 	constexpr std::uint64_t rook_mask(const Position& square)
 	{
 		std::uint64_t result{0ULL};

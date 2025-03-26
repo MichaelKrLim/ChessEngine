@@ -10,9 +10,7 @@ namespace engine
 	{
 		if(!is_on_board(square))
 			return false;
-
-		bool square_is_occupied = !(occupied_squares & (1ULL << to_index(Position(square))));
-		return square_is_occupied;
+		return !occupied_squares.is_occupied(square);
 	}
 }
 
