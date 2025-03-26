@@ -195,23 +195,24 @@ namespace engine
 		const auto& pieces = board.sides[side_index].pieces;
 		const auto occupied_squares = board.occupied_squares();
 		const bool in_check = board.in_check();
-		if(!in_check)
-		{
-			legal_moves.reserve(max_legal_moves);
-			const std::unordered_set<Position> pinned_pieces = generate_pinned_pieces(board);
-			pawn_legal_moves(legal_moves, pieces[static_cast<std::size_t>(Piece::pawn)], occupied_squares, static_cast<Side>(side_index), board.sides[side_index].occupied_squares(), pinned_pieces);
-			knight_legal_moves(legal_moves, pieces[static_cast<std::size_t>(Piece::knight)], board.sides[side_index].occupied_squares(), pinned_pieces);
-			king_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::king)], board.sides[side_index].occupied_squares() | board.enemy_attack_map, pinned_pieces);
+		legal_moves.reserve(max_legal_moves);
+		const std::unordered_set<Position> pinned_pieces = generate_pinned_pieces(board);
+		pawn_legal_moves(legal_moves, pieces[static_cast<std::size_t>(Piece::pawn)], occupied_squares, static_cast<Side>(side_index), board.sides[side_index].occupied_squares(), pinned_pieces);
+		knight_legal_moves(legal_moves, pieces[static_cast<std::size_t>(Piece::knight)], board.sides[side_index].occupied_squares(), pinned_pieces);
+		in_check?
+		king_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::king)], board.sides[side_index].occupied_squares() | board.enemy_attack_map)
+		 : king_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::king)], board.sides[side_index].occupied_squares() | board.enemy_attack_map, pinned_pieces);
 
-			bishop_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::bishop)], occupied_squares, board.sides[side_index].occupied_squares(), pinned_pieces);
-			rook_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::rook)], occupied_squares, board.sides[side_index].occupied_squares(), pinned_pieces);
-			queen_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::queen)], occupied_squares, board.sides[side_index].occupied_squares(), pinned_pieces);
-		}
-		else
+		bishop_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::bishop)], occupied_squares, board.sides[side_index].occupied_squares(), pinned_pieces);
+		rook_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::rook)], occupied_squares, board.sides[side_index].occupied_squares(), pinned_pieces);
+		queen_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::queen)], occupied_squares, board.sides[side_index].occupied_squares(), pinned_pieces);
+		if(in_check)
 		{
-			legal_moves.reserve(king_max_adjacent_squares);
-			king_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::king)], board.sides[side_index].occupied_squares() | board.enemy_attack_map);
-			//TODO deal with double checks and finding pieces that can block check
+			for(const auto& move : sliding_moves)
+			{
+			std::optional<Position> found_pinnable_piece{std::nullopt};
+			for(Position current_square{king_square+move}; is_on_board(current_square); current_square+=move)
+			{
 		}
 		return legal_moves;
 	}
