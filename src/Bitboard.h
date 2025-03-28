@@ -55,7 +55,7 @@ namespace engine
 			while(data_c > 0)
 			{
 				const std::size_t index = std::countr_zero(data_c);
-				f(Position{index});
+				std::forward<Function_type>(f)(Position{index});
 				data_c &= data_c - 1;
 			}
 		}
