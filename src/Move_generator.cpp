@@ -159,29 +159,32 @@ namespace
 		const auto& enemy_side = board.sides[static_cast<std::uint8_t>(!board.side_to_move)];
 		const Bitboard enemy_sliding_pieces = enemy_side.pieces[static_cast<std::uint8_t>(Piece::rook)] | enemy_side.pieces[static_cast<std::uint8_t>(Piece::bishop)] | enemy_side.pieces[static_cast<std::uint8_t>(Piece::queen)];
 		const Position king_square = side.pieces[static_cast<std::uint8_t>(Piece::king)].lsb_square();
-		const auto sliding_moves = { Position{1,  1}, Position{1,  -1}, Position{-1, 1}, Position{-1, -1},
-									 Position{1, 0},  Position{0, 1},   Position{-1, 0}, Position{0, -1} };
-		for(const auto& move : sliding_moves)
+		auto find = [&](const auto& moves, const Bitboard& piece_bb)
 		{
-			std::optional<Position> found_pinnable_piece{std::nullopt};
-			for(Position current_square{king_square+move}; is_on_board(current_square); current_square+=move)
+			for(const auto& move : moves)
 			{
-				if(found_pinnable_piece && enemy_sliding_pieces.is_occupied(current_square))
+				std::optional<Position> found_pinnable_piece{std::nullopt};
+				for(Position current_square{king_square+move}; is_on_board(current_square); current_square+=move)
 				{
-					pinned_pieces.insert(found_pinnable_piece.value());
-					break;
-				}
-				if(enemy_side.occupied_squares().is_occupied(current_square))
-					break;
-				if(side.occupied_squares().is_occupied(current_square))
-				{
-					if(!found_pinnable_piece.has_value())
-						found_pinnable_piece = current_square;
-					else
+					if(found_pinnable_piece && enemy_sliding_pieces.is_occupied(current_square))
+					{
+						pinned_pieces.insert(found_pinnable_piece.value());
 						break;
+					}
+					if(enemy_side.occupied_squares().is_occupied(current_square))
+						break;
+					if(piece_bb.is_occupied(current_square))
+					{
+						if(!found_pinnable_piece.has_value())
+							found_pinnable_piece = current_square;
+						else
+							break;
+					}
 				}
 			}
-		}
+		};
+		find(bishop_moves_, enemy_side.pieces[static_cast<std::uint8_t>(Piece::bishop)]);
+		find(rook_moves_, enemy_side.pieces[static_cast<std::uint8_t>(Piece::rook)]);
 		return pinned_pieces;
 	}
 }
@@ -191,28 +194,45 @@ namespace engine
 	const std::vector<Move> legal_moves(const Board& board) noexcept
 	{
 		std::vector<Move> legal_moves{};
-		const auto side_index = static_cast<std::uint8_t>(board.side_to_move);
-		const auto& pieces = board.sides[side_index].pieces;
+		const Side_position our_side = board.sides[static_cast<std::uint8_t>(board.side_to_move)];
+		const auto& pieces = our_side.pieces;
+		const auto& our_occupied_squares = our_side.occupied_squares();
 		const auto occupied_squares = board.occupied_squares();
 		const bool in_check = board.in_check();
 		legal_moves.reserve(max_legal_moves);
 		const std::unordered_set<Position> pinned_pieces = generate_pinned_pieces(board);
-		pawn_legal_moves(legal_moves, pieces[static_cast<std::size_t>(Piece::pawn)], occupied_squares, static_cast<Side>(side_index), board.sides[side_index].occupied_squares(), pinned_pieces);
-		knight_legal_moves(legal_moves, pieces[static_cast<std::size_t>(Piece::knight)], board.sides[side_index].occupied_squares(), pinned_pieces);
+		pawn_legal_moves(legal_moves, pieces[static_cast<std::size_t>(Piece::pawn)], occupied_squares, board.side_to_move, our_occupied_squares, pinned_pieces);
+		knight_legal_moves(legal_moves, pieces[static_cast<std::size_t>(Piece::knight)], our_occupied_squares, pinned_pieces);
 		in_check?
-		king_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::king)], board.sides[side_index].occupied_squares() | board.enemy_attack_map)
-		 : king_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::king)], board.sides[side_index].occupied_squares() | board.enemy_attack_map, pinned_pieces);
+		king_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::king)], our_occupied_squares | board.enemy_attack_map)
+		 : king_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::king)], our_occupied_squares | board.enemy_attack_map, pinned_pieces);
 
-		bishop_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::bishop)], occupied_squares, board.sides[side_index].occupied_squares(), pinned_pieces);
-		rook_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::rook)], occupied_squares, board.sides[side_index].occupied_squares(), pinned_pieces);
-		queen_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::queen)], occupied_squares, board.sides[side_index].occupied_squares(), pinned_pieces);
+		bishop_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::bishop)], occupied_squares, our_occupied_squares, pinned_pieces);
+		rook_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::rook)], occupied_squares, our_occupied_squares, pinned_pieces);
+		queen_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::queen)], occupied_squares, our_occupied_squares, pinned_pieces);
 		if(in_check)
 		{
-			for(const auto& move : sliding_moves)
+			const Position king_square = our_side.pieces[static_cast<std::uint8_t>(Piece::king)].lsb_square();
+			const Side_position& enemy_side = board.sides[static_cast<std::uint8_t>(!board.side_to_move)];
+			std::unordered_set<Position> pinning_pieces;
+			for(const auto [moves, pinning_bb] : 
+				{{rook_moves_, enemy_side.pieces[static_cast<std::uint8_t>(Piece::rook)]},
+				 {bishop_moves_, enemy_side.pieces[static_cast<std::uint8_t>(Piece::bishop)]}})
 			{
-			std::optional<Position> found_pinnable_piece{std::nullopt};
-			for(Position current_square{king_square+move}; is_on_board(current_square); current_square+=move)
-			{
+				for(const auto& move : moves)
+				{
+					for(Position current_square{king_square+move}; is_on_board(current_square); current_square+=move)
+					{
+						if(our_occupied_squares.is_occupied(current_square))
+							break;
+						else if(pinning_bb.is_occupied(current_square))
+						{	
+							pinning_pieces.insert(current_square);
+							break;
+						}
+					}
+				}
+			}
 		}
 		return legal_moves;
 	}
