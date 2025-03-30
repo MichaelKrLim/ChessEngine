@@ -16,7 +16,6 @@ namespace engine
 	struct Side_position
 	{
 		std::array<Bitboard, number_of_pieces> pieces{};
-		std::optional<Position> en_passent_target_square{std::nullopt};
 		std::array<bool, 2> castling_rights{false, false};
 
 		[[nodiscard]] inline Bitboard occupied_squares() const noexcept 
@@ -41,8 +40,10 @@ namespace engine
 		{
 			const Move move;
 			const Piece piece;
-			std::optional<Piece> captured_piece;
+			const std::optional<Piece> captured_piece;
 			const Bitboard enemy_attack_map;
+			const std::optional<Position> en_passant_target_square;
+			const bool was_en_passant;
 		};
 
 		public:
@@ -54,6 +55,7 @@ namespace engine
 		int half_move_clock{}, full_move_clock{};
 		Side side_to_move{Side::white};
 		Bitboard enemy_attack_map;
+		std::optional<Position> en_passant_target_square{std::nullopt};
 		static std::stack<State_delta> history;
 
 		void make(const Move& move);

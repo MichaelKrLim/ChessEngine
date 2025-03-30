@@ -90,12 +90,6 @@ Board::Board(const std::string_view& fen_string)
 	{
 		assert(fen_segment.size()==2 && isalpha(fen_segment[0]) && isdigit(fen_segment[1]) && "Invalid FEN string");
 		en_passent_target_square = algebraic_to_position(fen_segment);
-		std::size_t side_index;
-		if(en_passent_target_square.rank_ == white_en_passant_target_rank-1)
-			side_index = static_cast<std::uint8_t>(Side::white);
-		else
-			side_index = static_cast<std::uint8_t>(Side::black);
-		sides[side_index].en_passent_target_square = en_passent_target_square;
 	}
 
 	std::getline(iss, fen_segment, ' ');
@@ -116,7 +110,10 @@ void Board::make(const Move& move)
 	auto& opposite_side = sides[static_cast<std::uint8_t>(!side_to_move)];
 	const auto destination_square = move.destination_square();
 	const auto from_square = move.from_square();
+	const auto pawn_direction = side_to_move == Side::white ? 1 : -1;
 	std::optional<Piece> piece_to_capture = std::nullopt;
+	const auto old_en_passant_target_square = en_passant_target_square;
+	en_passant_target_square = std::nullopt;
 	if(!is_free(destination_square, occupied_squares()))
 	{
 		for(std::size_t i{0}; i<opposite_side.pieces.size(); ++i)
@@ -135,9 +132,9 @@ void Board::make(const Move& move)
 			if(found) break;
 		}
 	}
-	if(move.type() == Move_type::promotion)
+	if(false/*is promotion*/)
 	{
-		history.push(State_delta{move, static_cast<Piece>(Piece::pawn), piece_to_capture, enemy_attack_map});
+		history.push(State_delta{move, static_cast<Piece>(Piece::pawn), piece_to_capture, enemy_attack_map, old_en_passant_target_square, false});
 		Bitboard& pawn_bb = side.pieces[static_cast<std::uint8_t>(Piece::pawn)];
 		pawn_bb.remove_piece(from_square);
 		side.pieces[static_cast<std::uint8_t>(move.promotion_piece())].add_piece(destination_square);
@@ -149,15 +146,26 @@ void Board::make(const Move& move)
 			bool moved{false};
 			side.pieces[i].for_each_piece([&](const Position& occupied_square) mutable
 			{
+				const Piece piece_type = static_cast<Piece>(i);
 				if(occupied_square == from_square)
 				{
-					history.push(State_delta{move, static_cast<Piece>(i), piece_to_capture, enemy_attack_map});
+					if(piece_type  == Piece::pawn && destination_square.rank_ == from_square.rank_ + 2*pawn_direction)
+					{
+						en_passant_target_square = Position{from_square.rank_+pawn_direction, from_square.file_};
+					}
+					const bool is_en_passant = destination_square==old_en_passant_target_square && piece_type == Piece::pawn;
+					if(is_en_passant)
+					{
+						opposite_side.pieces[static_cast<std::uint8_t>(Piece::pawn)].remove_piece(Position{destination_square.rank_-pawn_direction, destination_square.file_});
+					}
+					history.push(State_delta{move, static_cast<Piece>(i), piece_to_capture, enemy_attack_map, old_en_passant_target_square, is_en_passant});
 					side.pieces[i] ^= (1ULL << to_index(occupied_square)) | (1ULL << to_index(destination_square));
 					moved = true;
 					return;
 				}
 			});
-			if(moved) break;
+			if(moved)
+				break;
 		}
 	}
 	++half_move_clock;
@@ -176,23 +184,22 @@ void Board::unmove()
 	--half_move_clock;
 	if(!was_whites_move) --full_move_clock;
 	
-	const auto [move, moved_piece, captured_piece, attack_map] = history.top();
+	const auto [move, moved_piece, captured_piece, attack_map, previous_en_passant_target_square, was_en_passant] = history.top();
 	history.pop();
-	const auto move_type = move.type();
 	Side_position& side_to_unmove = sides[static_cast<std::uint8_t>(last_moved_side)];
 	Side_position& current_side_to_move = sides[static_cast<std::uint8_t>(side_to_move)];
-	if(move_type == Move_type::promotion)
+	if(false /*is promotion*/)
 	{
 		side_to_unmove.pieces[static_cast<std::uint8_t>(move.promotion_piece())].remove_piece(move.destination_square());
 		side_to_unmove.pieces[static_cast<std::uint8_t>(Piece::pawn)].add_piece(move.from_square());
 	}
-	if(move_type == Move_type::castling)
+	if(false /*is castling*/)
 	{
 		// TODO
 	}
 	else
 	{
-		if(move_type == Move_type::en_passant)
+		if(was_en_passant)
 		{
 			const auto direction = was_whites_move? 1 : -1;
 			const Position destination_square = move.destination_square();
@@ -205,6 +212,7 @@ void Board::unmove()
 	}
 	side_to_move = last_moved_side;
 	enemy_attack_map = attack_map;
+	en_passant_target_square = previous_en_passant_target_square;
 }
 
 Bitboard Board::occupied_squares() const noexcept
