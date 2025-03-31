@@ -46,9 +46,12 @@ namespace engine
 			const bool was_en_passant;
 		};
 
+		void validate_fen(const std::array<std::string, 6>& partitioned_fen) const;
+		void parse_fen(const std::string_view fen) noexcept;
+
 		public:
 
-		explicit Board(const std::string_view& fen_string);
+		explicit Board(const std::string_view fen);
 		Board() = default;
 
 		std::array<Side_position, 2> sides{};

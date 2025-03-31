@@ -102,6 +102,7 @@ namespace engine
 	}
 
 	constexpr bool        Bitboard::is_occupied(const Position& square) const { return data_ & (1ULL << to_index(square)); }
+	
 	constexpr Position    Bitboard::lsb_square() 						const { return Position{static_cast<std::size_t>(std::countr_zero(data_))}; }
 
 	inline std::ostream& operator<<(std::ostream& os, const Bitboard& bitboard) { return os << bitboard.pretty_string(); }

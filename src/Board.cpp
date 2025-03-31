@@ -1,13 +1,42 @@
 #include "Board.h"
 #include "Move_generator.h"
 
+#include <algorithm>
+#include <ranges>
+#include <regex>
 #include <sstream>
 
 using namespace engine;
 
 std::stack<Board::State_delta> Board::history{};
 
-Board::Board(const std::string_view& fen_string)
+void Board::validate_fen(const std::array<std::string, 6>& partitioned_fen) const
+{
+	const auto [fen_piece_data, fen_active_color, fen_castling_availiability, fen_en_passant_target_square, fen_halfmove_clock, fen_fullmove_clock] = partitioned_fen;
+	auto ranks = std::ranges::views::split(fen_piece_data, '/');
+	if(std::ranges::distance(ranks) != 8)
+		throw std::invalid_argument("invalid piece data");
+	for(auto&& rank : ranks)
+	{
+		const bool double_empty_squares = std::regex_match(std::string{rank.begin(), rank.end()}, std::regex{"\\d{2}"});
+		const bool invalid_letters = std::ranges::any_of(rank, [](const char& letter){ return !std::regex_match(std::string{letter}, std::regex{"[1-8]|[pkqbnrPKQBNR]"}); });
+		const std::uint8_t number_of_squares = std::ranges::fold_left(rank, 0, [](int current_count, const char& letter){ return isdigit(letter)? current_count+letter-'0' : current_count+1; });
+		if(invalid_letters || number_of_squares != 8 || double_empty_squares)
+			throw std::invalid_argument("invalid piece data");
+		if(!std::regex_match(fen_active_color, std::regex{"^(w|b)$"}))
+			throw std::invalid_argument("invalid active color");
+		if(!std::regex_match(fen_castling_availiability, std::regex{"^-$|^(KQ?k?q?|Qk?q?|kq?|q)$"}))
+			throw std::invalid_argument("invalid castling rights");
+		if(!std::regex_match(fen_en_passant_target_square, std::regex{"^(-|[a-h][36])$"}))
+			throw std::invalid_argument("invalid en passant square");
+		if(!std::regex_match(fen_halfmove_clock, std::regex{"^([0-9]|[1-9][0-9])$"}))
+			throw std::invalid_argument("invalid halfmove clock");
+		if(!std::regex_match(fen_fullmove_clock, std::regex{"^([1-9][0-9]{0,1})$"}))
+			throw std::invalid_argument("invalid halfmove clock");
+	}
+}
+
+void Board::parse_fen(const std::string_view fen) noexcept
 {
 	const auto to_piece_index = [](const char& to_convert)
 	{
@@ -30,7 +59,7 @@ Board::Board(const std::string_view& fen_string)
 		const std::size_t flipped = (board_size-1-position.rank_)*board_size+position.file_;
 		return flipped;
 	};
-	const auto read_placement_data = [&](const std::string_view& fen_section)
+	const auto read_piece_data = [&](const std::string_view& fen_section)
 	{
 		std::size_t board_index{0};
 		for(std::size_t i{0}; i<fen_section.size(); ++i)
@@ -58,19 +87,34 @@ Board::Board(const std::string_view& fen_string)
 			}
 		}
 	};
-	std::istringstream iss{std::string{fen_string}};
-	Position en_passent_target_square;
-	std::string fen_segment;
-	std::getline(iss, fen_segment, ' ');
-	read_placement_data(fen_segment);
 
-	std::getline(iss, fen_segment, ' ');
-	side_to_move = fen_segment[0] == 'w'? Side::white : Side::black;
-
-	std::getline(iss, fen_segment, ' ');
-	if(fen_segment[0] != '-')
+	std::istringstream iss{std::string{fen}};
+	std::array<std::string, 6> partitioned_fen;
+	for(auto& partition : partitioned_fen)
+		std::getline(iss, partition, ' ');
+	for(bool invalid_input{true}; invalid_input;)
 	{
-		for(const char& castling_right : fen_segment)
+		try
+		{
+			validate_fen(partitioned_fen);
+			invalid_input = false;
+		}
+		catch(const std::invalid_argument& exception)
+		{
+			std::cout << "Invalid fen string: " << exception.what() << "\n";
+			std::string new_fen;
+			std::getline(std::cin, new_fen);
+			std::istringstream iss{std::string{new_fen}};
+			for(auto& partition : partitioned_fen)
+				std::getline(iss, partition, ' ');
+		}
+	}
+	const auto [fen_piece_data, fen_active_color, fen_castling_availiability, fen_en_passant_target_square, fen_halfmove_clock, fen_fullmove_clock] = partitioned_fen;
+	read_piece_data(fen_piece_data);
+	side_to_move = fen_active_color[0] == 'w'? Side::white : Side::black;
+	if(fen_castling_availiability[0] != '-')
+	{
+		for(const char& castling_right : fen_castling_availiability)
 		{
 			std::uint8_t side_index, castling_right_index;
 			if(std::isupper(castling_right))
@@ -84,20 +128,15 @@ Board::Board(const std::string_view& fen_string)
 			sides[side_index].castling_rights[castling_right_index] = true;
 		}
 	}
+	if(fen_en_passant_target_square[0] != '-')
+		en_passant_target_square = algebraic_to_position(fen_en_passant_target_square);
+	half_move_clock = std::stoi(fen_halfmove_clock);
+	full_move_clock = std::stoi(fen_fullmove_clock);
+}
 
-	std::getline(iss, fen_segment, ' ');
-	if(fen_segment[0] != '-')
-	{
-		assert(fen_segment.size()==2 && isalpha(fen_segment[0]) && isdigit(fen_segment[1]) && "Invalid FEN string");
-		en_passent_target_square = algebraic_to_position(fen_segment);
-	}
-
-	std::getline(iss, fen_segment, ' ');
-	half_move_clock = std::stoi(fen_segment);
-
-	std::getline(iss, fen_segment, ' ');
-	full_move_clock = std::stoi(fen_segment);
-
+Board::Board(const std::string_view fen)
+{
+	parse_fen(fen);
 	side_to_move = !side_to_move;
 	enemy_attack_map = generate_attack_map(*this);
 	side_to_move = !side_to_move;

@@ -9,7 +9,8 @@ namespace engine
 	enum class Side
 	{
 		white, black
-	};
+
+	};g
 
 	inline Side operator!(const Side& side) noexcept
 	{
