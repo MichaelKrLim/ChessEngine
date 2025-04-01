@@ -48,6 +48,7 @@ namespace engine
 
 		void validate_fen(const std::array<std::string, 6>& partitioned_fen) const;
 		void parse_fen(const std::string_view fen) noexcept;
+		[[nodiscard]] std::optional<Piece> piece_at(const Position& position, const Side& side) const noexcept;
 
 		public:
 

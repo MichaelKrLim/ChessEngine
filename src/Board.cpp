@@ -142,6 +142,25 @@ Board::Board(const std::string_view fen)
 	side_to_move = !side_to_move;
 }
 
+std::optional<Piece> Board::piece_at(const Position& position, const Side& side) const noexcept
+{
+	std::optional<Piece> found_piece{std::nullopt};
+	for(std::uint8_t piece_index{0}; piece_index < number_of_pieces; ++piece_index)
+	{
+		sides[static_cast<std::uint8_t>(side)].pieces[piece_index].for_each_piece([&](const Position& occupied_square) mutable
+		{
+			if(occupied_square == position)
+			{
+				found_piece = static_cast<Piece>(piece_index);
+				return;
+			}
+		});
+		if(found_piece.has_value())
+			return found_piece;
+	}
+	return std::nullopt;
+}
+
 void Board::make(const Move& move)
 {
 	const auto& history_size = history.size();
