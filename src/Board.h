@@ -16,7 +16,7 @@ namespace engine
 	struct Side_position
 	{
 		std::array<Bitboard, number_of_pieces> pieces{};
-		std::array<bool, 2> castling_rights{false, false};
+		std::array<bool, 2> castling_rights{true, true};
 
 		[[nodiscard]] inline Bitboard occupied_squares() const noexcept 
 		{
@@ -49,6 +49,7 @@ namespace engine
 		void validate_fen(const std::array<std::string, 6>& partitioned_fen) const;
 		void parse_fen(const std::string_view fen) noexcept;
 		[[nodiscard]] std::optional<Piece> piece_at(const Position& position, const Side& side) const noexcept;
+		void update_castling_rights(const Side& side) noexcept;
 
 		public:
 
@@ -62,8 +63,8 @@ namespace engine
 		std::optional<Position> en_passant_target_square{std::nullopt};
 		static std::stack<State_delta> history;
 
-		void make(const Move& move);
-		void unmove();
+		void make(const Move& move) noexcept;
+		void unmove() noexcept;
 		[[nodiscard]] Bitboard occupied_squares() const noexcept;
 		[[nodiscard]] inline bool is_square_attacked(const Position& position) const noexcept { return enemy_attack_map.is_occupied(position); }
 		[[nodiscard]] bool in_check() const noexcept;

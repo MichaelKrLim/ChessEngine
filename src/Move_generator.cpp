@@ -43,6 +43,19 @@ namespace
 		return reachable_squares;
 	}
 
+	constexpr Bitboard king_mask(const Position& square)
+	{
+		Bitboard reachable_squares{0ULL};
+		for(const auto& move : king_moves_)
+		{
+			const auto [del_rank, del_file] = move;
+			const Position destination_square(square.rank_+del_rank, square.file_+del_file);
+			if(is_on_board(destination_square))
+				reachable_squares.add_piece(destination_square);
+		}
+		return reachable_squares;
+	}
+
 	const void pawn_legal_moves(std::vector<Move>& legal_moves, const Bitboard& pawns_bb, const Bitboard& occupied_squares, const Side& active_player, const Bitboard& current_side_occupied_squares, const std::optional<Position>& en_passant_target_square, const Position& king_square = Position{-1, -1}, const Bitboard& pinned_pieces = {})
 	{
 		const auto rank_move = 8;
@@ -289,8 +302,8 @@ namespace engine
 		legal_moves.reserve(max_legal_moves);
 		attack_map |= is_white? (pawn_bb << (board_size-1)) : (pawn_bb >> (board_size+1));
 		attack_map |= is_white? (pawn_bb << (board_size+1)) : (pawn_bb >> (board_size-1));
-		knight_legal_moves(legal_moves, pieces[static_cast<std::size_t>(Piece::knight)], board.sides[side_index].occupied_squares());
-		king_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::king)], board.sides[side_index].occupied_squares());
+		attack_map |= king_mask(pieces[static_cast<std::uint8_t>(Piece::king)].lsb_square());
+		knight_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::knight)], Bitboard{0ULL});
 		bishop_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::bishop)], occupied_squares, Bitboard{0ULL}, {});
 		rook_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::rook)], occupied_squares, Bitboard{0ULL}, {});
 		queen_legal_moves(legal_moves, pieces[static_cast<std::uint8_t>(Piece::queen)], occupied_squares, Bitboard{0ULL}, {});
