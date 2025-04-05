@@ -3,6 +3,7 @@
 
 #include "Bitboard.h"
 #include "Constants.h"
+#include "Enum_map.h"
 #include "Move.h"
 #include "Position.h"
 
@@ -13,10 +14,15 @@
 
 namespace engine
 {
+	enum class Castling_rights
+	{
+		kingside, queenside
+	};
+
 	struct Side_position
 	{
-		std::array<Bitboard, number_of_pieces> pieces{};
-		std::array<bool, 2> castling_rights{true, true};
+		Enum_map<Piece, Bitboard, number_of_pieces> pieces{};
+		Enum_map<Castling_rights, bool, 2> castling_rights{true, true};
 
 		[[nodiscard]] inline Bitboard occupied_squares() const noexcept 
 		{
@@ -25,11 +31,6 @@ namespace engine
 				occupied_squares |= piece_bb;
 			return occupied_squares;
 		};
-	};
-
-	enum class Castling_rights
-	{
-		kingside, queenside
 	};
 
 	struct Board
@@ -56,7 +57,7 @@ namespace engine
 		explicit Board(const std::string_view fen);
 		Board() = default;
 
-		std::array<Side_position, 2> sides{};
+		Enum_map<Side, Side_position, 2> sides{};
 		int half_move_clock{}, full_move_clock{};
 		Side side_to_move{Side::white};
 		Bitboard enemy_attack_map;

@@ -38,7 +38,7 @@ void Board::validate_fen(const std::array<std::string, 6>& partitioned_fen) cons
 
 void Board::parse_fen(const std::string_view fen) noexcept
 {
-	const auto to_piece_index = [](const char& to_convert)
+	const auto to_piece = [](const char& to_convert)
 	{
 		constexpr auto to_piece = []()
 		{
@@ -51,7 +51,7 @@ void Board::parse_fen(const std::string_view fen) noexcept
 			to_piece['r'] = Piece::rook;
 			return to_piece;
 		}();
-		return static_cast<std::size_t>(to_piece[to_convert]);
+		return to_piece[to_convert];
 	};
 	const auto to_shift = [](std::size_t board_index) -> std::size_t
 	{
@@ -67,9 +67,9 @@ void Board::parse_fen(const std::string_view fen) noexcept
 			const auto add_piece = [&](const Side& side)
 			{
 				const auto side_index = static_cast<std::uint8_t>(side);
-				std::size_t piece_type_index = to_piece_index(std::tolower(fen_section[i]));
+				const Piece piece_type_index = to_piece(std::tolower(fen_section[i]));
 				const std::uint64_t mask = (1ULL << to_shift(board_index));
-				sides[side_index].pieces[piece_type_index] |= mask;
+				sides[Side{side_index}].pieces[piece_type_index] |= mask;
 			};
 			if(fen_section[i] == '/')
 				continue;
@@ -116,15 +116,16 @@ void Board::parse_fen(const std::string_view fen) noexcept
 	{
 		for(const char& castling_right : fen_castling_availiability)
 		{
-			std::uint8_t side_index, castling_right_index;
+			Side side_index;
+			Castling_rights castling_right_index;
 			if(std::isupper(castling_right))
-				side_index = static_cast<std::uint8_t>(Side::white);
+				side_index = Side::white;
 			else
-				side_index = static_cast<std::uint8_t>(Side::black);
+				side_index = Side::black;
 			if(std::tolower(castling_right) == 'k')
-				castling_right_index = static_cast<std::uint8_t>(Castling_rights::kingside);
+				castling_right_index = Castling_rights::kingside;
 			else
-				castling_right_index = static_cast<std::uint8_t>(Castling_rights::queenside);
+				castling_right_index = Castling_rights::queenside;
 			sides[side_index].castling_rights[castling_right_index] = true;
 		}
 	}
@@ -147,7 +148,7 @@ std::optional<Piece> Board::piece_at(const Position& position, const Side& side)
 	std::optional<Piece> found_piece{std::nullopt};
 	for(std::uint8_t piece_index{0}; piece_index < number_of_pieces; ++piece_index)
 	{
-		sides[static_cast<std::uint8_t>(side)].pieces[piece_index].for_each_piece([&](const Position& occupied_square) mutable
+		sides[side].pieces[Piece{piece_index}].for_each_piece([&](const Position& occupied_square) mutable
 		{
 			if(occupied_square == position)
 			{
@@ -163,21 +164,21 @@ std::optional<Piece> Board::piece_at(const Position& position, const Side& side)
 
 void Board::update_castling_rights(const Side& side) noexcept
 {
-	auto& castling_rights = sides[static_cast<std::uint8_t>(side)].castling_rights;
+	auto& castling_rights = sides[side].castling_rights;
 	const std::uint8_t rank = side == Side::white? 0 : 7;
 	const Position kingside_rook{rank, 7}, queenside_rook{rank, 0};
-	if(castling_rights[static_cast<std::uint8_t>(Castling_rights::kingside)])
+	if(castling_rights[Castling_rights::kingside])
 	{
-		if(is_free(kingside_rook, sides[static_cast<std::uint8_t>(side)].pieces[static_cast<std::uint8_t>(Piece::rook)]))
+		if(is_free(kingside_rook, sides[side].pieces[Piece::rook]))
 		{
-			castling_rights[static_cast<std::uint8_t>(Castling_rights::kingside)] = false;
+			castling_rights[Castling_rights::kingside] = false;
 		}
 	}
-	if(castling_rights[static_cast<std::uint8_t>(Castling_rights::queenside)])
+	if(castling_rights[Castling_rights::queenside])
 	{
-		if(is_free(queenside_rook, sides[static_cast<std::uint8_t>(side)].pieces[static_cast<std::uint8_t>(Piece::rook)]))
+		if(is_free(queenside_rook, sides[side].pieces[Piece::rook]))
 		{
-			castling_rights[static_cast<std::uint8_t>(Castling_rights::kingside)] = false;
+			castling_rights[Castling_rights::kingside] = false;
 		}
 	}
 }
@@ -185,8 +186,8 @@ void Board::update_castling_rights(const Side& side) noexcept
 void Board::make(const Move& move) noexcept
 {
 	const auto& history_size = history.size();
-	Side_position& side = sides[static_cast<std::uint8_t>(side_to_move)];
-	auto& opposite_side = sides[static_cast<std::uint8_t>(!side_to_move)];
+	Side_position& side = sides[side_to_move];
+	auto& opposite_side = sides[!side_to_move];
 	const auto destination_square = move.destination_square();
 	const auto from_square = move.from_square();
 	const auto pawn_direction = side_to_move == Side::white ? 1 : -1;
@@ -197,15 +198,15 @@ void Board::make(const Move& move) noexcept
 	if(!is_free(destination_square, occupied_squares()))
 	{
 		piece_to_capture = piece_at(destination_square, !side_to_move).value();
-		opposite_side.pieces[static_cast<std::uint8_t>(piece_to_capture.value())].remove_piece(destination_square);
+		opposite_side.pieces[piece_to_capture.value()].remove_piece(destination_square);
 	}
 	const bool is_promotion = piece_type == Piece::pawn && destination_square.rank_ == 7;
 	if(is_promotion)
 	{
 		history.push(State_delta{move, static_cast<Piece>(Piece::pawn), piece_to_capture, enemy_attack_map, old_en_passant_target_square, false});
-		Bitboard& pawn_bb = side.pieces[static_cast<std::uint8_t>(Piece::pawn)];
+		Bitboard& pawn_bb = side.pieces[Piece::pawn];
 		pawn_bb.remove_piece(from_square);
-		side.pieces[static_cast<std::uint8_t>(move.promotion_piece())].add_piece(destination_square);
+		side.pieces[move.promotion_piece()].add_piece(destination_square);
 	}
 	else
 	{
@@ -214,9 +215,9 @@ void Board::make(const Move& move) noexcept
 			en_passant_target_square = Position{from_square.rank_+pawn_direction, from_square.file_};
 		const bool is_en_passant = destination_square == old_en_passant_target_square && piece_type == Piece::pawn;
 		if(is_en_passant)
-			opposite_side.pieces[static_cast<std::uint8_t>(Piece::pawn)].remove_piece(Position{destination_square.rank_-pawn_direction, destination_square.file_});
+			opposite_side.pieces[Piece::pawn].remove_piece(Position{destination_square.rank_-pawn_direction, destination_square.file_});
 		history.push(State_delta{move, piece_type, piece_to_capture, enemy_attack_map, old_en_passant_target_square, is_en_passant});
-		side.pieces[static_cast<std::uint8_t>(piece_type)] ^= (1ULL << to_index(from_square)) | (1ULL << to_index(destination_square));
+		side.pieces[piece_type] ^= (1ULL << to_index(from_square)) | (1ULL << to_index(destination_square));
 	}
 	++half_move_clock;
 	if(side_to_move == Side::black) ++full_move_clock;
@@ -238,14 +239,14 @@ void Board::unmove() noexcept
 	
 	const auto [move, moved_piece, captured_piece, attack_map, previous_en_passant_target_square, was_en_passant] = history.top();
 	history.pop();
-	Side_position& side_to_unmove = sides[static_cast<std::uint8_t>(last_moved_side)];
-	Side_position& current_side_to_move = sides[static_cast<std::uint8_t>(side_to_move)];
+	Side_position& side_to_unmove = sides[last_moved_side];
+	Side_position& current_side_to_move = sides[side_to_move];
 	const Position previous_move_destination = move.destination_square();
 	const Position previous_move_origin = move.from_square();
 	if(moved_piece == Piece::pawn && previous_move_destination.rank_ == 7)
 	{
-		side_to_unmove.pieces[static_cast<std::uint8_t>(move.promotion_piece())].remove_piece(move.destination_square());
-		side_to_unmove.pieces[static_cast<std::uint8_t>(Piece::pawn)].add_piece(move.from_square());
+		side_to_unmove.pieces[move.promotion_piece()].remove_piece(move.destination_square());
+		side_to_unmove.pieces[Piece::pawn].add_piece(move.from_square());
 	}
 	if(moved_piece == Piece::king && std::abs(previous_move_destination.file_ - previous_move_origin.file_) > 1)
 	{
@@ -262,8 +263,8 @@ void Board::unmove() noexcept
 			rook_origin_square = Position{rank, 0};
 			rook_destination_square = Position{rank, previous_move_destination.file_+1};
 		}
-		side_to_unmove.pieces[static_cast<std::uint8_t>(Piece::king)] ^= (1ULL << to_index(previous_move_destination)) & (1ULL << to_index(previous_move_origin));
-		side_to_unmove.pieces[static_cast<std::uint8_t>(Piece::rook)] ^= (1ULL << to_index(rook_origin_square) & (1ULL << to_index(rook_destination_square)));
+		side_to_unmove.pieces[Piece::king] ^= (1ULL << to_index(previous_move_destination)) & (1ULL << to_index(previous_move_origin));
+		side_to_unmove.pieces[Piece::rook] ^= (1ULL << to_index(rook_origin_square) & (1ULL << to_index(rook_destination_square)));
 	}
 	else
 	{
@@ -272,11 +273,11 @@ void Board::unmove() noexcept
 			const auto direction = was_whites_move? 1 : -1;
 			const Position destination_square = move.destination_square();
 			const Position pawn_to_return = Position{destination_square.rank_-direction,destination_square.file_};
-			current_side_to_move.pieces[static_cast<std::uint8_t>(Piece::pawn)].add_piece(pawn_to_return);
+			current_side_to_move.pieces[Piece::pawn].add_piece(pawn_to_return);
 		}
-		side_to_unmove.pieces[static_cast<std::uint8_t>(moved_piece)] ^= (1ULL << to_index(move.destination_square())) | (1ULL << to_index(move.from_square()));
+		side_to_unmove.pieces[moved_piece] ^= (1ULL << to_index(move.destination_square())) | (1ULL << to_index(move.from_square()));
 		if(captured_piece)
-			current_side_to_move.pieces[static_cast<std::uint8_t>(captured_piece.value())].add_piece(move.destination_square());
+			current_side_to_move.pieces[captured_piece.value()].add_piece(move.destination_square());
 	}
 	side_to_move = last_moved_side;
 	enemy_attack_map = attack_map;
@@ -285,10 +286,10 @@ void Board::unmove() noexcept
 
 Bitboard Board::occupied_squares() const noexcept
 {
-	return sides[static_cast<std::uint8_t>(Side::black)].occupied_squares() |= sides[static_cast<std::uint8_t>(Side::white)].occupied_squares();
+	return sides[Side::black].occupied_squares() |= sides[Side::white].occupied_squares();
 }
 
 bool Board::in_check() const noexcept
 {
-	return is_square_attacked(sides[static_cast<std::uint8_t>(side_to_move)].pieces[static_cast<std::uint8_t>(Piece::king)].lsb_square());
+	return is_square_attacked(sides[side_to_move].pieces[Piece::king].lsb_square());
 }

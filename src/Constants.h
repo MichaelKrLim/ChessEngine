@@ -1,6 +1,8 @@
 #ifndef Constants_h_INCLUDED
 #define Constants_h_INCLUDED
 
+#include "Enum_map.h"
+
 #include <array>
 #include <cstdint>
 
@@ -8,8 +10,11 @@ namespace engine
 {
 	enum class Side
 	{
-		white, black
+		white, black, size
 	};
+
+	template <typename Mapped_type>
+	using Side_map = Enum_map_from_size<Side, Mapped_type>;
 
 	inline Side operator!(const Side& side) noexcept
 	{
