@@ -113,9 +113,21 @@ namespace
 		});
 	}
 
-	const void king_legal_moves(std::vector<Move>& legal_moves, const Bitboard& king_bb, const Bitboard& our_occupied_squares)
+	const void king_legal_moves(std::vector<Move>& legal_moves, const Bitboard& king_bb, const Bitboard& occupied_squares, const Bitboard& our_occupied_squares, const bool is_white, const Castling_rights_map<bool>& castling_rights)
 	{
 		const Position original_square = king_bb.lsb_square();
+		if(castling_rights[Castling_rights::kingside])
+		{
+			std::uint64_t blocking_pieces_mask = is_white? 0x60ULL : 0x60ULL << (board_size*7);
+			if(!(occupied_squares & blocking_pieces_mask))
+				legal_moves.push_back(Move{original_square, Position{original_square.rank_, original_square.file_+2}});
+		}
+		if(castling_rights[Castling_rights::queenside])
+		{
+			std::uint64_t blocking_pieces_mask = is_white? 0xeULL : 0xeULL << (board_size*7);
+			if(!(occupied_squares & blocking_pieces_mask))
+				legal_moves.push_back(Move{original_square, Position{original_square.rank_, original_square.file_-2}});
+		}
 		for(const auto& move : king_moves_)
 		{
 			const auto [del_rank, del_file] = move;
@@ -286,7 +298,7 @@ namespace engine
 			else
 				legal_moves.clear();
 		}
-		king_legal_moves(legal_moves, pieces[Piece::king], our_occupied_squares | board.enemy_attack_map);
+		king_legal_moves(legal_moves, pieces[Piece::king], occupied_squares, our_occupied_squares | board.enemy_attack_map, board.side_to_move == Side::white? true : false, our_side.castling_rights);
 		return legal_moves;
 	}
 

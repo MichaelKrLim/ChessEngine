@@ -16,13 +16,15 @@ namespace engine
 {
 	enum class Castling_rights
 	{
-		kingside, queenside
+		kingside, queenside, size
 	};
+	template <typename Mapped_type>
+	using Castling_rights_map = Enum_map_from_size<Castling_rights, Mapped_type>;
 
 	struct Side_position
 	{
 		Enum_map<Piece, Bitboard, number_of_pieces> pieces{};
-		Enum_map<Castling_rights, bool, 2> castling_rights{true, true};
+		Castling_rights_map<bool> castling_rights{true, true};
 
 		[[nodiscard]] inline Bitboard occupied_squares() const noexcept 
 		{

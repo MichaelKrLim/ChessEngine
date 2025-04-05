@@ -200,13 +200,33 @@ void Board::make(const Move& move) noexcept
 		piece_to_capture = piece_at(destination_square, !side_to_move).value();
 		opposite_side.pieces[piece_to_capture.value()].remove_piece(destination_square);
 	}
-	const bool is_promotion = piece_type == Piece::pawn && destination_square.rank_ == 7;
+	const bool is_promotion = piece_type == Piece::pawn && destination_square.rank_ == 7,
+	is_castling = piece_type == Piece::king && std::abs(destination_square.file_ - from_square.file_) > 1;
 	if(is_promotion)
 	{
 		history.push(State_delta{move, static_cast<Piece>(Piece::pawn), piece_to_capture, enemy_attack_map, old_en_passant_target_square, false});
 		Bitboard& pawn_bb = side.pieces[Piece::pawn];
 		pawn_bb.remove_piece(from_square);
 		side.pieces[move.promotion_piece()].add_piece(destination_square);
+	}
+	else if(is_castling)
+	{
+		const std::uint8_t rank = side_to_move == Side::white? 0 : 7;
+		bool castled_kingside = destination_square.file_ == 6;
+		Position rook_destination_square, rook_origin_square;
+		if(castled_kingside)
+		{
+			rook_origin_square = Position{rank, 7};
+			rook_destination_square = Position{rank, destination_square.file_-1};
+		}
+		else
+		{
+			rook_origin_square = Position{rank, 0};
+			rook_destination_square = Position{rank, destination_square.file_+1};
+		}
+		side.pieces[Piece::king] ^= (1ULL << to_index(destination_square)) & (1ULL << to_index(from_square));
+		side.pieces[Piece::rook] ^= (1ULL << to_index(rook_origin_square) & (1ULL << to_index(rook_destination_square)));
+
 	}
 	else
 	{
@@ -241,14 +261,13 @@ void Board::unmove() noexcept
 	history.pop();
 	Side_position& side_to_unmove = sides[last_moved_side];
 	Side_position& current_side_to_move = sides[side_to_move];
-	const Position previous_move_destination = move.destination_square();
-	const Position previous_move_origin = move.from_square();
+	const Position previous_move_destination = move.destination_square(), previous_move_origin = move.from_square();
 	if(moved_piece == Piece::pawn && previous_move_destination.rank_ == 7)
 	{
 		side_to_unmove.pieces[move.promotion_piece()].remove_piece(move.destination_square());
 		side_to_unmove.pieces[Piece::pawn].add_piece(move.from_square());
 	}
-	if(moved_piece == Piece::king && std::abs(previous_move_destination.file_ - previous_move_origin.file_) > 1)
+	else if(moved_piece == Piece::king && std::abs(previous_move_destination.file_ - previous_move_origin.file_) > 1)
 	{
 		const std::uint8_t rank = last_moved_side == Side::white? 0 : 7;
 		Position rook_destination_square, rook_origin_square;
