@@ -1,158 +1,166 @@
 #include "Bitboard.h"
+#include "Constants.h"
 #include "Engine.h"
-#include "Position.h"
+#include "Move_generator.h"
+#include "Pieces.h"
 
 #include <array>
-#include <iostream>
+#include <limits>
 
-using namespace engine;
-
-//Move_generator Engine::move_generator_ = Move_generator();
-
-Engine::weightmap_type Engine::white_weightmaps_ =
-{{
-	{{
-		//Piece::pawn
-		 0,  0,  0,  0,  0,  0,  0,  0,
-		 5, 10, 10,-20,-20, 10, 10,  5,
-		 5, -5,-10,  0,  0,-10, -5,  5,
-		 0,  0,  0, 20, 20,  0,  0,  0,
-		 5,  5, 10, 25, 25, 10,  5,  5,
-		 10, 10, 20, 30, 30, 20, 10, 10,
-		 50, 50, 50, 50, 50, 50, 50, 50,
-		 0,  0,  0,  0,  0,  0,  0,  0
-	}},
-	{{
-		//Piece::knight
-		-50,-40,-30,-30,-30,-30,-40,-50,
-		-40,-20,  0,  5,  5,  0,-20,-40,
-		-30,  5, 10, 15, 15, 10,  5,-30,
-		-30,  0, 15, 20, 20, 15,  0,-30,
-		-30,  5, 15, 20, 20, 15,  5,-30,
-		-30,  0, 10, 15, 15, 10,  0,-30,
-		-40,-20,  0,  0,  0,  0,-20,-40,
-		-50,-40,-30,-30,-30,-30,-40,-50
-	}},
-	{{
-		//Piece::bishop,
-		-20,-10,-10,-10,-10,-10,-10,-20,
-		-10,  5,  0,  0,  0,  0,  5,-10,
-		-10, 10, 10, 10, 10, 10, 10,-10,
-		-10,  0, 10, 10, 10, 10,  0,-10,
-		-10,  5,  5, 10, 10,  5,  5,-10,
-		-10,  0,  5, 10, 10,  5,  0,-10,
-		-10,  0,  0,  0,  0,  0,  0,-10,
-		-20,-10,-10,-10,-10,-10,-10,-20
-	}},
-	{{
-		//Piece::rook,
-		 0,  0,  5,  10, 10, 5,  0,  0,
-		-5,  0,  0,  0,  0,  0,  0, -5,
-		-5,  0,  0,  0,  0,  0,  0, -5,
-		-5,  0,  0,  0,  0,  0,  0, -5,
-		-5,  0,  0,  0,  0,  0,  0, -5,
-		-5,  0,  0,  0,  0,  0,  0, -5,
-		 5,  10, 10, 10, 10, 10, 10, 5,
-		 0,  0,  0,  0,  0,  0,  0,  0,
-	}},
-	{{
-		//Piece::queen,
-		-20,-10,-10, -5, -5,-10,-10,-20
-		-10,  0,  5,  0,  0,  0,  0,-10,
-		-10,  5,  5,  5,  5,  5,  0,-10,
-		 0,  0,  5,  5,  5,  5,  0, -5,
-		-5,  0,  5,  5,  5,  5,  0, -5,
-		-10,  0,  5,  5,  5,  5,  0,-10,
-		-10,  0,  0,  0,  0,  0,  0,-10,
-		-20,-10,-10, -5, -5,-10,-10,-20,
-
-	}},
-	{{
-		//Piece::king,
-		 20,  30,  10,  0,   0,   10,  30,  20,
-		 20,  20,  0,   0,   0,   0,   20,  20,
-		-10, -20, -20, -20, -20, -20, -20, -10,
-		-20, -30, -30, -40, -40, -30, -30, -20,
-		-30, -40, -40, -50, -50, -40, -40, -30,
-		-30, -40, -40, -50, -50, -40, -40, -30,
-		-30, -40, -40, -50, -50, -40, -40, -30,
-		-30, -40, -40, -50, -50, -40, -40, -30,
-	}},
-}};
-
-std::array<int, 6> Engine::piece_values_ =
+namespace
 {
-	//Piece::pawn
-	1,
-	//Piece::knight
-	3,
-	//Piece::bishop
-	3,
-	//Piece::rook
-	5, 
-	//Piece::queen
-	9
-};
+	using namespace engine;
 
-Engine::weightmap_type Engine::black_weightmaps_ = Engine::generate_black_weightmap();
-
-Engine::weightmap_type Engine::generate_black_weightmap()
-{
-	weightmap_type white_weightmaps_copy = white_weightmaps_;
-	for(auto& weightmap : white_weightmaps_copy)
+	using weightmap_type = Piece_map<std::array<int, board_size*board_size>>;
+	constexpr Side_map<weightmap_type> weightmaps = []() constexpr
 	{
-		for(std::uint8_t rank{0}; rank<board_size/2; ++rank)
+		Side_map<weightmap_type> weightmaps{};
+		weightmaps[Side::white][Piece::pawn] =
 		{
-			for(std::uint8_t file{0}; file<board_size; ++file)
+			 0,  0,  0,  0,  0,  0,  0,  0,
+			 5, 10, 10,-20,-20, 10, 10,  5,
+			 5, -5,-10,  0,  0,-10, -5,  5,
+			 0,  0,  0, 20, 20,  0,  0,  0,
+			 5,  5, 10, 25, 25, 10,  5,  5,
+			 10, 10, 20, 30, 30, 20, 10, 10,
+			 50, 50, 50, 50, 50, 50, 50, 50,
+			 0,  0,  0,  0,  0,  0,  0,  0
+		};
+		weightmaps[Side::white][Piece::knight] =
+		{
+			-50,-40,-30,-30,-30,-30,-40,-50,
+			-40,-20,  0,  5,  5,  0,-20,-40,
+			-30,  5, 10, 15, 15, 10,  5,-30,
+			-30,  0, 15, 20, 20, 15,  0,-30,
+			-30,  5, 15, 20, 20, 15,  5,-30,
+			-30,  0, 10, 15, 15, 10,  0,-30,
+			-40,-20,  0,  0,  0,  0,-20,-40,
+			-50,-40,-30,-30,-30,-30,-40,-50
+		};
+		weightmaps[Side::white][Piece::bishop] =
+		{
+			-20,-10,-10,-10,-10,-10,-10,-20,
+			-10,  5,  0,  0,  0,  0,  5,-10,
+			-10, 10, 10, 10, 10, 10, 10,-10,
+			-10,  0, 10, 10, 10, 10,  0,-10,
+			-10,  5,  5, 10, 10,  5,  5,-10,
+			-10,  0,  5, 10, 10,  5,  0,-10,
+			-10,  0,  0,  0,  0,  0,  0,-10,
+			-20,-10,-10,-10,-10,-10,-10,-20
+		};
+		weightmaps[Side::white][Piece::rook] =
+		{
+			 0,  0,  5,  10, 10, 5,  0,  0,
+			-5,  0,  0,  0,  0,  0,  0, -5,
+			-5,  0,  0,  0,  0,  0,  0, -5,
+			-5,  0,  0,  0,  0,  0,  0, -5,
+			-5,  0,  0,  0,  0,  0,  0, -5,
+			-5,  0,  0,  0,  0,  0,  0, -5,
+			 5,  10, 10, 10, 10, 10, 10, 5,
+			 0,  0,  0,  0,  0,  0,  0,  0,
+		};
+		weightmaps[Side::white][Piece::queen] =
+		{
+			-20,-10,-10, -5, -5,-10,-10,-20,
+			-10,  0,  5,  0,  0,  0,  0,-10,
+			-10,  5,  5,  5,  5,  5,  0,-10,
+			 0,  0,  5,  5,  5,  5,  0, -5,
+			-5,  0,  5,  5,  5,  5,  0, -5,
+			-10,  0,  5,  5,  5,  5,  0,-10,
+			-10,  0,  0,  0,  0,  0,  0,-10,
+			-20,-10,-10, -5, -5,-10,-10,-20,
+		};
+		weightmaps[Side::white][Piece::king] =
+		{
+			 20,  30,  10,  0,   0,   10,  30,  20,
+			 20,  20,  0,   0,   0,   0,   20,  20,
+			-10, -20, -20, -20, -20, -20, -20, -10,
+			-20, -30, -30, -40, -40, -30, -30, -20,
+			-30, -40, -40, -50, -50, -40, -40, -30,
+			-30, -40, -40, -50, -50, -40, -40, -30,
+			-30, -40, -40, -50, -50, -40, -40, -30,
+			-30, -40, -40, -50, -50, -40, -40, -30,
+		};
+
+		weightmaps[Side::black] = weightmaps[Side::white];
+		for(auto& weightmap : weightmaps[Side::black])
+		{
+			for(std::uint8_t rank{0}; rank<board_size/2; ++rank)
 			{
-				Position above_midpoint = Position{rank, file};
-				Position below_midpoint = Position{static_cast<std::uint8_t>(board_size-1-rank), file};
-				std::swap(weightmap[to_index(above_midpoint)], weightmap[to_index(below_midpoint)]);
+				for(std::uint8_t file{0}; file<board_size; ++file)
+				{
+					Position above_midpoint = Position{rank, file};
+					Position below_midpoint = Position{static_cast<std::uint8_t>(board_size-1-rank), file};
+					std::swap(weightmap[to_index(above_midpoint)], weightmap[to_index(below_midpoint)]);
+				}
 			}
 		}
+		return weightmaps;
+	}();
+
+	Piece_map<int> piece_values = []()
+	{
+		Piece_map<int> piece_values{};
+		piece_values[Piece::pawn]   = 1;
+		piece_values[Piece::knight] = 3;
+		piece_values[Piece::bishop] = 3;
+		piece_values[Piece::rook]   = 5;
+		piece_values[Piece::queen]  = 9;
+		return piece_values;
+	}();
+
+	[[nodiscard]] double evaluate(const Board& board) noexcept
+	{
+		const auto side_evaluation = [&board](const Side& side)
+		{
+			double total{0};
+			for(const auto& piece : all_pieces)
+			{
+				for(std::uint8_t index{0}; index<board_size*board_size-1; ++index)
+				{
+					const Position current_square{index};
+					if(!is_free(current_square, board.sides[side].pieces[piece])) [[unlikely]]
+						total += weightmaps[side][piece][index] + piece_values[piece];
+				}
+			}
+			return total;
+		};
+		return side_evaluation(board.side_to_move) - side_evaluation(!board.side_to_move);
 	}
-	return white_weightmaps_copy;
 }
 
-void Engine::output_weights() const
+namespace engine
 {
-	std::cout << "white: \n";
-	for(const auto& weightmap : white_weightmaps_)
+	Move generate_move_at_depth(Board board, const int depth) noexcept
 	{
-		for(std::size_t i{0}; i<weightmap.size(); ++i)
+		const auto nega_max = [&board](this auto&& rec, int depth, Move& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
 		{
-			if(i%board_size==0)
-				std::cout << "\n";
-			std::cout << weightmap[i] << ", ";
-		}
-		std::cout << "\n";
-	}
-	std::cout << "black: \n";
-	for(const auto& weightmap : black_weightmaps_)
-	{
-		for(std::size_t i{0}; i<weightmap.size(); ++i)
-		{
-			if(i%board_size==0)
-				std::cout << "\n";
-			std::cout << weightmap[i] << ", ";
-		}
-		std::cout << "\n";
-	}
-}
+			if(depth == 0) 
+				return evaluate(board);
 
-double Engine::material_value() const
-{
-	const auto value = [](const weightmap_type& weightmaps, const auto& bitboards)
-	{
-		double total{0};
-		for(std::uint8_t piece_index{0}; piece_index < 6; ++piece_index)
-			for(std::uint8_t shift{0}; shift<board_size*board_size-1; ++shift)
-				if((bitboards[Piece{piece_index}] & (1ULL << shift)) > 0)
-					total += weightmaps[piece_index][shift];
-
-		return total;
-	};
-	
-	return value(white_weightmaps_,board_.sides[Side::white].pieces) -
-		   value(black_weightmaps_, board_.sides[Side::black].pieces);
+			std::optional<double> best_seen_score = std::nullopt;
+			for(const auto& move : legal_moves(board))
+			{
+				board.make(move);
+				Move opponent_move;
+				double score = -rec(depth-1, opponent_move, -beta, -alpha);
+				board.unmove();
+				if(!best_seen_score || score > best_seen_score.value())
+				{
+					best_seen_score = score;
+					best_move = move;
+				}
+				alpha = std::max(alpha, best_seen_score.value());
+				if(alpha >= beta)
+					break;
+			}
+			if(best_seen_score)
+				return best_seen_score.value();
+			else
+				return -std::numeric_limits<double>::infinity();
+		};
+		Move best_move;
+		nega_max(depth, best_move);
+		return best_move;
+	}
 }

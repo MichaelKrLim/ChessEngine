@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
 project(engine VERSION 0.0.1)
 option(ENGINE_BUILD_TESTS "Build tests" ON)
-
-# produces compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # for CPM
@@ -97,7 +95,9 @@ add_executable(${PROJECT_NAME} src/main.cpp
 	${common_sources}
 )
 
-add_dependencies(engine generate_magics)
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/src/magic_squares.h")
+	add_dependencies(engine generate_magics)
+endif()
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_EXTENSIONS OFF)

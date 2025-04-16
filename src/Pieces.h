@@ -13,7 +13,7 @@ namespace engine
 	};
 	template <typename Mapped_type>
 	using Piece_map = Enum_map_from_size<Piece, Mapped_type>;
-	const std::size_t number_of_piece_types = 6;
+	constexpr std::size_t number_of_piece_types = 6;
+	constexpr std::array<Piece, number_of_piece_types> all_pieces{Piece::king, Piece::pawn, Piece::knight, Piece::bishop, Piece::rook, Piece::queen};
 }
-
 #endif // Pieces_h_INCLUDED

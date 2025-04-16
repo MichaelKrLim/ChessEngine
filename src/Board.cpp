@@ -201,10 +201,10 @@ void Board::make(const Move& move) noexcept
 		opposite_side.pieces[piece_to_capture.value()].remove_piece(destination_square);
 	}
 	const bool is_promotion = piece_type == Piece::pawn && destination_square.rank_ == 7,
-	is_castling = piece_type == Piece::king && std::abs(destination_square.file_ - from_square.file_) > 1;
+			   is_castling = piece_type == Piece::king && std::abs(destination_square.file_ - from_square.file_) > 1,
+			   is_en_passant = destination_square == old_en_passant_target_square && piece_type == Piece::pawn;
 	if(is_promotion)
 	{
-		history.push(State_delta{move, static_cast<Piece>(Piece::pawn), piece_to_capture, enemy_attack_map, old_en_passant_target_square, false});
 		Bitboard& pawn_bb = side.pieces[Piece::pawn];
 		pawn_bb.remove_piece(from_square);
 		side.pieces[move.promotion_piece()].add_piece(destination_square);
@@ -224,21 +224,19 @@ void Board::make(const Move& move) noexcept
 			rook_origin_square = Position{rank, 0};
 			rook_destination_square = Position{rank, destination_square.file_+1};
 		}
-		side.pieces[Piece::king] ^= (1ULL << to_index(destination_square)) & (1ULL << to_index(from_square));
-		side.pieces[Piece::rook] ^= (1ULL << to_index(rook_origin_square) & (1ULL << to_index(rook_destination_square)));
-
+		side.pieces[Piece::king] ^= (1ULL << to_index(destination_square)) | (1ULL << to_index(from_square));
+		side.pieces[Piece::rook] ^= (1ULL << to_index(rook_origin_square) | (1ULL << to_index(rook_destination_square)));
 	}
 	else
 	{
 		const bool is_double_pawn_move = piece_type == Piece::pawn && destination_square.rank_ == from_square.rank_ + 2*pawn_direction;
 		if(is_double_pawn_move)
 			en_passant_target_square = Position{from_square.rank_+pawn_direction, from_square.file_};
-		const bool is_en_passant = destination_square == old_en_passant_target_square && piece_type == Piece::pawn;
 		if(is_en_passant)
 			opposite_side.pieces[Piece::pawn].remove_piece(Position{destination_square.rank_-pawn_direction, destination_square.file_});
-		history.push(State_delta{move, piece_type, piece_to_capture, enemy_attack_map, old_en_passant_target_square, is_en_passant});
 		side.pieces[piece_type] ^= (1ULL << to_index(from_square)) | (1ULL << to_index(destination_square));
 	}
+	history.push(State_delta{move, piece_type, piece_to_capture, enemy_attack_map, old_en_passant_target_square, is_en_passant});
 	++half_move_clock;
 	if(side_to_move == Side::black) ++full_move_clock;
 	enemy_attack_map = generate_attack_map(*this);
@@ -276,14 +274,16 @@ void Board::unmove() noexcept
 		{
 			rook_origin_square = Position{rank, 7};
 			rook_destination_square = Position{rank, previous_move_destination.file_-1};
+			side_to_unmove.castling_rights[Castling_rights::kingside] = true;
 		}
 		else
 		{
 			rook_origin_square = Position{rank, 0};
 			rook_destination_square = Position{rank, previous_move_destination.file_+1};
+			side_to_unmove.castling_rights[Castling_rights::queenside] = true;
 		}
-		side_to_unmove.pieces[Piece::king] ^= (1ULL << to_index(previous_move_destination)) & (1ULL << to_index(previous_move_origin));
-		side_to_unmove.pieces[Piece::rook] ^= (1ULL << to_index(rook_origin_square) & (1ULL << to_index(rook_destination_square)));
+		side_to_unmove.pieces[Piece::king] ^= (1ULL << to_index(previous_move_destination)) | (1ULL << to_index(previous_move_origin));
+		side_to_unmove.pieces[Piece::rook] ^= (1ULL << to_index(rook_origin_square) | (1ULL << to_index(rook_destination_square)));
 	}
 	else
 	{
@@ -305,7 +305,7 @@ void Board::unmove() noexcept
 
 Bitboard Board::occupied_squares() const noexcept
 {
-	return sides[Side::black].occupied_squares() |= sides[Side::white].occupied_squares();
+	return sides[Side::black].occupied_squares() | sides[Side::white].occupied_squares();
 }
 
 bool Board::in_check() const noexcept

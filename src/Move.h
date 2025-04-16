@@ -51,7 +51,15 @@ namespace engine
 		// bits 6-11, origin square
 		// bits 12-13, promotion piece type, (Piece::, from knight to queen)
 		std::uint16_t move_data_{};
+
+		friend std::ostream& operator<<(std::ostream& os, const Move& move);
 	};
+
+	inline std::ostream& operator<<(std::ostream& os, const Move& move)
+	{
+		const Position from_square{move.from_square()}, destination_square{move.destination_square()};
+		return os << from_square << destination_square;
+	}
 }
 
 #endif // Move_h_INCLUDED
