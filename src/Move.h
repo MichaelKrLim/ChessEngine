@@ -58,7 +58,12 @@ namespace engine
 	inline std::ostream& operator<<(std::ostream& os, const Move& move)
 	{
 		const Position from_square{move.from_square()}, destination_square{move.destination_square()};
-		return os << from_square << destination_square;
+		const Piece promotion_piece{move.promotion_piece()};
+		os << from_square << destination_square;
+		constexpr Piece_map<char> to_algebraic_piece = {' ', ' ', 'k', 'b', 'r', 'q'};
+		if(static_cast<std::uint8_t>(promotion_piece) > 1)
+			return os << to_algebraic_piece[promotion_piece];
+		return os;
 	}
 }
 

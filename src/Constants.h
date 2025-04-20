@@ -18,7 +18,7 @@ namespace engine
 
 	constexpr auto all_sides = {Side::white, Side::black};
 
-	inline Side operator!(const Side& side) noexcept
+	inline Side other_side(const Side& side) noexcept
 	{
 		return side == Side::white? Side::black : Side::white;
 	}

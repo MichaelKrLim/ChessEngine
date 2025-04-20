@@ -47,6 +47,7 @@ namespace engine
 			const Bitboard enemy_attack_map;
 			const std::optional<Position> en_passant_target_square;
 			const bool was_en_passant;
+			Castling_rights_map<bool> castling_rights;
 		};
 
 		void validate_fen(const std::array<std::string, 6>& partitioned_fen) const;

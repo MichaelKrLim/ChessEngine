@@ -101,11 +101,11 @@ namespace
 	Piece_map<int> piece_values = []()
 	{
 		Piece_map<int> piece_values{};
-		piece_values[Piece::pawn]   = 1;
-		piece_values[Piece::knight] = 3;
-		piece_values[Piece::bishop] = 3;
-		piece_values[Piece::rook]   = 5;
-		piece_values[Piece::queen]  = 9;
+		piece_values[Piece::pawn]   = 100;
+		piece_values[Piece::knight] = 288;
+		piece_values[Piece::bishop] = 345;
+		piece_values[Piece::rook]   = 480;
+		piece_values[Piece::queen]  = 1077;
 		return piece_values;
 	}();
 
@@ -116,7 +116,7 @@ namespace
 			double total{0};
 			for(const auto& piece : all_pieces)
 			{
-				for(std::uint8_t index{0}; index<board_size*board_size-1; ++index)
+				for(std::uint8_t index{0}; index<board_size*board_size; ++index)
 				{
 					const Position current_square{index};
 					if(!is_free(current_square, board.sides[side].pieces[piece])) [[unlikely]]
@@ -125,7 +125,7 @@ namespace
 			}
 			return total;
 		};
-		return side_evaluation(board.side_to_move) - side_evaluation(!board.side_to_move);
+		return side_evaluation(board.side_to_move) - side_evaluation(other_side(board.side_to_move));
 	}
 }
 
@@ -160,7 +160,7 @@ namespace engine
 				return -std::numeric_limits<double>::infinity();
 		};
 		Move best_move;
-		nega_max(depth, best_move);
+		std::cout << nega_max(depth, best_move) << ' ';
 		return best_move;
 	}
 }

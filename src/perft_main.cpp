@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 				board.unmove();
 			}
 			if(is_root)
-				std::cout << move.from_square() << move.destination_square() << ' ' << current_count << "\n";
+				std::cout << move << ' ' << current_count << "\n";
 		}
 		return nodes;
 	};
