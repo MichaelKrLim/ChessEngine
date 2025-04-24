@@ -3,7 +3,7 @@
 
 namespace uci
 {
-    void start_listening() noexcept;
+	void start_listening() noexcept;
 };
 
 #endif // Uci_handler_h_INCLUDED

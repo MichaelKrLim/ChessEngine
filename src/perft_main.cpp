@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 	assert((argc == 3 || argc == 4) && "Usage: perft <depth> <fen> <moves...>");
 	const auto depth = std::atoi(argv[1]);
 	const std::string_view fen{argv[2]};
-	Board base_position{fen};
+	State base_position{fen};
 	if(argc == 4)
 	{
 		std::istringstream iss{argv[3]};
@@ -19,10 +19,10 @@ int main(int argc, char* argv[])
 		while(std::getline(iss, move, ' '))
 			base_position.make(Move{algebraic_to_position(move.substr(0, 2)), algebraic_to_position(move.substr(2, 2))});
 	}
-	const auto perft = [](this auto&& rec, int depth, Board& board, const bool&& is_root) -> unsigned long long
+	const auto perft = [](this auto&& rec, int depth, State& state, const bool&& is_root) -> unsigned long long
 	{
 		std::uint64_t current_count, nodes{0};
-		const auto moves = legal_moves(board);
+		const auto moves = legal_moves(state);
 		for(const auto& move : moves)
 		{
 			if(is_root && depth <= 1)
@@ -32,10 +32,10 @@ int main(int argc, char* argv[])
 			}
 			else
 			{
-				board.make(move);
-				current_count = depth == 2? legal_moves(board).size() : rec(depth-1, board, false);
+				state.make(move);
+				current_count = depth == 2? legal_moves(state).size() : rec(depth-1, state, false);
 				nodes += current_count;
-				board.unmove();
+				state.unmove();
 			}
 			if(is_root)
 				std::cout << move << ' ' << current_count << "\n";

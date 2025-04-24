@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cstdint>
+#include <string_view>
 
 namespace engine 
 {
@@ -14,7 +15,7 @@ namespace engine
 	};
 
 	template <typename Mapped_type>
-	using Side_map = constexpr Enum_map_from_size<Side, Mapped_type>;
+	using Side_map = Enum_map_from_size<Side, Mapped_type>;
 
 	constexpr auto all_sides = {Side::white, Side::black};
 
@@ -30,8 +31,7 @@ namespace engine
 	max_legal_moves = 218,
 	king_max_adjacent_squares = 6;
 
-	constexpr std::string_view engine_name{"CppEngine"},
-	author{"Michael Lim"};
+	constexpr std::string_view name{"cpp_engine"}, author{"Michael Lim"}, starting_fen{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
 
 	constexpr std::uint64_t file_a{0x101010101010101}, file_h{0x8080808080808080};
 	
