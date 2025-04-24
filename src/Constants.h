@@ -14,7 +14,7 @@ namespace engine
 	};
 
 	template <typename Mapped_type>
-	using Side_map = Enum_map_from_size<Side, Mapped_type>;
+	using Side_map = constexpr Enum_map_from_size<Side, Mapped_type>;
 
 	constexpr auto all_sides = {Side::white, Side::black};
 
@@ -29,6 +29,9 @@ namespace engine
 	black_en_passant_target_rank = 6,
 	max_legal_moves = 218,
 	king_max_adjacent_squares = 6;
+
+	constexpr std::string_view engine_name{"CppEngine"},
+	author{"Michael Lim"};
 
 	constexpr std::uint64_t file_a{0x101010101010101}, file_h{0x8080808080808080};
 	

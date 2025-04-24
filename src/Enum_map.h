@@ -41,6 +41,6 @@ class Enum_map
 };
 
 template <typename enum_type, typename mapped_type>
-using Enum_map_from_size = Enum_map<enum_type, mapped_type, static_cast<std::size_t>(enum_type::size)>;
+using Enum_map_from_size = constexpr Enum_map<enum_type, mapped_type, static_cast<std::size_t>(enum_type::size)>;
 
 #endif

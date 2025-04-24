@@ -12,7 +12,7 @@ namespace engine
 		king = 0, pawn = 1, knight = 2, bishop = 3, rook = 4, queen = 5, size = 6
 	};
 	template <typename Mapped_type>
-	using Piece_map = Enum_map_from_size<Piece, Mapped_type>;
+	using Piece_map = constexpr Enum_map_from_size<Piece, Mapped_type>;
 
 
 	constexpr std::size_t number_of_piece_types = 6;
