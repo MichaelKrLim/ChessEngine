@@ -65,6 +65,20 @@ namespace engine
 			return os << to_algebraic_piece[promotion_piece];
 		return os;
 	}
+
+	inline std::istream& operator>>(std::istream& is, Move& move)
+	{
+		std::string move_string;
+		is>>move_string;
+		if(move_string.size() != 4)
+		{
+			is.setstate(std::ios::failbit);
+			return is;
+		}
+
+		move = Move{algebraic_to_position(move_string.substr(0, 2)), algebraic_to_position(move_string.substr(2, 2))};
+		return is;
+	}
 }
 
 #endif // Move_h_INCLUDED

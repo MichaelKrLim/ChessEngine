@@ -160,7 +160,7 @@ namespace engine
 				return -std::numeric_limits<double>::infinity();
 		};
 		Move best_move;
-		std::cout << nega_max(depth, best_move) << ' ';
+		nega_max(depth, best_move);
 		return best_move;
 	}
 }

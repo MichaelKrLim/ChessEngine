@@ -8,7 +8,6 @@
 #include "Position.h"
 
 #include <array>
-#include <cctype>
 #include <optional>
 #include <stack>
 

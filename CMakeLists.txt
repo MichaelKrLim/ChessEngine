@@ -18,12 +18,12 @@ set(common_sources
 	src/Engine.h src/Engine.cpp
 	src/Position.h
 	src/Constants.h
-	src/Board.h src/Board.cpp
 	src/Move.h
 	src/Pieces.h
 	src/Bitboard.h
 	src/Utility.h
 	src/Magic_util.h
+	src/State.cpp src/State.h
 	src/Move_generator.h src/Move_generator.cpp
 )
 
@@ -93,6 +93,7 @@ endif()
 
 add_executable(${PROJECT_NAME} src/main.cpp
 	${common_sources}
+	src/Uci_handler.cpp src/Uci_handler.h
 )
 
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/src/magic_squares.h")

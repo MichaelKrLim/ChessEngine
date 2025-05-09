@@ -1,21 +1,101 @@
 #include "Constants.h"
+#include "Engine.h"
 #include "State.h"
 #include "Uci_handler.h"
 
-#include <array>
-#include <functional>
 #include <iostream>
-#include <ranges>
+#include <sstream>
+#include <stdexcept>
 #include <string>
+#include <string_view>
 #include <unordered_map>
+#include <vector>
 
 namespace
 {
 	engine::State state{};
-	
+
+	bool debug{false};
+
+	struct Input_state
+	{
+		std::string fen{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
+		std::vector<engine::Move> continuation;
+	};
+
+	std::istream& operator>>(std::istream& is, Input_state& input_state)
+	{
+		std::string command;
+		is >> command;
+		if(command == "startpos")
+			input_state.fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+		else if(std::string current_data; command == "fen")
+		{
+			is >> current_data;
+			input_state.fen = current_data;
+			// side to move
+			is >> current_data;
+			input_state.fen += ' '+current_data;
+			// castling rights
+			is >> current_data;
+			input_state.fen += ' '+current_data;
+			// en passant
+			is >> current_data;
+			input_state.fen += ' '+current_data;
+			// halfmove clock
+			is >> current_data;
+			input_state.fen += ' '+current_data;
+			// fullmove clock
+			is >> current_data;
+			input_state.fen += ' '+current_data;
+		}
+		else
+			throw std::invalid_argument{"in reading an Input_state, invalid command"};
+
+		is >> command;
+		if(command == "moves")
+		{
+			for(engine::Move move; is>>move;)
+				input_state.continuation.push_back(move);
+		}
+		return is;
+	}
+
+	struct Search_options
+	{
+		unsigned depth = 4;
+	};
+
+	std::istream& operator>>(std::istream& is, Search_options& search_options)
+	{
+		std::string option;
+		while(is>>option)
+		{
+			if(option == "depth")
+			{
+				unsigned depth;
+				is >> depth;
+				search_options.depth = depth;
+			} 
+			else // need to add rest of search options at some point...
+				throw std::invalid_argument{"Command not found"};
+		}
+		return is;
+	};
+
 	void isready_handler() noexcept
 	{
 		std::cout << "readyok\n";
+	}
+
+	void debug_handler(std::string option) noexcept
+	{
+		if(option == "on")
+			debug = true;
+		else if(option == "off")
+			debug = false;
+		else
+			std::cout << "debug must be on or off";
 	}
 
 	void ucinewgame_handler() noexcept
@@ -23,36 +103,16 @@ namespace
 		state = engine::State{};
 	}
 
-	void position_handler(const std::string& line) noexcept
+	void position_handler(const Input_state& input_state) noexcept
 	{
-		auto commands_string = line | std::ranges::views::split(' ');
-		std::vector<std::string_view> commands = commands_string | std::ranges::views::transform([](auto&& seg)
-		{
-			return std::string_view{std::ranges::begin(seg), std::ranges::end(seg)};
-		}) | std::ranges::to<std::vector>();
-
-		assert(commands[0] == "position" && !commands.empty());
-		int move_list_index{0};
-		if(commands[1] == "startpos")
-		{
-			move_list_index = 2;
-			state = engine::State{engine::starting_fen};
-		}
-		if(commands[1] == "fen")
-		{
-			move_list_index = 3;
-			state = engine::State{commands[2]};
-		}
-		for(int i{move_list_index}; i<commands.size(); ++i)
-		{
-			const auto move = commands[i];
-			state.make(engine::Move{engine::algebraic_to_position(move.substr(0, 2)), engine::algebraic_to_position(move.substr(2, 2))});
-		}
+		state =  engine::State{input_state.fen};
+		for(const auto& move : input_state.continuation)
+			state.make(move);
 	}
 
-	void go_handler() noexcept
+	void go_handler(const Search_options& search_options) noexcept
 	{
-
+		std::cout << "bestmove " << engine::generate_move_at_depth(state, search_options.depth) << "\n";
 	}
 
 	void uci_handler() noexcept
@@ -62,47 +122,50 @@ namespace
 				  << "uciok\n";
 	}
 
-	using handler_function_map_t = std::unordered_map<std::string, std::function<void()>>;
-	handler_function_map_t to_handler_function = []()
+	template <auto>
+	struct call_helper;
+
+	template <typename R, typename... ARGS_PACK_T, R (*handler_function)(ARGS_PACK_T...) noexcept>
+	struct call_helper<handler_function>
 	{
-		handler_function_map_t handler_functions;
-		struct Handler_command_pair
+		static void call(std::istringstream& args_stream)
 		{
-			std::string command;
-			const std::function<void()> handler_function;
-		};
-		std::array<Handler_command_pair, 4> handler_command_pairs
-		{{
-			{"go", go_handler}, {"uci", uci_handler},
-			{"isready", isready_handler}, {"ucinewgame", ucinewgame_handler},
-		}};
-		for(const Handler_command_pair& handler_command_pair : handler_command_pairs)
-		{
-			handler_functions[handler_command_pair.command] = handler_command_pair.handler_function;
+			[&args_stream] <std::size_t... INDEXES_PACK> (std::index_sequence<INDEXES_PACK...>)
+			{
+				[[maybe_unused]] auto args = std::tuple<std::decay_t<ARGS_PACK_T>...>{};
+				((args_stream >> std::get<INDEXES_PACK>(args)), ...);
+				(*handler_function)(std::move(std::get<INDEXES_PACK>(args))...);
+			}(std::index_sequence_for<ARGS_PACK_T...>{});
 		}
-		return handler_functions;
-	}();
+	};
+
+	template <auto v>
+	constexpr auto call_handler_v = call_helper<v>::call;
+
+	using handler_function_map_t = std::unordered_map<std::string_view, void(*)(std::istringstream&)>;
+	const handler_function_map_t to_handler_function
+	{
+		{"go", call_handler_v<&go_handler>}, {"uci", call_handler_v<&uci_handler>}, {"position", call_handler_v<&position_handler>},
+		{"ucinewgame", call_handler_v<&ucinewgame_handler>}, {"isready", call_handler_v<&isready_handler>}, {"debug", call_handler_v<&debug_handler>}
+	};
 }
 
 namespace uci
 {
 	void start_listening() noexcept
 	{
-		for(std::string line{}; line != "quit"; std::getline(std::cin, line))
+		for(std::string line, command; command != "quit";)
 		{
-			const auto trim_whitespace = [](std::string& to_trim)
-			{
-				const auto leading_whitespace = std::find_if_not(to_trim.begin(), to_trim.end(), ::isspace);
-				const auto trailing_whitespace = std::find_if_not(to_trim.rbegin(), to_trim.rend(), ::isspace).base();
-				to_trim = (leading_whitespace < trailing_whitespace ? std::string{leading_whitespace, trailing_whitespace} : std::string{""});
-			};
-			trim_whitespace(line);
-			if(auto it = to_handler_function.find(line); it != to_handler_function.end())
-			{
-				(to_handler_function[line])();
-			}
+			std::getline(std::cin, line);
+			std::istringstream iss{line};
+			iss >> command;
+			if(const auto it{to_handler_function.find(command)}; it != to_handler_function.end())
+				it->second(iss);
 			else
-				position_handler(line);
+			{
+				std::cout << "Command: " << command << " not found";
+				return;
+			}
 		}
 	}
 }
