@@ -3,6 +3,7 @@
 #include "Engine.h"
 #include "Move_generator.h"
 #include "Pieces.h"
+#include "Transposition_table.h"
 
 #include <array>
 #include <limits>
@@ -133,7 +134,8 @@ namespace engine
 {
 	Move generate_move_at_depth(State state, const int depth) noexcept
 	{
-		const auto nega_max = [&state](this auto&& rec, int depth, Move& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
+		Transposition_table<64> transposition_table;
+		const auto nega_max = [&state, &transposition_table](this auto&& rec, int depth, Move& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
 		{
 			if(depth == 0) 
 				return evaluate(state);
@@ -162,5 +164,9 @@ namespace engine
 		Move best_move;
 		nega_max(depth, best_move);
 		return best_move;
+		for(int current_depth{0}; current_depth < depth; ++current_depth)
+		{
+			best_move = nega_max(current_depth, best_move);
+		}
 	}
 }

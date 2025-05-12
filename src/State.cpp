@@ -312,3 +312,18 @@ bool State::in_check() const noexcept
 {
 	return is_square_attacked(sides[side_to_move].pieces[Piece::king].lsb_square());
 }
+
+std::vector<State::Piece_and_data> State::get_board_data() const noexcept
+{
+	std::vector<Piece_and_data> board_data{};
+	for(const auto& side : all_sides)
+	{
+		for(const auto& piece : all_pieces)
+		{
+			sides[side].pieces[piece].for_each_piece([&board_data, &side, &piece](const Position& position)
+			{
+				board_data.push_back(Piece_and_data{piece, position, side});
+			});
+		}
+	}
+}
