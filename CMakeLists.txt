@@ -25,6 +25,7 @@ set(common_sources
 	src/Magic_util.h
 	src/State.cpp src/State.h
 	src/Move_generator.h src/Move_generator.cpp
+	src/Transposition_table.h
 )
 
 add_executable(generate_magics src/magic_main.cpp

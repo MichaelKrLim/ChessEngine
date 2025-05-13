@@ -10,6 +10,7 @@
 #include <array>
 #include <optional>
 #include <stack>
+#include <vector>
 
 namespace engine
 {

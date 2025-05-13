@@ -326,4 +326,5 @@ std::vector<State::Piece_and_data> State::get_board_data() const noexcept
 			});
 		}
 	}
+	return board_data;
 }

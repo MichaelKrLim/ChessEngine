@@ -132,20 +132,36 @@ namespace
 
 namespace engine
 {
-	Move generate_move_at_depth(State state, const int depth) noexcept
+	Move generate_move_at_depth(State state, const unsigned int depth) noexcept
 	{
-		Transposition_table<64> transposition_table;
-		const auto nega_max = [&state, &transposition_table](this auto&& rec, int depth, Move& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
+		Transposition_table<32> transposition_table;
+		const auto nega_max = [&state, &transposition_table, &depth](this auto&& rec, unsigned int current_depth, Move& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
 		{
-			if(depth == 0) 
-				return evaluate(state);
+			if(current_depth == 0)
+			{
+				if(const auto previous_data = transposition_table.find(state); previous_data && previous_data->depth >= depth)
+					return previous_data->eval;
+				else
+				{
+					const double evaluation = evaluate(state);
+					transposition_table[state] = Transposition_data{};
+					return evaluation;
+				}
+			}
 
 			std::optional<double> best_seen_score = std::nullopt;
 			for(const auto& move : legal_moves(state))
 			{
 				state.make(move);
 				Move opponent_move;
-				double score = -rec(depth-1, opponent_move, -beta, -alpha);
+				double score;
+				if(const auto cache_result = transposition_table.find(state); cache_result && cache_result->depth >= depth)
+					score = state.side_to_move==cache_result->to_move? cache_result->eval : -cache_result->eval;
+				else
+				{
+					score = -rec(current_depth-1, opponent_move, -beta, -alpha);
+					transposition_table[state] = Transposition_data{depth, score, state.side_to_move};
+				}
 				state.unmove();
 				if(!best_seen_score || score > best_seen_score.value())
 				{
@@ -161,12 +177,13 @@ namespace engine
 			else
 				return -std::numeric_limits<double>::infinity();
 		};
+
 		Move best_move;
 		nega_max(depth, best_move);
 		return best_move;
-		for(int current_depth{0}; current_depth < depth; ++current_depth)
+		for(unsigned int current_depth{0}; current_depth < depth; ++current_depth)
 		{
-			best_move = nega_max(current_depth, best_move);
+			nega_max(current_depth, best_move);
 		}
 	}
 }
