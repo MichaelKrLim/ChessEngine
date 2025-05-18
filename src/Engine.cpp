@@ -3,7 +3,6 @@
 #include "Engine.h"
 #include "Move_generator.h"
 #include "Pieces.h"
-#include "Transposition_table.h"
 
 #include <array>
 #include <limits>
@@ -132,53 +131,65 @@ namespace
 
 namespace engine
 {
-	Move generate_move_at_depth(State state, const unsigned int depth) noexcept
+	std::optional<Move> generate_move_at_depth(State state, const int depth) noexcept
 	{
-		Transposition_table<32> transposition_table;
-		const auto nega_max = [&state, &transposition_table, &depth](this auto&& rec, unsigned int current_depth, Move& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
+		const auto quiescence_search = [&state](this auto&& rec, double alpha, double beta) -> double
 		{
-			if(current_depth == 0)
+			const double stand_pat = evaluate(state);
+			double best_score = stand_pat;
+			if(stand_pat >= beta)
+				return stand_pat;
+			if(alpha < stand_pat)
+				alpha = stand_pat;
+
+			for(const engine::Move& move : noisy_moves(state))
 			{
-				if(const auto previous_data = transposition_table.find(state); previous_data && previous_data->depth >= depth)
-					return previous_data->eval;
-				else
-				{
-					const double evaluation = evaluate(state);
-					transposition_table[state] = Transposition_data{};
-					return evaluation;
-				}
+				state.make(move);
+				const double score = -rec(-beta, -alpha);
+				state.unmove();
+				if(score >= beta)
+					return score;
+				if(score > best_score)
+					best_score = score;
+				if(score > alpha)
+					alpha = score;
 			}
+			return best_score;
+		};
+
+		const auto nega_max = [&state, &quiescence_search](this auto&& rec, int depth, std::optional<Move>& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
+		{
+			if(depth == 0)
+				return quiescence_search(alpha, beta);
 
 			std::optional<double> best_seen_score = std::nullopt;
 			for(const auto& move : legal_moves(state))
 			{
 				state.make(move);
-				Move opponent_move;
-				double score;
-				if(const auto cache_result = transposition_table.find(state); cache_result && cache_result->depth >= depth)
-					score = state.side_to_move==cache_result->to_move? cache_result->eval : -cache_result->eval;
-				else
-				{
-					score = -rec(current_depth-1, opponent_move, -beta, -alpha);
-					transposition_table[state] = Transposition_data{depth, score, state.side_to_move};
-				}
+				std::optional<Move> opponent_move;
+				double score = -rec(depth-1, opponent_move, -beta, -alpha);
 				state.unmove();
 				if(!best_seen_score || score > best_seen_score.value())
 				{
 					best_seen_score = score;
 					best_move = move;
 				}
-				alpha = std::max(alpha, best_seen_score.value());
-				if(alpha >= beta)
+				if(score >= beta)
 					break;
+				if(score >= alpha)
+					alpha = score;
 			}
 			if(best_seen_score)
 				return best_seen_score.value();
 			else
-				return -std::numeric_limits<double>::infinity();
+			{
+				if(state.is_square_attacked(state.sides[state.side_to_move].pieces[Piece::king].lsb_square()))
+					return 0.0;
+				else
+					return -std::numeric_limits<double>::infinity();
+			}
 		};
-
-		Move best_move;
+		std::optional<Move> best_move;
 		nega_max(depth, best_move);
 		return best_move;
 		for(unsigned int current_depth{0}; current_depth < depth; ++current_depth)

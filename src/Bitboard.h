@@ -69,7 +69,7 @@ namespace engine
 
 	constexpr bool is_free(const Position& square, const Bitboard& occupied_squares)
 	{
-		return !(occupied_squares & (1ULL << to_index(square)));
+		return (occupied_squares & (1ULL << to_index(square))) == 0;
 	}
 
 	constexpr Bitboard rank_bb(int rank) 

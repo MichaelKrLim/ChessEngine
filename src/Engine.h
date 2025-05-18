@@ -4,9 +4,11 @@
 #include "State.h"
 #include "Move.h"
 
+#include <optional>
+
 namespace engine
 {
-	[[nodiscard]] Move generate_move_at_depth(State state, const int depth) noexcept;
+	[[nodiscard]] std::optional<Move> generate_move_at_depth(State state, const int depth) noexcept;
 }
 
 #endif //Engine_h_INCLUDED

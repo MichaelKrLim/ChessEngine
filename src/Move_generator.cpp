@@ -329,4 +329,15 @@ namespace engine
 		}
 		return attack_map;
 	}
+
+	const std::vector<Move> noisy_moves(const State& state) noexcept
+	{
+		// inefficient but that is okay also does not find checking moves
+		std::vector<Move> moves = legal_moves(state);
+		std::erase_if(moves, [&state](const Move& move)
+		{
+			return is_free(move.destination_square(), state.sides[other_side(state.side_to_move)].occupied_squares());
+		});
+		return moves;
+	}
 }

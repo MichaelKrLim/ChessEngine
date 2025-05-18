@@ -80,6 +80,7 @@ namespace engine
 		[[nodiscard]] inline bool is_square_attacked(const Position& position) const noexcept { return enemy_attack_map.is_occupied(position); }
 		[[nodiscard]] bool in_check() const noexcept;
 		[[nodiscard]] std::vector<Piece_and_data> get_board_data() const noexcept;
+		[[nodiscard]] bool is_stalemate() const noexcept;
 	};
 }
 

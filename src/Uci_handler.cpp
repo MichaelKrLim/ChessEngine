@@ -112,7 +112,11 @@ namespace
 
 	void go_handler(const Search_options& search_options) noexcept
 	{
-		std::cout << "bestmove " << engine::generate_move_at_depth(state, search_options.depth) << "\n";
+		const std::optional<engine::Move> best_move = engine::generate_move_at_depth(state, search_options.depth);
+		if(best_move)
+			std::cout << "bestmove " << best_move.value()  << "\n";
+		else
+			std::cout << "bestmove 0000\n";
 	}
 
 	void uci_handler() noexcept

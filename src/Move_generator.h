@@ -9,6 +9,7 @@ namespace engine
 {
 	[[nodiscard]] const std::vector<Move> legal_moves(const State& state) noexcept;
 	[[nodiscard]] const Bitboard generate_attack_map(const State& state) noexcept;
+	[[nodiscard]] const std::vector<Move> noisy_moves(const State& state) noexcept;
 }
 
 #endif // Move_generator_h_INCLUDED
