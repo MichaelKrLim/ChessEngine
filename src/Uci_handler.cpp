@@ -105,7 +105,7 @@ namespace
 
 	void position_handler(const Input_state& input_state) noexcept
 	{
-		state =  engine::State{input_state.fen};
+		state = engine::State{input_state.fen};
 		for(const auto& move : input_state.continuation)
 			state.make(move);
 	}

@@ -145,7 +145,7 @@ namespace
 	{
 		const auto square_index = to_index(original_square);
 		const auto& magic_square = bishop_magic_squares_[square_index];
-		const auto& attack_table = bishop_magic_squares_[square_index].attack_table;
+		const auto& attack_table = magic_square.attack_table;
 		std::uint64_t magic_index = magic_hash(occupied_squares & magic_square.mask, magic_square.magic, magic_square.shift);
 		return attack_table[magic_index];
 	}
@@ -154,7 +154,7 @@ namespace
 	{
 		const auto square_index = to_index(original_square);
 		const auto& magic_square = rook_magic_squares_[square_index];
-		const auto& attack_table = rook_magic_squares_[square_index].attack_table;
+		const auto& attack_table = magic_square.attack_table;
 		std::uint64_t magic_index = magic_hash(occupied_squares & magic_square.mask, magic_square.magic, magic_square.shift);
 		return attack_table[magic_index];
 	}
@@ -191,12 +191,11 @@ namespace
 		rook_legal_moves(legal_moves, queen_bb, occupied_squares, current_sides_occupied_squares, king_square, pinned_pieces);
 	}
 
-	[[nodiscard]] const Bitboard generate_pinned_pieces(const State& state) noexcept
+	[[nodiscard]] const Bitboard generate_pinned_pieces(const State& state, const Position& king_square) noexcept
 	{
 		Bitboard pinned_pieces{0ULL};
 		const auto& side = state.sides[state.side_to_move];
 		const auto& enemy_side = state.sides[other_side(state.side_to_move)];
-		const Position king_square = side.pieces[Piece::king].lsb_square();
 		auto find = [&](const auto& moves, const Bitboard& our_occupied_squares, const Bitboard& sliding_piece)
 		{
 			for(const auto& move : moves)
@@ -229,7 +228,7 @@ namespace
 
 namespace engine
 {
-	const std::vector<Move> legal_moves(const State& state) noexcept
+	std::vector<Move> legal_moves(const State& state) noexcept
 	{
 		std::vector<Move> legal_moves{};
 		const Side_position our_side = state.sides[state.side_to_move];
@@ -239,7 +238,7 @@ namespace engine
 		const bool in_check = state.in_check();
 		const Position king_square = our_side.pieces[Piece::king].lsb_square();
 		legal_moves.reserve(max_legal_moves);
-		const Bitboard pinned_pieces = generate_pinned_pieces(state);
+		const Bitboard pinned_pieces = generate_pinned_pieces(state, king_square);
 		pawn_legal_moves(legal_moves, pieces[Piece::pawn], occupied_squares, state.side_to_move, our_occupied_squares, state.en_passant_target_square, king_square, pinned_pieces);
 		knight_legal_moves(legal_moves, pieces[Piece::knight] & ~pinned_pieces, our_occupied_squares );
 
@@ -306,7 +305,7 @@ namespace engine
 		return legal_moves;
 	}
 
-	const Bitboard generate_attack_map(const State& state) noexcept
+	Bitboard generate_attack_map(const State& state) noexcept
 	{
 		std::vector<Move> legal_moves{};
 		Bitboard attack_map;

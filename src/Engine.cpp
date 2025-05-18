@@ -3,6 +3,7 @@
 #include "Engine.h"
 #include "Move_generator.h"
 #include "Pieces.h"
+#include "Transposition_table.h"
 
 #include <array>
 #include <limits>
@@ -131,8 +132,9 @@ namespace
 
 namespace engine
 {
-	std::optional<Move> generate_move_at_depth(State state, const int depth) noexcept
+	std::optional<Move> generate_move_at_depth(State state, const unsigned depth) noexcept
 	{
+		Transposition_table transposition_table(16);
 		const auto quiescence_search = [&state](this auto&& rec, double alpha, double beta) -> double
 		{
 			const double stand_pat = evaluate(state);
@@ -157,10 +159,19 @@ namespace engine
 			return best_score;
 		};
 
-		const auto nega_max = [&state, &quiescence_search](this auto&& rec, int depth, std::optional<Move>& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
+		const auto nega_max = [&state, &quiescence_search, &transposition_table, &depth](this auto&& rec, const unsigned current_depth, std::optional<Move>& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
 		{
-			if(depth == 0)
-				return quiescence_search(alpha, beta);
+			if(current_depth == 0)
+			{
+				if(auto& cache_data = transposition_table[state]; cache_data && cache_data->depth >= depth)
+					return cache_data->eval;
+				else
+				{
+					const double evaluation = quiescence_search(alpha, beta);
+					cache_data = Transposition_data{depth, evaluation, state.side_to_move};
+					return evaluation;
+				}
+			}
 
 			std::optional<double> best_seen_score = std::nullopt;
 			for(const auto& move : legal_moves(state))
@@ -168,6 +179,13 @@ namespace engine
 				state.make(move);
 				std::optional<Move> opponent_move;
 				double score = -rec(depth-1, opponent_move, -beta, -alpha);
+				if(auto& cache_result = transposition_table[state]; cache_result && cache_result->depth >= depth)
+					score = state.side_to_move==cache_result->to_move? cache_result->eval : -cache_result->eval;
+				else
+				{
+					score = -rec(current_depth-1, opponent_move, -beta, -alpha);
+					cache_result = Transposition_data{depth, score, state.side_to_move};
+				}
 				state.unmove();
 				if(!best_seen_score || score > best_seen_score.value())
 				{
@@ -192,7 +210,7 @@ namespace engine
 		std::optional<Move> best_move;
 		nega_max(depth, best_move);
 		return best_move;
-		for(unsigned int current_depth{0}; current_depth < depth; ++current_depth)
+		for(unsigned current_depth{0}; current_depth < depth; ++current_depth)
 		{
 			nega_max(current_depth, best_move);
 		}

@@ -53,7 +53,7 @@ void State::parse_fen(const std::string_view fen) noexcept
 		}();
 		return to_piece[to_convert];
 	};
-	const auto to_shift = [](std::size_t board_index) -> std::size_t
+	const auto to_shift = [](std::size_t board_index)
 	{
 		Position position(board_index);
 		const std::size_t flipped = (board_size-1-position.rank_)*board_size+position.file_;
@@ -66,10 +66,9 @@ void State::parse_fen(const std::string_view fen) noexcept
 		{
 			const auto add_piece = [&](const Side& side)
 			{
-				const auto side_index = static_cast<std::uint8_t>(side);
 				const Piece piece_type_index = to_piece(std::tolower(fen_section[i]));
 				const std::uint64_t mask = (1ULL << to_shift(board_index));
-				sides[Side{side_index}].pieces[piece_type_index] |= mask;
+				sides[side].pieces[piece_type_index] |= mask;
 			};
 			if(fen_section[i] == '/')
 				continue;
@@ -146,18 +145,13 @@ State::State(const std::string_view fen)
 std::optional<Piece> State::piece_at(const Position& position, const Side& side) const noexcept
 {
 	std::optional<Piece> found_piece{std::nullopt};
-	for(std::uint8_t piece_index{0}; piece_index < number_of_pieces; ++piece_index)
+	for(const auto& piece : all_pieces)
 	{
-		sides[side].pieces[Piece{piece_index}].for_each_piece([&](const Position& occupied_square) mutable
+		if(!is_free(position, sides[side].pieces[piece]))
 		{
-			if(occupied_square == position)
-			{
-				found_piece = static_cast<Piece>(piece_index);
-				return;
-			}
-		});
-		if(found_piece)
+			found_piece = piece;
 			break;
+		}
 	}
 	return found_piece;
 }
@@ -310,7 +304,7 @@ Bitboard State::occupied_squares() const noexcept
 
 bool State::in_check() const noexcept
 {
-	return is_square_attacked(sides[side_to_move].pieces[Piece::king].lsb_square());
+	return (enemy_attack_map & sides[side_to_move].pieces[Piece::king])>0;
 }
 
 std::vector<State::Piece_and_data> State::get_board_data() const noexcept

@@ -81,7 +81,17 @@ namespace engine
 		[[nodiscard]] bool in_check() const noexcept;
 		[[nodiscard]] std::vector<Piece_and_data> get_board_data() const noexcept;
 		[[nodiscard]] bool is_stalemate() const noexcept;
+
+		friend std::ostream& operator<<(std::ostream& os, const State& state);
 	};
+
+	inline std::ostream& operator<<(std::ostream& os, const State& state)
+	{
+		return os << state.occupied_squares() << "\n"
+		<< "half move clock: " << state.half_move_clock << "\n"
+		<< "full move clock: " << state.full_move_clock << "\n"
+		<< "side to move: " << (state.side_to_move==Side::white?"white":"black") << "\n";
+	}
 }
 
 #endif // Board_h_INCLUDED
