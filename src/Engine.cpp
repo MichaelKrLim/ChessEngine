@@ -6,6 +6,7 @@
 #include "Transposition_table.h"
 
 #include <array>
+#include <cstdint>
 #include <limits>
 
 namespace
@@ -134,7 +135,7 @@ namespace engine
 {
 	std::optional<Move> generate_move_at_depth(State state, const unsigned depth) noexcept
 	{
-		Transposition_table transposition_table(16);
+		Transposition_table transposition_table(27);
 		const auto quiescence_search = [&state](this auto&& rec, double alpha, double beta) -> double
 		{
 			const double stand_pat = evaluate(state);
@@ -159,7 +160,18 @@ namespace engine
 			return best_score;
 		};
 
-		const auto nega_max = [&state, &quiescence_search, &transposition_table](this auto&& rec, const unsigned current_depth, std::optional<Move>& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
+		struct Repetition_data
+		{
+			engine::Move our_move, their_move;
+			unsigned our_count, their_count;
+		};
+
+		const auto inverted_repetition_data = [](const Repetition_data& repetition_data)
+		{
+			return Repetition_data{repetition_data.their_move, repetition_data.our_move, repetition_data.their_count, repetition_data.our_count};
+		};
+
+		const auto nega_max = [&state, &quiescence_search, &transposition_table, &inverted_repetition_data](this auto&& rec, const unsigned current_depth, std::optional<Move>& best_move, Repetition_data repetition_data, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity()) -> double
 		{
 			if(current_depth == 0)
 			{
@@ -185,7 +197,14 @@ namespace engine
 					score = state.side_to_move==cache_result->to_move? cache_result->eval : -cache_result->eval;
 				else
 				{
-					score = -rec(current_depth-1, opponent_move, -beta, -alpha);
+					if(move == repetition_data.our_move && ++repetition_data.our_count >= 3)
+						score = 0.0;
+					else
+					{
+						repetition_data.our_move = move;
+						repetition_data.our_count = 1;
+						score = -rec(current_depth-1, opponent_move, inverted_repetition_data(repetition_data) , -beta, -alpha);
+					}
 					cache_result = Transposition_data{current_depth, score, state.side_to_move, current_hash};
 				}
 				state.unmove();
@@ -212,7 +231,7 @@ namespace engine
 		std::optional<Move> best_move;
 		for(unsigned current_depth{0}; current_depth < depth; ++current_depth)
 		{
-			nega_max(current_depth, best_move);
+			nega_max(current_depth, best_move, Repetition_data{Move{}, Move{}, 0, 0});
 		}
 		return best_move;
 	}

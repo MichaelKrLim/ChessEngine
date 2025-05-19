@@ -230,10 +230,7 @@ void State::make(const Move& move) noexcept
 			side.castling_rights[Castling_rights::kingside] = false;
 	}
 	if(piece_type == Piece::king)
-	{
-		side.castling_rights[Castling_rights::kingside] = false;
-		side.castling_rights[Castling_rights::queenside] = false;
-	}
+		side.castling_rights[Castling_rights::kingside] = side.castling_rights[Castling_rights::queenside] = false;
 	++half_move_clock;
 	if(side_to_move == Side::black) ++full_move_clock;
 	enemy_attack_map = generate_attack_map(*this);

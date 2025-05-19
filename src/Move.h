@@ -28,6 +28,8 @@ namespace engine
 								 (to_index(current_square)<<6)                                          |
 								  to_index(desired_square)) {};
 
+		auto operator<=>(const Move&) const = default;
+
 		constexpr Position from_square() const
 		{
 			return Position((move_data_>>6) & (board_size*board_size-1));

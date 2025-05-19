@@ -1,5 +1,5 @@
-#ifndef ENUM_MAP_H
-#define ENUM_MAP_H
+#ifndef Enum_map_h_INCLUDED
+#define Enum_map_h_INCLUDED
 
 #include <array>
 #include <type_traits>
@@ -43,4 +43,4 @@ class Enum_map
 template <typename enum_type, typename mapped_type>
 using Enum_map_from_size = Enum_map<enum_type, mapped_type, static_cast<std::size_t>(enum_type::size)>;
 
-#endif
+#endif // Enum_map_h_INCLUDED

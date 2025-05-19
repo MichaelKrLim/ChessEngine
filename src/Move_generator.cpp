@@ -113,9 +113,8 @@ namespace
 		});
 	}
 
-	const void king_legal_moves(std::vector<Move>& legal_moves, const Bitboard& king_bb, const Bitboard& occupied_squares, const Bitboard& our_occupied_squares, const bool is_white, const Castling_rights_map<bool>& castling_rights, const Bitboard& enemy_attack_map)
+	const void king_legal_moves(std::vector<Move>& legal_moves, const Position& original_square, const Bitboard& occupied_squares, const Bitboard& our_occupied_squares, const bool is_white, const Castling_rights_map<bool>& castling_rights, const Bitboard& enemy_attack_map)
 	{
-		const Position original_square = king_bb.lsb_square();
 		if(!(enemy_attack_map & (1ULL << to_index(original_square))))
 		{
 			if(castling_rights[Castling_rights::kingside])
@@ -301,7 +300,7 @@ namespace engine
 			else
 				legal_moves.clear();
 		}
-		king_legal_moves(legal_moves, pieces[Piece::king], occupied_squares, our_occupied_squares | state.enemy_attack_map, state.side_to_move == Side::white? true : false, our_side.castling_rights, state.enemy_attack_map);
+		king_legal_moves(legal_moves, king_square, occupied_squares, our_occupied_squares | state.enemy_attack_map, state.side_to_move == Side::white? true : false, our_side.castling_rights, state.enemy_attack_map);
 		return legal_moves;
 	}
 

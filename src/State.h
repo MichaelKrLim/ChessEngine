@@ -25,7 +25,7 @@ namespace engine
 	struct Side_position
 	{
 		Enum_map<Piece, Bitboard, number_of_pieces> pieces{};
-		Castling_rights_map<bool> castling_rights{true, true};
+		Castling_rights_map<bool> castling_rights{false, false};
 
 		[[nodiscard]] inline Bitboard occupied_squares() const noexcept 
 		{
@@ -88,10 +88,13 @@ namespace engine
 
 	inline std::ostream& operator<<(std::ostream& os, const State& state)
 	{
-		return os << state.occupied_squares() << "\n"
+		os << state.occupied_squares() << "\n"
 		<< "half move clock: " << state.half_move_clock << "\n"
 		<< "full move clock: " << state.full_move_clock << "\n"
 		<< "side to move: " << (state.side_to_move==Side::white?"white":"black") << "\n";
+		if(state.en_passant_target_square)
+			os << "en_passant_target_square: " << state.en_passant_target_square.value() << "\n";
+		return os;
 	}
 }
 
