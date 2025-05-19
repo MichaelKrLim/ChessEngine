@@ -159,16 +159,17 @@ namespace engine
 			return best_score;
 		};
 
-		const auto nega_max = [&state, &quiescence_search, &transposition_table, &depth](this auto&& rec, const unsigned current_depth, std::optional<Move>& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
+		const auto nega_max = [&state, &quiescence_search, &transposition_table](this auto&& rec, const unsigned current_depth, std::optional<Move>& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
 		{
 			if(current_depth == 0)
 			{
-				if(auto& cache_data = transposition_table[state]; cache_data && cache_data->depth >= depth)
+				const auto current_hash = zobrist::hash(state);
+				if(auto& cache_data = transposition_table[state]; cache_data && cache_data->depth >= 0 && cache_data->zobrist_hash == current_hash)
 					return cache_data->eval;
 				else
 				{
 					const double evaluation = quiescence_search(alpha, beta);
-					cache_data = Transposition_data{depth, evaluation, state.side_to_move};
+					cache_data = Transposition_data{current_depth, evaluation, state.side_to_move, current_hash};
 					return evaluation;
 				}
 			}
@@ -178,13 +179,14 @@ namespace engine
 			{
 				state.make(move);
 				std::optional<Move> opponent_move;
-				double score = -rec(depth-1, opponent_move, -beta, -alpha);
-				if(auto& cache_result = transposition_table[state]; cache_result && cache_result->depth >= depth)
+				double score;
+				const auto current_hash = zobrist::hash(state);
+				if(auto& cache_result = transposition_table[state]; cache_result && cache_result->depth >= current_depth && cache_result->zobrist_hash == current_hash)
 					score = state.side_to_move==cache_result->to_move? cache_result->eval : -cache_result->eval;
 				else
 				{
 					score = -rec(current_depth-1, opponent_move, -beta, -alpha);
-					cache_result = Transposition_data{depth, score, state.side_to_move};
+					cache_result = Transposition_data{current_depth, score, state.side_to_move, current_hash};
 				}
 				state.unmove();
 				if(!best_seen_score || score > best_seen_score.value())
@@ -208,11 +210,10 @@ namespace engine
 			}
 		};
 		std::optional<Move> best_move;
-		nega_max(depth, best_move);
-		return best_move;
 		for(unsigned current_depth{0}; current_depth < depth; ++current_depth)
 		{
 			nega_max(current_depth, best_move);
 		}
+		return best_move;
 	}
 }

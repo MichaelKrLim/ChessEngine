@@ -329,7 +329,7 @@ namespace engine
 		return attack_map;
 	}
 
-	const std::vector<Move> noisy_moves(const State& state) noexcept
+	std::vector<Move> noisy_moves(const State& state) noexcept
 	{
 		// inefficient but that is okay also does not find checking moves
 		std::vector<Move> moves = legal_moves(state);

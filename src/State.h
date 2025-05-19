@@ -20,6 +20,7 @@ namespace engine
 	};
 	template <typename Mapped_type>
 	using Castling_rights_map = Enum_map_from_size<Castling_rights, Mapped_type>;
+	constexpr auto all_castling_rights = {Castling_rights::kingside, Castling_rights::queenside};
 
 	struct Side_position
 	{
