@@ -10,6 +10,7 @@
 #include <array>
 #include <optional>
 #include <stack>
+#include <unordered_map>
 #include <vector>
 
 namespace engine
@@ -49,6 +50,7 @@ namespace engine
 			const std::optional<Position> en_passant_target_square;
 			const bool was_en_passant;
 			Castling_rights_map<bool> castling_rights;
+			const std::uint64_t previous_zobrist_hash;
 		};
 
 		struct Piece_and_data
@@ -73,6 +75,8 @@ namespace engine
 		Side side_to_move{Side::white};
 		Bitboard enemy_attack_map;
 		std::optional<Position> en_passant_target_square{std::nullopt};
+		std::uint64_t zobrist_hash;
+		std::unordered_map<std::uint64_t, unsigned> repetition_history;
 		static std::stack<State_delta> history;
 
 		void make(const Move& move) noexcept;

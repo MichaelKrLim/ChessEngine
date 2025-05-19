@@ -1,5 +1,6 @@
-#include "State.h"
 #include "Move_generator.h"
+#include "State.h"
+#include "Transposition_table.h"
 
 #include <algorithm>
 #include <ranges>
@@ -140,6 +141,7 @@ State::State(const std::string_view fen)
 	side_to_move = other_side(side_to_move);
 	enemy_attack_map = generate_attack_map(*this);
 	side_to_move = other_side(side_to_move);
+	zobrist_hash = zobrist::hash(*this);
 }
 
 std::optional<Piece> State::piece_at(const Position& position, const Side& side) const noexcept
@@ -170,11 +172,13 @@ void State::make(const Move& move) noexcept
 	const Piece piece_type = piece_at(from_square, side_to_move).value();
 	std::optional<Piece> piece_to_capture = std::nullopt;
 	const auto old_en_passant_target_square = en_passant_target_square;
+	std::uint64_t new_zobrist_hash = zobrist_hash;
 	en_passant_target_square = std::nullopt;
 	if(!is_free(destination_square, occupied_squares()))
 	{
 		piece_to_capture = piece_at(destination_square, other_side(side_to_move)).value();
 		opposite_side.pieces[piece_to_capture.value()].remove_piece(destination_square);
+		zobrist::invert_piece_at(new_zobrist_hash, destination_square, piece_to_capture.value(), other_side(side_to_move));
 		if(piece_to_capture == Piece::rook)
 		{
 			if(destination_square.file_ == 0)
@@ -190,6 +194,7 @@ void State::make(const Move& move) noexcept
 	{
 		Bitboard& pawn_bb = side.pieces[Piece::pawn];
 		pawn_bb.remove_piece(from_square);
+		zobrist::invert_piece_at(new_zobrist_hash, from_square, Piece::pawn, side_to_move);
 		side.pieces[move.promotion_piece()].add_piece(destination_square);
 	}
 	else if(is_castling)
@@ -210,7 +215,11 @@ void State::make(const Move& move) noexcept
 			side.castling_rights[Castling_rights::queenside] = false;
 		}
 		side.pieces[Piece::king] ^= (1ULL << to_index(destination_square)) | (1ULL << to_index(from_square));
+		zobrist::invert_piece_at(new_zobrist_hash, destination_square, Piece::king, side_to_move);
+		zobrist::invert_piece_at(new_zobrist_hash, from_square, Piece::king, side_to_move);
 		side.pieces[Piece::rook] ^= (1ULL << to_index(rook_origin_square) | (1ULL << to_index(rook_destination_square)));
+		zobrist::invert_piece_at(new_zobrist_hash, rook_origin_square, Piece::rook, side_to_move);
+		zobrist::invert_piece_at(new_zobrist_hash, rook_destination_square, Piece::rook, side_to_move);
 	}
 	else
 	{
@@ -218,10 +227,26 @@ void State::make(const Move& move) noexcept
 		if(is_double_pawn_move)
 			en_passant_target_square = Position{from_square.rank_+pawn_direction, from_square.file_};
 		if(is_en_passant)
-			opposite_side.pieces[Piece::pawn].remove_piece(Position{destination_square.rank_-pawn_direction, destination_square.file_});
+		{
+			const Position capture_square{destination_square.rank_-pawn_direction, destination_square.file_};
+			opposite_side.pieces[Piece::pawn].remove_piece(capture_square);
+			zobrist::invert_piece_at(new_zobrist_hash, capture_square, Piece::pawn, other_side(side_to_move));
+		}
 		side.pieces[piece_type] ^= (1ULL << to_index(from_square)) | (1ULL << to_index(destination_square));
+		zobrist::invert_piece_at(new_zobrist_hash, from_square, piece_type, side_to_move);
+		zobrist::invert_piece_at(new_zobrist_hash, destination_square, piece_type, side_to_move);
 	}
-	history.push(State_delta{move, piece_type, piece_to_capture, enemy_attack_map, old_en_passant_target_square, is_en_passant, old_castling_rights});
+	history.push(State_delta
+	{
+		move,
+		piece_type,
+		piece_to_capture,
+		enemy_attack_map,
+		old_en_passant_target_square,
+		is_en_passant,
+		old_castling_rights,
+		zobrist_hash
+	});
 	if(piece_type == Piece::rook)
 	{
 		if(from_square.file_ == 0)
@@ -231,6 +256,8 @@ void State::make(const Move& move) noexcept
 	}
 	if(piece_type == Piece::king)
 		side.castling_rights[Castling_rights::kingside] = side.castling_rights[Castling_rights::queenside] = false;
+	zobrist_hash = new_zobrist_hash;
+	++repetition_history[new_zobrist_hash];
 	++half_move_clock;
 	if(side_to_move == Side::black) ++full_move_clock;
 	enemy_attack_map = generate_attack_map(*this);
@@ -247,7 +274,7 @@ void State::unmove() noexcept
 	--half_move_clock;
 	if(!was_whites_move) --full_move_clock;
 	
-	const auto [move, moved_piece, captured_piece, attack_map, previous_en_passant_target_square, was_en_passant, old_castling_rights] = history.top();
+	const auto [move, moved_piece, captured_piece, attack_map, previous_en_passant_target_square, was_en_passant, old_castling_rights, old_zobrist_hash] = history.top();
 	history.pop();
 	Side_position& side_to_unmove = sides[last_moved_side];
 	Side_position& current_side_to_move = sides[side_to_move];
@@ -292,6 +319,8 @@ void State::unmove() noexcept
 	side_to_move = last_moved_side;
 	enemy_attack_map = attack_map;
 	en_passant_target_square = previous_en_passant_target_square;
+	--repetition_history[zobrist_hash];
+	zobrist_hash = old_zobrist_hash;
 }
 
 Bitboard State::occupied_squares() const noexcept

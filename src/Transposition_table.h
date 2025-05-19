@@ -1,6 +1,7 @@
 #ifndef Transposition_table_h_INCLUDED
 #define Transposition_table_h_INCLUDED
 
+#include "Constants.h"
 #include "Pieces.h"
 #include "State.h"
 
@@ -14,9 +15,9 @@ namespace zobrist
 {
 	const static struct Zobrist_randoms
 	{
-		engine::Piece_map<engine::Side_map<std::array<std::uint64_t, 64>>> pieces;
+		engine::Piece_map<engine::Side_map<std::array<std::uint64_t, engine::board_size*engine::board_size>>> pieces;
 		engine::Side_map<engine::Castling_rights_map<std::uint64_t>> castling_rights;
-		std::array<std::uint64_t, engine::to_index(engine::Position{7, 7})> en_passant_squares;
+		std::array<std::uint64_t, engine::board_size*engine::board_size> en_passant_squares;
 	} zobrist_randoms = []()
 	{
 		Zobrist_randoms zobrist_randoms;
@@ -35,6 +36,21 @@ namespace zobrist
 				random = dist(rng);
 		return zobrist_randoms;
 	}();
+
+	inline void invert_piece_at(std::uint64_t& hash, const engine::Position& position, const engine::Piece& piece, const engine::Side& side)
+	{
+		hash ^= zobrist_randoms.pieces[piece][side][to_index(position)];
+	}
+
+	inline void invert_castling_right(std::uint64_t& hash, const engine::Side& side, const engine::Castling_rights& castling_right)
+	{
+		hash ^= zobrist_randoms.castling_rights[side][castling_right];
+	}
+
+	inline void invert_en_passant_square(std::uint64_t& hash, const engine::Position& position)
+	{
+		hash ^= zobrist_randoms.en_passant_squares[to_index(position)];
+	}
 
 	[[nodiscard]] inline std::uint64_t hash(const engine::State& state) noexcept
 	{

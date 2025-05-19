@@ -135,8 +135,7 @@ namespace engine
 {
 	std::optional<Move> generate_move_at_depth(State state, const unsigned depth) noexcept
 	{
-		Transposition_table transposition_table(27);
-		const auto quiescence_search = [&state](this auto&& rec, double alpha, double beta) -> double
+		static Transposition_table transposition_table(27);		const auto quiescence_search = [&state](this auto&& rec, double alpha, double beta) -> double
 		{
 			const double stand_pat = evaluate(state);
 			double best_score = stand_pat;
@@ -160,28 +159,16 @@ namespace engine
 			return best_score;
 		};
 
-		struct Repetition_data
-		{
-			engine::Move our_move, their_move;
-			unsigned our_count, their_count;
-		};
-
-		const auto inverted_repetition_data = [](const Repetition_data& repetition_data)
-		{
-			return Repetition_data{repetition_data.their_move, repetition_data.our_move, repetition_data.their_count, repetition_data.our_count};
-		};
-
-		const auto nega_max = [&state, &quiescence_search, &transposition_table, &inverted_repetition_data](this auto&& rec, const unsigned current_depth, std::optional<Move>& best_move, Repetition_data repetition_data, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity()) -> double
+		const auto nega_max = [&state, &quiescence_search](this auto&& rec, const unsigned current_depth, std::optional<Move>& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity()) -> double
 		{
 			if(current_depth == 0)
 			{
-				const auto current_hash = zobrist::hash(state);
-				if(auto& cache_data = transposition_table[state]; cache_data && cache_data->depth >= 0 && cache_data->zobrist_hash == current_hash)
+				if(auto& cache_data = transposition_table[state]; cache_data && cache_data->depth >= current_depth && cache_data->zobrist_hash == state.zobrist_hash)
 					return cache_data->eval;
 				else
 				{
 					const double evaluation = quiescence_search(alpha, beta);
-					cache_data = Transposition_data{current_depth, evaluation, state.side_to_move, current_hash};
+					cache_data = Transposition_data{current_depth, evaluation, state.side_to_move, state.zobrist_hash};
 					return evaluation;
 				}
 			}
@@ -192,20 +179,17 @@ namespace engine
 				state.make(move);
 				std::optional<Move> opponent_move;
 				double score;
-				const auto current_hash = zobrist::hash(state);
-				if(auto& cache_result = transposition_table[state]; cache_result && cache_result->depth >= current_depth && cache_result->zobrist_hash == current_hash)
+				if(auto& cache_result = transposition_table[state]; cache_result && cache_result->depth >= current_depth && cache_result->zobrist_hash == state.zobrist_hash)
 					score = state.side_to_move==cache_result->to_move? cache_result->eval : -cache_result->eval;
 				else
 				{
-					if(move == repetition_data.our_move && ++repetition_data.our_count >= 3)
+					if(state.repetition_history[state.zobrist_hash] >= 3)
 						score = 0.0;
 					else
 					{
-						repetition_data.our_move = move;
-						repetition_data.our_count = 1;
-						score = -rec(current_depth-1, opponent_move, inverted_repetition_data(repetition_data) , -beta, -alpha);
+						score = -rec(current_depth-1, opponent_move, -beta, -alpha);
 					}
-					cache_result = Transposition_data{current_depth, score, state.side_to_move, current_hash};
+					cache_result = Transposition_data{current_depth, score, state.side_to_move, state.zobrist_hash};
 				}
 				state.unmove();
 				if(!best_seen_score || score > best_seen_score.value())
@@ -223,15 +207,15 @@ namespace engine
 			else
 			{
 				if(state.is_square_attacked(state.sides[state.side_to_move].pieces[Piece::king].lsb_square()))
-					return 0.0;
-				else
 					return -std::numeric_limits<double>::infinity();
+				else
+					return 0.0;
 			}
 		};
 		std::optional<Move> best_move;
 		for(unsigned current_depth{0}; current_depth < depth; ++current_depth)
 		{
-			nega_max(current_depth, best_move, Repetition_data{Move{}, Move{}, 0, 0});
+			nega_max(current_depth, best_move);
 		}
 		return best_move;
 	}
