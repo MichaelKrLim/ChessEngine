@@ -138,7 +138,18 @@ namespace engine
 		Transposition_table transposition_table(19);
 		const auto quiescence_search = [&state](this auto&& rec, double alpha, double beta) -> double
 		{
-			const double stand_pat = evaluate(state);
+			double stand_pat;
+			if(state.repetition_history[state.zobrist_hash] >= 3)
+				stand_pat = 0.0;
+			else if(legal_moves(state).size() != 0)
+				stand_pat = evaluate(state);
+			else
+			{
+				if(state.is_square_attacked(state.sides[state.side_to_move].pieces[Piece::king].lsb_square()))
+					return -std::numeric_limits<double>::infinity();
+				else
+					return 0.0;
+			}
 			double best_score = stand_pat;
 			if(stand_pat >= beta)
 				return stand_pat;
@@ -168,7 +179,18 @@ namespace engine
 					return cache_data->eval;
 				else
 				{
-					const double evaluation = quiescence_search(alpha, beta);
+					double evaluation;
+					if(state.repetition_history[state.zobrist_hash] >= 3)
+						evaluation = 0.0;
+					else if(legal_moves(state).size() != 0)
+						evaluation = quiescence_search(alpha, beta);
+					else
+					{
+						if(state.is_square_attacked(state.sides[state.side_to_move].pieces[Piece::king].lsb_square()))
+							return -std::numeric_limits<double>::infinity();
+						else
+							return 0.0;
+					}
 					cache_data = Transposition_data{current_depth, evaluation, state.side_to_move, state.zobrist_hash};
 					return evaluation;
 				}

@@ -49,6 +49,7 @@ namespace engine
 		[[nodiscard]] constexpr std::uint8_t popcount() const { return std::popcount(data_); }
 		constexpr void add_piece(const Position& index);
 		constexpr void remove_piece(const Position& square);
+		constexpr void move_piece(const Position& origin_square, const Position& destination_square);
 		template <typename Function_type>
 		constexpr void for_each_piece(Function_type&& f) const
 		{
@@ -86,6 +87,11 @@ namespace engine
 	constexpr void Bitboard::remove_piece(const Position& square)
 	{
 		data_ &= ~(1ULL << to_index(square));
+	}
+
+	constexpr void Bitboard::move_piece(const Position& origin_square, const Position& destination_square)
+	{
+		data_ ^= (1ULL << to_index(origin_square)) | (1ULL << to_index(destination_square));
 	}
 
 	inline std::string Bitboard::pretty_string() const

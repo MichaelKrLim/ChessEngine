@@ -86,9 +86,9 @@ namespace engine
 		static std::unordered_map<char, Piece> to_piece{{'n', Piece::knight}, {'q', Piece::queen}, {'b', Piece::bishop}, {'r', Piece::rook}};
 		if(move_string.size() == 4)
 			move = Move{algebraic_to_position(move_string.substr(0, 2)), algebraic_to_position(move_string.substr(2, 2))};
-		if(move_string.size() == 5)
+		else if(move_string.size() == 5)
 			move = Move{algebraic_to_position(move_string.substr(0, 2)), algebraic_to_position(move_string.substr(2, 2)), to_piece[move_string.back()]};
-		if(move_string.size())
+		else
 			is.setstate(std::ios::failbit);
 		return is;
 	}
