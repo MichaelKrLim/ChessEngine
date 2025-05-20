@@ -63,22 +63,35 @@ namespace
 		const bool is_white = active_player == Side::white? true:false;
 		const auto initial_rank = active_player == Side::white ? 1 : 6;
 		const auto pawn_direction = is_white? 1 : -1;
-		const Bitboard single_moves = is_white? (pawns_bb << rank_move) : (pawns_bb >> rank_move);
+		const auto promotion_rank = is_white? 7 : 0;
+		const auto add_promotion_legal_move = [&legal_moves](const Position& origin_square, const Position& destination_square)
+		{
+			for(const auto& piece_type : all_promotion_pieces)
+				legal_moves.push_back(Move{origin_square, destination_square, piece_type});
+		};
+		Bitboard single_moves = is_white? (pawns_bb << rank_move) : (pawns_bb >> rank_move);
 		single_moves.for_each_piece([&](const Position& destination_square)
 		{
 			const Position origin_square = Position{destination_square.rank_-pawn_direction, destination_square.file_};
 			if(is_valid_destination(destination_square, occupied_squares) && (!pinned_pieces.is_occupied(origin_square) || origin_square.file_ == king_square.file_))
-				legal_moves.push_back(Move{origin_square, destination_square});
+			{	
+				if(destination_square.rank_ == promotion_rank)
+					add_promotion_legal_move(origin_square, destination_square);
+				else
+					legal_moves.push_back(Move{origin_square, destination_square});
+			}
+			else
+				single_moves.remove_piece(destination_square);
 		});
-		Bitboard pawns_to_move = pawns_bb & rank_bb(initial_rank);
-		const Bitboard double_moves = is_white? (pawns_to_move << (rank_move*2)) : (pawns_to_move >> (rank_move*2));
+		single_moves &= rank_bb(initial_rank+pawn_direction);
+		const Bitboard double_moves = is_white? (single_moves << (rank_move)) : (single_moves >> (rank_move));
 		double_moves.for_each_piece([&](const Position& destination_square)
 		{
 			const Position origin_square = Position{destination_square.rank_-pawn_direction*2, destination_square.file_};
 			if(is_valid_destination(destination_square, occupied_squares) && is_free(Position{destination_square.rank_-pawn_direction, destination_square.file_}, occupied_squares) && (!pinned_pieces.is_occupied(origin_square) || origin_square.file_ == king_square.file_))
 				legal_moves.push_back(Move{origin_square, destination_square});
 		});
-		pawns_to_move = pawns_bb & ~file_h;
+		Bitboard pawns_to_move = pawns_bb & ~file_h;
 		const Bitboard right_captures = is_white? (pawns_to_move << (rank_move+1)) : (pawns_to_move >> (rank_move-1));
 		right_captures.for_each_piece([&](const Position& destination_square)
 		{
@@ -87,7 +100,10 @@ namespace
 			const auto relative_diagonal = is_white? &Position::diagonal_index : &Position::antidiagonal_index;
 			if(is_on_board(destination_square) && can_capture && (!pinned_pieces.is_occupied(origin_square) || std::invoke(relative_diagonal, &king_square) == std::invoke(relative_diagonal, &destination_square)))
 			{
-				legal_moves.push_back(Move{origin_square, destination_square});
+				if(destination_square.rank_ == promotion_rank)
+					add_promotion_legal_move(origin_square, destination_square);
+				else
+					legal_moves.push_back(Move{origin_square, destination_square});
 			}
 		});
 		pawns_to_move = pawns_bb & ~file_a;
@@ -98,7 +114,12 @@ namespace
 			const Position origin_square = Position{destination_square.rank_-pawn_direction, destination_square.file_+1};
 			const auto relative_diagonal = is_white? &Position::antidiagonal_index : &Position::diagonal_index;
 			if(is_on_board(destination_square) && can_capture && (!pinned_pieces.is_occupied(origin_square) || std::invoke(relative_diagonal, &king_square) == std::invoke(relative_diagonal, &destination_square)))
-				legal_moves.push_back(Move{origin_square, destination_square});
+			{
+				if(destination_square.rank_ == promotion_rank)
+					add_promotion_legal_move(origin_square, destination_square);
+				else
+					legal_moves.push_back(Move{origin_square, destination_square});
+			}
 		});
 	}
 

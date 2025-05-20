@@ -33,6 +33,7 @@ namespace engine
 		constexpr Bitboard& operator|= (const Bitboard& bitboard) { data_ |= bitboard.data_; return *this; }
 		constexpr Bitboard& operator>>=(std::uint64_t shift) 	  { data_ = data_ >> shift; return *this; }
 		constexpr Bitboard& operator&= (std::uint64_t value) 	  { data_ = data_ & value; return *this; }
+		constexpr Bitboard& operator&= (const Bitboard& bitboard) { data_ = data_ & bitboard.data_; return *this; }
 		constexpr void      operator=  (std::uint64_t data)  	  { data_ = data; }
 
 		constexpr bool operator> (std::uint64_t value) const { return data_ > value; }

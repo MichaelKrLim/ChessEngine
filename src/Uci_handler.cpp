@@ -114,7 +114,7 @@ namespace
 	{
 		const std::optional<engine::Move> best_move = engine::generate_move_at_depth(state, search_options.depth);
 		if(best_move)
-			std::cout << "bestmove " << best_move.value()  << "\n";
+			std::cout << "bestmove " << best_move.value() << "\n";
 		else
 			std::cout << "bestmove 0000\n";
 	}

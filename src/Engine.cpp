@@ -135,7 +135,8 @@ namespace engine
 {
 	std::optional<Move> generate_move_at_depth(State state, const unsigned depth) noexcept
 	{
-		static Transposition_table transposition_table(27);		const auto quiescence_search = [&state](this auto&& rec, double alpha, double beta) -> double
+		Transposition_table transposition_table(19);
+		const auto quiescence_search = [&state](this auto&& rec, double alpha, double beta) -> double
 		{
 			const double stand_pat = evaluate(state);
 			double best_score = stand_pat;
@@ -159,7 +160,7 @@ namespace engine
 			return best_score;
 		};
 
-		const auto nega_max = [&state, &quiescence_search](this auto&& rec, const unsigned current_depth, std::optional<Move>& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity()) -> double
+		const auto nega_max = [&state, &quiescence_search, &transposition_table](this auto&& rec, const unsigned current_depth, std::optional<Move>& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity()) -> double
 		{
 			if(current_depth == 0)
 			{
@@ -186,9 +187,7 @@ namespace engine
 					if(state.repetition_history[state.zobrist_hash] >= 3)
 						score = 0.0;
 					else
-					{
 						score = -rec(current_depth-1, opponent_move, -beta, -alpha);
-					}
 					cache_result = Transposition_data{current_depth, score, state.side_to_move, state.zobrist_hash};
 				}
 				state.unmove();

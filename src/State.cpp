@@ -187,10 +187,9 @@ void State::make(const Move& move) noexcept
 				side.castling_rights[Castling_rights::kingside] = false;
 		}
 	}
-	const bool is_promotion = piece_type == Piece::pawn && destination_square.rank_ == 7,
-			   is_castling = piece_type == Piece::king && std::abs(destination_square.file_ - from_square.file_) > 1,
+	const bool is_castling = piece_type == Piece::king && std::abs(destination_square.file_ - from_square.file_) > 1,
 			   is_en_passant = destination_square == old_en_passant_target_square && piece_type == Piece::pawn;
-	if(is_promotion)
+	if(move.is_promotion())
 	{
 		Bitboard& pawn_bb = side.pieces[Piece::pawn];
 		pawn_bb.remove_piece(from_square);

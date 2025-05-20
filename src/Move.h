@@ -7,6 +7,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <unordered_map>
 
 namespace engine
 {
@@ -23,10 +24,14 @@ namespace engine
 		public:
 
 		constexpr Move() = default;
-		constexpr Move(Position current_square, Position desired_square, Piece piece_type = Piece::knight) :
-			Move(((static_cast<std::uint16_t>(piece_type)-static_cast<std::uint16_t>(Piece::knight))<<12) |
-								 (to_index(current_square)<<6)                                          |
-								  to_index(desired_square)) {};
+		constexpr Move(Position current_square, Position desired_square)
+		{
+			move_data_ |= (to_index(current_square)<<6) | to_index(desired_square);
+		};
+		constexpr Move(Position current_square, Position desired_square, Piece piece_type) : Move(current_square, desired_square)
+		{
+			move_data_ |= (1U<<14) | ((static_cast<std::uint16_t>(piece_type)-static_cast<std::uint16_t>(Piece::knight))<<12);
+		};
 
 		auto operator<=>(const Move&) const = default;
 
@@ -42,7 +47,12 @@ namespace engine
 
 		constexpr Piece promotion_piece() const
 		{
-			return static_cast<Piece>((move_data_ >> 11) & 0b11);
+			return static_cast<Piece>(((move_data_ >> 12) & 0b11) + static_cast<std::uint8_t>(Piece::knight));
+		}
+
+		constexpr bool is_promotion() const
+		{
+			return move_data_ & (1ULL << 14);
 		}
 
 		private:
@@ -52,7 +62,8 @@ namespace engine
 		// bits 0-5, destination square 
 		// bits 6-11, origin square
 		// bits 12-13, promotion piece type, (Piece::, from knight to queen)
-		std::uint16_t move_data_{};
+		// bit 14 promotion flag
+		std::uint16_t move_data_{0};
 
 		friend std::ostream& operator<<(std::ostream& os, const Move& move);
 	};
@@ -62,8 +73,8 @@ namespace engine
 		const Position from_square{move.from_square()}, destination_square{move.destination_square()};
 		const Piece promotion_piece{move.promotion_piece()};
 		os << from_square << destination_square;
-		constexpr Piece_map<char> to_algebraic_piece = {' ', ' ', 'k', 'b', 'r', 'q'};
-		if(static_cast<std::uint8_t>(promotion_piece) > 1)
+		constexpr Piece_map<char> to_algebraic_piece = {' ', ' ', 'n', 'b', 'r', 'q'};
+		if(move.is_promotion())
 			return os << to_algebraic_piece[promotion_piece];
 		return os;
 	}
@@ -72,13 +83,13 @@ namespace engine
 	{
 		std::string move_string;
 		is>>move_string;
-		if(move_string.size() != 4)
-		{
+		static std::unordered_map<char, Piece> to_piece{{'n', Piece::knight}, {'q', Piece::queen}, {'b', Piece::bishop}, {'r', Piece::rook}};
+		if(move_string.size() == 4)
+			move = Move{algebraic_to_position(move_string.substr(0, 2)), algebraic_to_position(move_string.substr(2, 2))};
+		if(move_string.size() == 5)
+			move = Move{algebraic_to_position(move_string.substr(0, 2)), algebraic_to_position(move_string.substr(2, 2)), to_piece[move_string.back()]};
+		if(move_string.size())
 			is.setstate(std::ios::failbit);
-			return is;
-		}
-
-		move = Move{algebraic_to_position(move_string.substr(0, 2)), algebraic_to_position(move_string.substr(2, 2))};
 		return is;
 	}
 }

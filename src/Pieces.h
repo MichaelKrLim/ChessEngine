@@ -15,7 +15,8 @@ namespace engine
 	using Piece_map = Enum_map_from_size<Piece, Mapped_type>;
 
 
-	constexpr std::size_t number_of_piece_types = 6;
+	constexpr std::size_t number_of_piece_types = static_cast<std::size_t>(Piece::size);
 	constexpr std::array<Piece, number_of_piece_types> all_pieces{Piece::king, Piece::pawn, Piece::knight, Piece::bishop, Piece::rook, Piece::queen};
+	constexpr std::array<Piece, number_of_piece_types-2> all_promotion_pieces{Piece::knight, Piece::bishop, Piece::queen, Piece::rook};
 }
 #endif // Pieces_h_INCLUDED
