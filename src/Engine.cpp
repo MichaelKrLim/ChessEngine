@@ -133,10 +133,10 @@ namespace
 
 namespace engine
 {
-	std::optional<Move> generate_move_at_depth(State state, const unsigned depth) noexcept
+	std::optional<Move> generate_move_at_depth(State& state, const unsigned depth) noexcept
 	{
 		Transposition_table transposition_table(19);
-		const auto quiescence_search = [&state](this auto&& rec, double alpha, double beta)
+		const auto quiescence_search = [&state](this auto&& rec, double alpha, double beta, const unsigned& excess_depth)
 		{
 			double stand_pat;
 			if(state.repetition_history[state.zobrist_hash] >= 3)
@@ -151,7 +151,7 @@ namespace engine
 					return 0.0;
 			}
 			double best_score = stand_pat;
-			if(stand_pat >= beta)
+			if(stand_pat >= beta || excess_depth >= 4)
 				return stand_pat;
 			if(alpha < stand_pat)
 				alpha = stand_pat;
@@ -159,7 +159,7 @@ namespace engine
 			for(const engine::Move& move : noisy_moves(state))
 			{
 				state.make(move);
-				const double score = -rec(-beta, -alpha);
+				const double score = -rec(-beta, -alpha, excess_depth+1);
 				state.unmove();
 				if(score >= beta)
 					return score;
@@ -183,7 +183,7 @@ namespace engine
 					if(state.repetition_history[state.zobrist_hash] >= 3)
 						evaluation = 0.0;
 					else if(legal_moves(state).size() != 0)
-						evaluation = quiescence_search(alpha, beta);
+						evaluation = quiescence_search(alpha, beta, 0);
 					else
 					{
 						if(state.is_square_attacked(state.sides[state.side_to_move].pieces[Piece::king].lsb_square()))

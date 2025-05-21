@@ -8,7 +8,7 @@
 
 namespace engine
 {
-	[[nodiscard]] std::optional<Move> generate_move_at_depth(State state, const unsigned depth) noexcept;
+	[[nodiscard]] std::optional<Move> generate_move_at_depth(State& state, const unsigned depth) noexcept;
 }
 
 #endif //Engine_h_INCLUDED

@@ -18,6 +18,7 @@ namespace zobrist
 		engine::Piece_map<engine::Side_map<std::array<std::uint64_t, engine::board_size*engine::board_size>>> pieces;
 		engine::Side_map<engine::Castling_rights_map<std::uint64_t>> castling_rights;
 		std::array<std::uint64_t, engine::board_size*engine::board_size> en_passant_squares;
+		engine::Side_map<std::uint64_t> sides;
 	} zobrist_randoms = []()
 	{
 		Zobrist_randoms zobrist_randoms;
@@ -34,6 +35,9 @@ namespace zobrist
 		for(auto& side_randoms : zobrist_randoms.castling_rights)
 			for(auto& random : side_randoms)
 				random = dist(rng);
+
+		for(auto& random : zobrist_randoms.sides)
+			random = dist(rng);
 		return zobrist_randoms;
 	}();
 
@@ -50,6 +54,12 @@ namespace zobrist
 	inline void invert_en_passant_square(std::uint64_t& hash, const engine::Position& position)
 	{
 		hash ^= zobrist_randoms.en_passant_squares[to_index(position)];
+	}
+
+	inline void invert_side_to_move_from(std::uint64_t& hash, const engine::Side& side)
+	{
+		hash ^= zobrist_randoms.sides[side];
+		hash ^= zobrist_randoms.sides[other_side(side)];
 	}
 
 	[[nodiscard]] inline std::uint64_t hash(const engine::State& state) noexcept
@@ -71,6 +81,7 @@ namespace zobrist
 				}
 			}
 		}
+		hash ^= zobrist_randoms.sides[state.side_to_move];
 		return hash;
 	}
 }

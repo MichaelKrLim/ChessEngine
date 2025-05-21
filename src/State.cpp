@@ -165,7 +165,8 @@ void State::make(const Move& move) noexcept
 	auto& opposite_side = sides[other_side(side_to_move)];
 	const auto destination_square = move.destination_square();
 	const auto from_square = move.from_square();
-	const auto pawn_direction = side_to_move == Side::white ? 1 : -1;
+	const auto pawn_direction = side_to_move == Side::white? 1 : -1;
+	const auto back_rank = side_to_move == Side::white? 0 : 7;
 	const auto old_castling_rights = side.castling_rights;
 	const Piece piece_type = [&]()
 	{
@@ -173,69 +174,87 @@ void State::make(const Move& move) noexcept
 		assert(opt && "tried to move nonexistent piece");
 		return opt.value();
 	}();
-	const auto old_en_passant_target_square = en_passant_target_square;
-	std::uint64_t new_zobrist_hash = zobrist_hash;
-	en_passant_target_square = std::nullopt;
 	std::optional<Piece> piece_to_capture = piece_at(destination_square, other_side(side_to_move));
 	if(piece_to_capture)
 	{
 		opposite_side.pieces[piece_to_capture.value()].remove_piece(destination_square);
-		zobrist::invert_piece_at(new_zobrist_hash, destination_square, piece_to_capture.value(), other_side(side_to_move));
+		zobrist::invert_piece_at(zobrist_hash, destination_square, piece_to_capture.value(), other_side(side_to_move));
 		if(piece_to_capture == Piece::rook)
 		{
-			if(destination_square.file_ == 0)
+			if(destination_square == Position{back_rank, 0} && opposite_side.castling_rights[Castling_rights::queenside])
+			{
 				opposite_side.castling_rights[Castling_rights::queenside] = false;
-			else if(destination_square.file_ == 7)
+				zobrist::invert_castling_right(zobrist_hash, other_side(side_to_move), Castling_rights::queenside);
+			}
+			else if(destination_square == Position{back_rank, 7} && opposite_side.castling_rights[Castling_rights::kingside])
+			{
 				opposite_side.castling_rights[Castling_rights::kingside] = false;
+				zobrist::invert_castling_right(zobrist_hash, other_side(side_to_move), Castling_rights::kingside);
+			}
 		}
 	}
 	const bool is_castling = piece_type == Piece::king && std::abs(destination_square.file_ - from_square.file_) > 1,
-			   is_en_passant = destination_square == old_en_passant_target_square && piece_type == Piece::pawn;
+			   is_en_passant = en_passant_target_square && piece_type == Piece::pawn && destination_square == en_passant_target_square.value();
+	const auto old_en_passant_target_square = en_passant_target_square;
+	if(en_passant_target_square)
+	{
+		zobrist::invert_en_passant_square(zobrist_hash, en_passant_target_square.value());
+		en_passant_target_square = std::nullopt;
+	}
 	if(move.is_promotion())
 	{
-		Bitboard& pawn_bb = side.pieces[Piece::pawn];
-		pawn_bb.remove_piece(from_square);
-		zobrist::invert_piece_at(new_zobrist_hash, from_square, Piece::pawn, side_to_move);
-		side.pieces[move.promotion_piece()].add_piece(destination_square);
+		const auto promotion_piece = move.promotion_piece();
+		side.pieces[Piece::pawn].remove_piece(from_square);
+		zobrist::invert_piece_at(zobrist_hash, from_square, Piece::pawn, side_to_move);
+		side.pieces[promotion_piece].add_piece(destination_square);
+		zobrist::invert_piece_at(zobrist_hash, destination_square, promotion_piece, side_to_move);
 	}
 	else if(is_castling)
 	{
-		const std::uint8_t rank = side_to_move == Side::white? 0 : 7;
 		bool castled_kingside = destination_square.file_ == 6;
 		Position rook_destination_square, rook_origin_square;
 		if(castled_kingside)
 		{
-			rook_origin_square = Position{rank, 7};
-			rook_destination_square = Position{rank, destination_square.file_-1};
+			rook_origin_square = Position{back_rank, 7};
+			rook_destination_square = Position{back_rank, destination_square.file_-1};
 		}
 		else
 		{
-			rook_origin_square = Position{rank, 0};
-			rook_destination_square = Position{rank, destination_square.file_+1};
+			rook_origin_square = Position{back_rank, 0};
+			rook_destination_square = Position{back_rank, destination_square.file_+1};
 		}
 		for(const auto& castling_right : all_castling_rights)
-			side.castling_rights[castling_right] = false;
+		{
+			if(side.castling_rights[castling_right])
+			{
+				side.castling_rights[castling_right] = false;
+				zobrist::invert_castling_right(zobrist_hash, side_to_move, castling_right);
+			}
+		}
 		side.pieces[Piece::king].move_piece(from_square, destination_square);
-		zobrist::invert_piece_at(new_zobrist_hash, destination_square, Piece::king, side_to_move);
-		zobrist::invert_piece_at(new_zobrist_hash, from_square, Piece::king, side_to_move);
+		zobrist::invert_piece_at(zobrist_hash, from_square, Piece::king, side_to_move);
+		zobrist::invert_piece_at(zobrist_hash, destination_square, Piece::king, side_to_move);
 		side.pieces[Piece::rook].move_piece(rook_origin_square, rook_destination_square);
-		zobrist::invert_piece_at(new_zobrist_hash, rook_origin_square, Piece::rook, side_to_move);
-		zobrist::invert_piece_at(new_zobrist_hash, rook_destination_square, Piece::rook, side_to_move);
+		zobrist::invert_piece_at(zobrist_hash, rook_origin_square, Piece::rook, side_to_move);
+		zobrist::invert_piece_at(zobrist_hash, rook_destination_square, Piece::rook, side_to_move);
 	}
 	else
 	{
 		const bool is_double_pawn_move = piece_type == Piece::pawn && destination_square.rank_ == from_square.rank_ + 2*pawn_direction;
 		if(is_double_pawn_move)
+		{
 			en_passant_target_square = Position{from_square.rank_+pawn_direction, from_square.file_};
+			zobrist::invert_en_passant_square(zobrist_hash, en_passant_target_square.value());
+		}
 		if(is_en_passant)
 		{
 			const Position capture_square{destination_square.rank_-pawn_direction, destination_square.file_};
 			opposite_side.pieces[Piece::pawn].remove_piece(capture_square);
-			zobrist::invert_piece_at(new_zobrist_hash, capture_square, Piece::pawn, other_side(side_to_move));
+			zobrist::invert_piece_at(zobrist_hash, capture_square, Piece::pawn, other_side(side_to_move));
 		}
 		side.pieces[piece_type].move_piece(from_square, destination_square);
-		zobrist::invert_piece_at(new_zobrist_hash, from_square, piece_type, side_to_move);
-		zobrist::invert_piece_at(new_zobrist_hash, destination_square, piece_type, side_to_move);
+		zobrist::invert_piece_at(zobrist_hash, from_square, piece_type, side_to_move);
+		zobrist::invert_piece_at(zobrist_hash, destination_square, piece_type, side_to_move);
 	}
 	history.push(State_delta
 	{
@@ -248,20 +267,27 @@ void State::make(const Move& move) noexcept
 		old_castling_rights,
 		zobrist_hash
 	});
-	if(piece_type == Piece::rook)
+	if(piece_type == Piece::rook || piece_type == Piece::king)
 	{
-		if(from_square.file_ == 0)
+		if((from_square.file_ == 0 || piece_type == Piece::king) && side.castling_rights[Castling_rights::queenside])
+		{
 			side.castling_rights[Castling_rights::queenside] = false;
-		else if(from_square.file_ == 7)
+			zobrist::invert_castling_right(zobrist_hash, side_to_move, Castling_rights::queenside);
+		}
+		if((from_square.file_ == 7 || piece_type == Piece::king) && side.castling_rights[Castling_rights::kingside])
+		{
 			side.castling_rights[Castling_rights::kingside] = false;
+			zobrist::invert_castling_right(zobrist_hash, side_to_move, Castling_rights::kingside);
+		}
 	}
-	if(piece_type == Piece::king)
-		side.castling_rights[Castling_rights::kingside] = side.castling_rights[Castling_rights::queenside] = false;
-	zobrist_hash = new_zobrist_hash;
-	++repetition_history[new_zobrist_hash];
-	++half_move_clock;
+	if(piece_type == Piece::pawn || piece_to_capture)
+		half_move_clock = 0;
+	else
+		++half_move_clock;
 	if(side_to_move == Side::black) ++full_move_clock;
+	++repetition_history[zobrist_hash];
 	enemy_attack_map = generate_attack_map(*this);
+	zobrist::invert_side_to_move_from(zobrist_hash, side_to_move);
 	side_to_move = other_side(side_to_move);
 	assert(history.size() > history_size);
 }
@@ -271,16 +297,17 @@ void State::unmove() noexcept
 	assert(history.size() > 0 && "Tried to undo noexistent move");
 	const bool was_whites_move = side_to_move == Side::black;
 	const auto last_moved_side = was_whites_move? Side::white : Side::black;
+	const auto promotion_rank = was_whites_move? 7 : 0;
 	
 	--half_move_clock;
 	if(!was_whites_move) --full_move_clock;
 	
-	const auto [move, moved_piece, captured_piece, attack_map, previous_en_passant_target_square, was_en_passant, old_castling_rights, old_zobrist_hash] = history.top();
+	const auto [move, moved_piece, captured_piece, attack_map, previous_en_passant_target_square, was_en_passant, old_castling_rights, old_zobrist_hash] = std::move(history.top());
 	history.pop();
 	Side_position& side_to_unmove = sides[last_moved_side];
 	Side_position& current_side_to_move = sides[side_to_move];
 	const Position previous_move_destination = move.destination_square(), previous_move_origin = move.from_square();
-	if(moved_piece == Piece::pawn && previous_move_destination.rank_ == 7)
+	if(moved_piece == Piece::pawn && previous_move_destination.rank_ == promotion_rank)
 	{
 		side_to_unmove.pieces[move.promotion_piece()].remove_piece(move.destination_square());
 		side_to_unmove.pieces[Piece::pawn].add_piece(move.from_square());
@@ -309,13 +336,22 @@ void State::unmove() noexcept
 		{
 			const auto direction = was_whites_move? 1 : -1;
 			const Position destination_square = move.destination_square();
-			const Position pawn_to_return = Position{destination_square.rank_-direction,destination_square.file_};
+			const Position pawn_to_return = Position{destination_square.rank_-direction, destination_square.file_};
 			current_side_to_move.pieces[Piece::pawn].add_piece(pawn_to_return);
 		}
-		side_to_unmove.pieces[moved_piece].move_piece(move.from_square(), move.destination_square());
+		side_to_unmove.pieces[moved_piece].move_piece(move.destination_square(), move.from_square());
 	}
 	if(captured_piece)
-		current_side_to_move.pieces[captured_piece.value()].add_piece(move.destination_square());
+	{
+		if(was_en_passant)
+		{
+			const int pawn_direction = was_whites_move ? 1 : -1;
+			const Position captured_pawn_square{move.destination_square().rank_-pawn_direction, move.destination_square().file_};
+			current_side_to_move.pieces[captured_piece.value()].add_piece(captured_pawn_square);
+		}
+		else
+			current_side_to_move.pieces[captured_piece.value()].add_piece(move.destination_square());
+	}
 	side_to_unmove.castling_rights = old_castling_rights;
 	side_to_move = last_moved_side;
 	enemy_attack_map = attack_map;
