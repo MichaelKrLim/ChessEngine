@@ -170,14 +170,14 @@ void State::make(const Move& move) noexcept
 	const Piece piece_type = [&]()
 	{
 		const auto opt = piece_at(from_square, side_to_move);
-		assert(opt && "tried to move noexistent piece");
+		assert(opt && "tried to move nonexistent piece");
 		return opt.value();
 	}();
-	std::optional<Piece> piece_to_capture = std::nullopt;
 	const auto old_en_passant_target_square = en_passant_target_square;
 	std::uint64_t new_zobrist_hash = zobrist_hash;
 	en_passant_target_square = std::nullopt;
-	if(const std::optional<Piece> piece_to_capture = piece_at(destination_square, other_side(side_to_move)); piece_to_capture)
+	std::optional<Piece> piece_to_capture = piece_at(destination_square, other_side(side_to_move));
+	if(piece_to_capture)
 	{
 		opposite_side.pieces[piece_to_capture.value()].remove_piece(destination_square);
 		zobrist::invert_piece_at(new_zobrist_hash, destination_square, piece_to_capture.value(), other_side(side_to_move));
@@ -207,14 +207,14 @@ void State::make(const Move& move) noexcept
 		{
 			rook_origin_square = Position{rank, 7};
 			rook_destination_square = Position{rank, destination_square.file_-1};
-			side.castling_rights[Castling_rights::kingside] = false;
 		}
 		else
 		{
 			rook_origin_square = Position{rank, 0};
 			rook_destination_square = Position{rank, destination_square.file_+1};
-			side.castling_rights[Castling_rights::queenside] = false;
 		}
+		for(const auto& castling_right : all_castling_rights)
+			side.castling_rights[castling_right] = false;
 		side.pieces[Piece::king].move_piece(from_square, destination_square);
 		zobrist::invert_piece_at(new_zobrist_hash, destination_square, Piece::king, side_to_move);
 		zobrist::invert_piece_at(new_zobrist_hash, from_square, Piece::king, side_to_move);
