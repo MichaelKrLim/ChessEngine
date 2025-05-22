@@ -90,9 +90,8 @@ namespace engine
 {
 	struct Transposition_data
 	{
-		unsigned depth;
+		unsigned remaining_depth, max_depth;
 		double eval;
-		engine::Side to_move;
 		std::uint64_t zobrist_hash;
 	};
 
@@ -102,8 +101,7 @@ namespace engine
 
 		[[nodiscard]] std::optional<Transposition_data>& operator[](const State& state)
 		{
-			const auto index = zobrist::hash(state) % data.size();
-			return data[index];
+			return data[state.zobrist_hash];
 		}
 
 		explicit Transposition_table(const unsigned table_size_log2) : data(1ULL<<table_size_log2, std::nullopt) {};

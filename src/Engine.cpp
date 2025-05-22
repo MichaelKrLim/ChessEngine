@@ -171,29 +171,23 @@ namespace engine
 			return best_score;
 		};
 
-		const auto nega_max = [&state, &quiescence_search, &transposition_table](this auto&& rec, const unsigned current_depth, std::optional<Move>& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
+		const auto nega_max = [&state, &quiescence_search, &transposition_table](this auto&& rec, const unsigned current_depth, const unsigned max_depth, std::optional<Move>& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
 		{
 			if(current_depth == 0)
 			{
-				if(auto& cache_data = transposition_table[state]; cache_data && cache_data->depth >= current_depth && cache_data->zobrist_hash == state.zobrist_hash)
-					return cache_data->eval;
+				double evaluation;
+				if(state.repetition_history[state.zobrist_hash] >= 3)
+					evaluation = 0.0;
+				else if(legal_moves(state).size() != 0)
+					evaluation = quiescence_search(alpha, beta, 0);
 				else
 				{
-					double evaluation;
-					if(state.repetition_history[state.zobrist_hash] >= 3)
-						evaluation = 0.0;
-					else if(legal_moves(state).size() != 0)
-						evaluation = quiescence_search(alpha, beta, 0);
+					if(state.is_square_attacked(state.sides[state.side_to_move].pieces[Piece::king].lsb_square()))
+						return -std::numeric_limits<double>::infinity();
 					else
-					{
-						if(state.is_square_attacked(state.sides[state.side_to_move].pieces[Piece::king].lsb_square()))
-							return -std::numeric_limits<double>::infinity();
-						else
-							return 0.0;
-					}
-					cache_data = Transposition_data{current_depth, evaluation, state.side_to_move, state.zobrist_hash};
-					return evaluation;
+						return 0.0;
 				}
+				return evaluation;
 			}
 
 			std::optional<double> best_seen_score = std::nullopt;
@@ -202,15 +196,16 @@ namespace engine
 				state.make(move);
 				std::optional<Move> opponent_move;
 				double score;
-				if(auto& cache_result = transposition_table[state]; cache_result && cache_result->depth >= current_depth && cache_result->zobrist_hash == state.zobrist_hash)
-					score = state.side_to_move==cache_result->to_move? cache_result->eval : -cache_result->eval;
+				if(auto& cache_result = transposition_table[state]; cache_result && cache_result->remaining_depth >= current_depth && cache_result->max_depth >= max_depth && cache_result->zobrist_hash == state.zobrist_hash)
+					score = cache_result->eval;
 				else
 				{
 					if(state.repetition_history[state.zobrist_hash] >= 3)
 						score = 0.0;
 					else
-						score = -rec(current_depth-1, opponent_move, -beta, -alpha);
-					cache_result = Transposition_data{current_depth, score, state.side_to_move, state.zobrist_hash};
+						score = -rec(current_depth-1, max_depth, opponent_move, -beta, -alpha);
+					if(score < beta)
+						cache_result = Transposition_data{current_depth, max_depth, score, state.zobrist_hash};
 				}
 				state.unmove();
 				if(!best_seen_score || score > best_seen_score.value())
@@ -236,7 +231,7 @@ namespace engine
 		std::optional<Move> best_move;
 		for(unsigned current_depth{0}; current_depth < depth; ++current_depth)
 		{
-			nega_max(current_depth, best_move);
+			nega_max(current_depth, current_depth, best_move);
 		}
 		return best_move;
 	}
