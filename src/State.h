@@ -23,6 +23,11 @@ namespace engine
 	using Castling_rights_map = Enum_map_from_size<Castling_rights, Mapped_type>;
 	constexpr auto all_castling_rights = {Castling_rights::kingside, Castling_rights::queenside};
 
+	inline std::ostream& operator<<(std::ostream& os, const Castling_rights& castling_right)
+	{
+		return os << (castling_right==Castling_rights::kingside? "kingside" : "queenside");
+	}
+
 	struct Side_position
 	{
 		Enum_map<Piece, Bitboard, number_of_pieces> pieces{};
@@ -36,6 +41,19 @@ namespace engine
 			return occupied_squares;
 		};
 	};
+
+	inline std::ostream& operator<<(std::ostream& os, const Castling_rights_map<bool>& castling_rights_map)
+	{
+		bool is_first{true};
+		for(const auto& castling_right : all_castling_rights)
+		{
+			os << castling_right << ": " << castling_rights_map[castling_right];
+			if(is_first)
+				os << "\n";
+			is_first = false;
+		}
+		return os;
+	}
 
 	struct State
 	{
@@ -51,6 +69,7 @@ namespace engine
 			const bool was_en_passant;
 			Castling_rights_map<bool> castling_rights;
 			const std::uint64_t previous_zobrist_hash;
+			const unsigned half_move_clock;
 		};
 
 		struct Piece_and_data
@@ -71,13 +90,13 @@ namespace engine
 		State() = default;
 
 		Enum_map<Side, Side_position, 2> sides{};
-		int half_move_clock{}, full_move_clock{};
+		unsigned half_move_clock{}, full_move_clock{};
 		Side side_to_move{Side::white};
 		Bitboard enemy_attack_map;
 		std::optional<Position> en_passant_target_square{std::nullopt};
 		std::uint64_t zobrist_hash;
-		std::unordered_map<std::uint64_t, unsigned> repetition_history;
-		static std::stack<State_delta> history;
+		std::unordered_map<std::uint64_t, unsigned> repetition_history{};
+		std::stack<State_delta> history{};
 
 		void make(const Move& move) noexcept;
 		void unmove() noexcept;
@@ -98,6 +117,11 @@ namespace engine
 		<< "side to move: " << (state.side_to_move==Side::white?"white":"black") << "\n";
 		if(state.en_passant_target_square)
 			os << "en_passant_target_square: " << state.en_passant_target_square.value() << "\n";
+		for(const auto& side : all_sides)
+		{
+			const auto current_side = state.sides[side];
+			os << side << ":\n" << current_side.castling_rights << "\n";
+		}
 		return os;
 	}
 }

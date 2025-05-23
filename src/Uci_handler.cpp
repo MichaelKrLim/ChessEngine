@@ -116,7 +116,7 @@ namespace
 		if(best_move)
 			std::cout << "bestmove " << best_move.value() << "\n";
 		else
-			std::cout << "bestmove 0000\n";
+			std::cout << "no moves left\n";
 	}
 
 	void uci_handler() noexcept

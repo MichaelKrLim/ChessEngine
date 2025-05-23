@@ -33,7 +33,7 @@ namespace engine
 			move_data_ |= (1U<<14) | ((static_cast<std::uint16_t>(piece_type)-static_cast<std::uint16_t>(Piece::knight))<<12);
 		};
 
-		auto operator<=>(const Move&) const = default;
+		constexpr auto operator<=>(const Move&) const = default;
 
 		constexpr Position from_square() const
 		{
@@ -52,7 +52,7 @@ namespace engine
 
 		constexpr bool is_promotion() const
 		{
-			return move_data_ & (1ULL << 14);
+			return move_data_ & (1U << 14);
 		}
 
 		private:

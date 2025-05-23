@@ -9,8 +9,6 @@
 
 using namespace engine;
 
-std::stack<State::State_delta> State::history{};
-
 void State::validate_fen(const std::array<std::string, 6>& partitioned_fen) const
 {
 	const auto [fen_piece_data, fen_active_color, fen_castling_availiability, fen_en_passant_target_square, fen_halfmove_clock, fen_fullmove_clock] = partitioned_fen;
@@ -142,6 +140,7 @@ State::State(const std::string_view fen)
 	enemy_attack_map = generate_attack_map(*this);
 	side_to_move = other_side(side_to_move);
 	zobrist_hash = zobrist::hash(*this);
+	++repetition_history[zobrist_hash];
 }
 
 std::optional<Piece> State::piece_at(const Position& position, const Side& side) const noexcept
@@ -265,7 +264,8 @@ void State::make(const Move& move) noexcept
 		old_en_passant_target_square,
 		is_en_passant,
 		old_castling_rights,
-		zobrist_hash
+		zobrist_hash, 
+		half_move_clock
 	});
 	if(piece_type == Piece::rook || piece_type == Piece::king)
 	{
@@ -285,10 +285,10 @@ void State::make(const Move& move) noexcept
 	else
 		++half_move_clock;
 	if(side_to_move == Side::black) ++full_move_clock;
-	++repetition_history[zobrist_hash];
 	enemy_attack_map = generate_attack_map(*this);
-	zobrist::invert_side_to_move_from(zobrist_hash, side_to_move);
+	zobrist::invert_side_to_move(zobrist_hash);
 	side_to_move = other_side(side_to_move);
+	++repetition_history[zobrist_hash];
 	assert(history.size() > history_size);
 }
 
@@ -297,13 +297,11 @@ void State::unmove() noexcept
 	assert(history.size() > 0 && "Tried to undo noexistent move");
 	const bool was_whites_move = side_to_move == Side::black;
 	const auto last_moved_side = was_whites_move? Side::white : Side::black;
-	const auto promotion_rank = was_whites_move? 7 : 0;
-	
-	--half_move_clock;
-	if(!was_whites_move) --full_move_clock;
-	
-	const auto [move, moved_piece, captured_piece, attack_map, previous_en_passant_target_square, was_en_passant, old_castling_rights, old_zobrist_hash] = std::move(history.top());
+	const auto promotion_rank = was_whites_move? 7 : 0;	
+	const auto [move, moved_piece, captured_piece, attack_map, previous_en_passant_target_square, was_en_passant, old_castling_rights, old_zobrist_hash, prev_half_move] = std::move(history.top());
 	history.pop();
+	half_move_clock = prev_half_move;
+	if(!was_whites_move) --full_move_clock;
 	Side_position& side_to_unmove = sides[last_moved_side];
 	Side_position& current_side_to_move = sides[side_to_move];
 	const Position previous_move_destination = move.destination_square(), previous_move_origin = move.from_square();

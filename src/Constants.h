@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cstdint>
+#include <ostream>
 #include <string_view>
 
 namespace engine 
@@ -22,6 +23,13 @@ namespace engine
 	inline Side other_side(const Side& side) noexcept
 	{
 		return side == Side::white? Side::black : Side::white;
+	}
+
+	inline std::ostream& operator<<(std::ostream& os, const Side& side)
+	{
+		if(side == Side::white) os << "white";
+		if(side == Side::black) os << "black";
+		return os;
 	}
 
 	constexpr std::uint8_t board_size = 8,

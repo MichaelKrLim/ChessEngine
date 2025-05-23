@@ -2,6 +2,7 @@
 #define Transposition_table_h_INCLUDED
 
 #include "Constants.h"
+#include "Move.h"
 #include "Pieces.h"
 #include "State.h"
 
@@ -18,7 +19,7 @@ namespace zobrist
 		engine::Piece_map<engine::Side_map<std::array<std::uint64_t, engine::board_size*engine::board_size>>> pieces;
 		engine::Side_map<engine::Castling_rights_map<std::uint64_t>> castling_rights;
 		std::array<std::uint64_t, engine::board_size*engine::board_size> en_passant_squares;
-		engine::Side_map<std::uint64_t> sides;
+		std::uint64_t side;
 	} zobrist_randoms = []()
 	{
 		Zobrist_randoms zobrist_randoms;
@@ -36,8 +37,7 @@ namespace zobrist
 			for(auto& random : side_randoms)
 				random = dist(rng);
 
-		for(auto& random : zobrist_randoms.sides)
-			random = dist(rng);
+		zobrist_randoms.side = dist(rng);
 		return zobrist_randoms;
 	}();
 
@@ -56,10 +56,9 @@ namespace zobrist
 		hash ^= zobrist_randoms.en_passant_squares[to_index(position)];
 	}
 
-	inline void invert_side_to_move_from(std::uint64_t& hash, const engine::Side& side)
+	inline void invert_side_to_move(std::uint64_t& hash)
 	{
-		hash ^= zobrist_randoms.sides[side];
-		hash ^= zobrist_randoms.sides[other_side(side)];
+		hash ^= zobrist_randoms.side;
 	}
 
 	[[nodiscard]] inline std::uint64_t hash(const engine::State& state) noexcept
@@ -81,34 +80,53 @@ namespace zobrist
 				}
 			}
 		}
-		hash ^= zobrist_randoms.sides[state.side_to_move];
+		if(state.side_to_move == engine::Side::white)
+			hash ^= zobrist_randoms.side;
 		return hash;
 	}
 }
 
 namespace engine
 {
+	enum class Search_result_type
+	{
+		lower_bound, upper_bound, exact, size
+	};
+
 	struct Transposition_data
 	{
-		unsigned remaining_depth, max_depth;
+		unsigned remaining_depth;
 		double eval;
 		std::uint64_t zobrist_hash;
+		Search_result_type search_result_type;
+		engine::Move best_move;
 	};
 
 	class Transposition_table
 	{
 		public:
 
-		[[nodiscard]] std::optional<Transposition_data>& operator[](const State& state)
+		[[nodiscard]] std::optional<Transposition_data> operator[](const std::uint64_t& zobrist_hash)
 		{
-			return data[state.zobrist_hash];
+			const auto index = zobrist_hash % data.size();
+			const Transposition_data entry = data[index];
+			if(entry.zobrist_hash == zobrist_hash)
+				return entry;
+			else
+				return std::nullopt;
 		}
 
-		explicit Transposition_table(const unsigned table_size_log2) : data(1ULL<<table_size_log2, std::nullopt) {};
+		void insert(const Transposition_data& t_data)
+		{
+			const auto index = t_data.zobrist_hash % data.size();
+			data[index] = t_data;
+		}
+
+		explicit Transposition_table(const unsigned table_size_log2) : data(1ULL<<table_size_log2) {};
 
 		private:
 
-		std::vector<std::optional<Transposition_data>> data;
+		std::vector<Transposition_data> data;
 	};
 }
 
