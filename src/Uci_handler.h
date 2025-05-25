@@ -3,15 +3,21 @@
 
 #include "Constants.h"
 
+#include <chrono>
+#include <optional>
+
 namespace uci
 {
 	struct Search_options
 	{
-		unsigned depth{std::numeric_limits<unsigned>::infinity()},
-		movestogo,
+		std::optional<unsigned> depth{std::nullopt};
+		unsigned movestogo,
 		transposition_table_size, hash;
-		engine::Side_map<unsigned> time, increment{0,0};
+		engine::Side_map<std::optional<std::chrono::milliseconds>> time{std::nullopt, std::nullopt};
+		engine::Side_map<std::chrono::milliseconds> increment{std::chrono::milliseconds{}, std::chrono::milliseconds{}};
+		std::optional<std::chrono::milliseconds> movetime{std::nullopt};
 	};
+
 	void start_listening() noexcept;
 };
 

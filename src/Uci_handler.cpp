@@ -3,6 +3,7 @@
 #include "State.h"
 #include "Uci_handler.h"
 
+#include <chrono>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -63,21 +64,34 @@ namespace
 		return is;
 	}
 
+	std::chrono::milliseconds read_time(std::istream& is)
+	{
+		unsigned count;
+		is>>count;
+		return std::chrono::milliseconds{count};
+	}
+
 	std::istream& operator>>(std::istream& is, Search_options& search_options)
 	{
 		std::string option;
 		while(is>>option)
 		{
 			if(option == "depth")
-				is>>search_options.depth;
+			{
+				unsigned depth;
+				is>>depth;
+				search_options.depth = depth;
+			}
 			else if(option == "wtime")
-				is>>search_options.time[engine::Side::white];
+				search_options.time[engine::Side::white] = read_time(is);
+			else if(option == "movetime")
+				search_options.movetime = read_time(is);
 			else if(option == "winc")
-				is>>search_options.increment[engine::Side::white];
+				search_options.increment[engine::Side::white] = read_time(is);
 			else if(option == "btime")
-				is>>search_options.time[engine::Side::black];
+				search_options.time[engine::Side::black] = read_time(is);
 			else if(option == "binc")
-				is>>search_options.increment[engine::Side::black];
+				search_options.increment[engine::Side::black] = read_time(is);
 			else if(option == "movestogo")
 				is>>search_options.movestogo;
 			else if(option == "tt" || option == "hash")

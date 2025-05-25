@@ -138,6 +138,8 @@ namespace engine
 	{
 		Transposition_table transposition_table(19);
 
+		enum class timeout {};
+
 		const auto compute_type = [](const double alpha, const double beta, const double score)
 		{
 			if(score<=alpha)      return Search_result_type::upper_bound;
@@ -147,110 +149,125 @@ namespace engine
 
 		const auto stop_searching = [&search_options, side=state.side_to_move](const unsigned remaining_depth, const auto& start_time, const unsigned current_depth = std::numeric_limits<unsigned>::infinity())
 		{
-			if(remaining_depth <= 0 || current_depth > search_options.depth)
+			if(search_options.depth && current_depth > search_options.depth.value())
 				return true;
-			const unsigned used_time = std::chrono::duration_cast<std::chrono::milliseconds>(start_time-std::chrono::high_resolution_clock::now()).count();
-			if(used_time > (search_options.time[side]+40*search_options.increment[side])/40)
-				return true;
+			else
+			{
+				const auto used_time = std::chrono::high_resolution_clock::now()-start_time;
+				if((search_options.movetime && used_time+std::chrono::milliseconds{50} > search_options.movetime.value()) || (search_options.time[side] && used_time > (search_options.time[side].value()+10*search_options.increment[side])/10))
+					return true;
+			}
 			return false;
+		};
+
+		const auto quiescence_search = [&state, &stop_searching](this auto&& rec, const auto& start_time, double alpha, double beta) -> double
+		{
+			if(state.repetition_history[state.zobrist_hash] >= 3)
+				return 0.0;
+
+			const double stand_pat = evaluate(state);
+			double best_score = stand_pat;
+			if(stand_pat >= beta || stop_searching(std::numeric_limits<unsigned>::infinity(), start_time))
+				return stand_pat;
+			if(alpha < stand_pat)
+				alpha = stand_pat;
+
+			for(const engine::Move& move : noisy_moves(state))
+			{
+				state.make(move);
+				const double score = -rec(start_time, -beta, -alpha);
+				state.unmove();
+				if(score >= beta)
+					return score;
+				if(score > best_score)
+					best_score = score;
+				if(score > alpha)
+					alpha = score;
+			}
+			return best_score;
+		};
+
+		const auto nega_max = [&state, &quiescence_search, &transposition_table, &compute_type, &stop_searching](this auto&& rec, const unsigned remaining_depth, std::optional<Move>& best_move, const auto& start_time, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
+		{
+			const double original_alpha = alpha, original_beta = beta;
+			if(const auto cache_result = transposition_table[state.zobrist_hash]; cache_result && cache_result->remaining_depth >= remaining_depth)
+			{
+				if(cache_result->search_result_type == Search_result_type::exact)
+				{
+					best_move = cache_result->best_move;
+					return cache_result->eval;
+				}
+				if(cache_result->search_result_type == Search_result_type::lower_bound)
+					alpha = std::max(alpha, cache_result->eval);
+				if(cache_result->search_result_type == Search_result_type::upper_bound)
+					beta = std::min(beta, cache_result->eval);
+				if(alpha >= beta)
+					return cache_result->eval;
+			}
+
+			if(state.repetition_history[state.zobrist_hash] >= 3)
+				return 0.0;
+			if(remaining_depth <= 0)
+				return quiescence_search(start_time, alpha, beta);
+
+			const auto all_legal_moves = legal_moves(state);
+			double best_seen_score{-std::numeric_limits<double>::infinity()};
+			for(const auto& move : all_legal_moves)
+			{
+				if(stop_searching(remaining_depth, start_time))
+					throw timeout{};
+
+				state.make(move);
+				std::optional<Move> opponent_move;
+				double score = -rec(remaining_depth-1, opponent_move, start_time, -beta, -alpha);
+				state.unmove();
+				if(score > best_seen_score || !best_move)
+				{
+					best_seen_score = score;
+					best_move = move;
+				}
+				if(score > alpha)
+				{
+					alpha = score;
+					if(alpha >= beta)
+						break;
+				}
+			}
+
+			if(all_legal_moves.empty())
+			{
+				if(state.is_square_attacked(state.sides[state.side_to_move].pieces[Piece::king].lsb_square()))
+					return -std::numeric_limits<double>::infinity();
+				else
+					return 0.0;
+			}
+
+			if(best_move)
+				transposition_table.insert(Transposition_data
+				{
+					.remaining_depth = remaining_depth,
+					.eval = best_seen_score,
+					.zobrist_hash = state.zobrist_hash,
+					.search_result_type = compute_type(original_alpha, original_beta, best_seen_score),
+					.best_move = best_move.value()
+				});
+
+			return best_seen_score;
 		};
 
 		std::optional<Move> best_move;
 		const auto time = std::chrono::high_resolution_clock::now();
 		for(unsigned current_depth{1}; !stop_searching(current_depth, time, current_depth); ++current_depth)
 		{
-			const auto quiescence_search = [&state, &stop_searching](this auto&& rec, const auto& start_time, double alpha, double beta) -> double
-			{
-				if(state.repetition_history[state.zobrist_hash] >= 3)
-					return 0.0;
-
-				const double stand_pat = evaluate(state);
-				double best_score = stand_pat;
-				if(stand_pat >= beta || stop_searching(std::numeric_limits<unsigned>::infinity(), start_time))
-					return stand_pat;
-				if(alpha < stand_pat)
-					alpha = stand_pat;
-
-				for(const engine::Move& move : noisy_moves(state))
-				{
-					state.make(move);
-					const double score = -rec(start_time, -beta, -alpha);
-					state.unmove();
-					if(score >= beta)
-						return score;
-					if(score > best_score)
-						best_score = score;
-					if(score > alpha)
-						alpha = score;
-				}
-				return best_score;
-			};
-			const auto nega_max = [&state, &quiescence_search, &transposition_table, &compute_type, &stop_searching, &search_options](this auto&& rec, const unsigned current_depth, std::optional<Move>& best_move, const auto& start_time, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
-			{
-				const double original_alpha = alpha, original_beta = beta;
-				if(const auto cache_result = transposition_table[state.zobrist_hash]; cache_result && cache_result->remaining_depth >= current_depth)
-				{
-					if(cache_result->search_result_type == Search_result_type::exact)
-					{
-						best_move = cache_result->best_move;	
-						return cache_result->eval;
-					}
-					if(cache_result->search_result_type == Search_result_type::lower_bound)
-						alpha = std::max(alpha, cache_result->eval);
-					if(cache_result->search_result_type == Search_result_type::upper_bound)
-						beta = std::min(beta, cache_result->eval);
-					if(alpha >= beta)
-						return cache_result->eval;
-				}
-
-				if(state.repetition_history[state.zobrist_hash] >= 3)
-					return 0.0;
-				const auto all_legal_moves = legal_moves(state);
-				if(stop_searching(current_depth, start_time) && !all_legal_moves.empty())
-					return quiescence_search(start_time, alpha, beta);
-
-				double best_seen_score{-std::numeric_limits<double>::infinity()};
-				for(const auto& move : all_legal_moves)
-				{
-					state.make(move);
-					std::optional<Move> opponent_move;
-					double score = -rec(current_depth-1, opponent_move, start_time, -beta, -alpha);
-					state.unmove();
-					if(score > best_seen_score || !best_move)
-					{
-						best_seen_score = score;
-						best_move = move;
-					}
-					if(score > alpha)
-					{
-						alpha = score;
-						if(alpha >= beta)
-							break;
-					}
-				}
-
-				if(all_legal_moves.empty())
-				{
-					if(state.is_square_attacked(state.sides[state.side_to_move].pieces[Piece::king].lsb_square()))
-						return -std::numeric_limits<double>::infinity();
-					else
-						return 0.0;
-				}
-
-				if(best_move)
-					transposition_table.insert(Transposition_data
-					{
-						.remaining_depth = current_depth,
-						.eval = best_seen_score,
-						.zobrist_hash = state.zobrist_hash,
-						.search_result_type = compute_type(original_alpha, original_beta, best_seen_score),
-						.best_move = best_move.value()
-					});
-
-				return best_seen_score;
-			};
 			std::optional<Move> current_best_move;
-			nega_max(current_depth, current_best_move, time);
+			try
+			{
+				nega_max(current_depth, current_best_move, time);
+			}
+			catch(const timeout&)
+			{
+				break;
+			}
 			if(current_best_move)
 				best_move = current_best_move;
 		}
