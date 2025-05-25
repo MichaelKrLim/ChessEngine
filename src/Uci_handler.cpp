@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include <vector>
 
+using namespace uci;
+
 namespace
 {
 	engine::State state{};
@@ -61,23 +63,30 @@ namespace
 		return is;
 	}
 
-	struct Search_options
-	{
-		unsigned depth = 4;
-	};
-
 	std::istream& operator>>(std::istream& is, Search_options& search_options)
 	{
 		std::string option;
 		while(is>>option)
 		{
 			if(option == "depth")
+				is>>search_options.depth;
+			else if(option == "wtime")
+				is>>search_options.time[engine::Side::white];
+			else if(option == "winc")
+				is>>search_options.increment[engine::Side::white];
+			else if(option == "btime")
+				is>>search_options.time[engine::Side::black];
+			else if(option == "binc")
+				is>>search_options.increment[engine::Side::black];
+			else if(option == "movestogo")
+				is>>search_options.movestogo;
+			else if(option == "tt" || option == "hash")
 			{
-				unsigned depth;
-				is >> depth;
-				search_options.depth = depth;
-			} 
-			else // need to add rest of search options at some point...
+				is>>search_options.transposition_table_size;
+				if(option == "hash")
+					search_options.transposition_table_size*=1024;
+			}
+			else
 				throw std::invalid_argument{"Command not found"};
 		}
 		return is;
@@ -112,7 +121,7 @@ namespace
 
 	void go_handler(const Search_options& search_options) noexcept
 	{
-		const std::optional<engine::Move> best_move = engine::generate_move_at_depth(state, search_options.depth);
+		const std::optional<engine::Move> best_move = engine::generate_move(state, search_options);
 		if(best_move)
 			std::cout << "bestmove " << best_move.value() << "\n";
 		else
