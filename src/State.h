@@ -111,7 +111,9 @@ namespace engine
 
 	inline std::ostream& operator<<(std::ostream& os, const State& state)
 	{
-		os << state.occupied_squares() << "\n"
+		os << "hash: " << state.zobrist_hash << "\n"
+		<< "repetition count: " << state.repetition_history.at(state.zobrist_hash) << "\n"
+		<< state.occupied_squares() << "\n"
 		<< "half move clock: " << state.half_move_clock << "\n"
 		<< "full move clock: " << state.full_move_clock << "\n"
 		<< "side to move: " << (state.side_to_move==Side::white?"white":"black") << "\n";

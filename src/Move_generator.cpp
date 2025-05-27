@@ -1,12 +1,13 @@
 #include "Bitboard.h"
-#include "State.h"
 #include "Constants.h"
+#include "Enum_map.h"
+#include "Fixed_capacity_vector.h"
 #include "Magic_util.h"
 #include "Move_generator.h"
 #include "Move.h"
 #include "Position.h"
+#include "State.h"
 #include "Utility.h"
-#include "Enum_map.h"
 
 #include <array>
 #include <functional>
@@ -30,6 +31,8 @@ namespace
 		Position{1, 0}, Position{-1, 0}, Position{0,  1}, Position{0,  -1},
 		Position{1, 1}, Position{-1, 1}, Position{1, -1}, Position{-1, -1}
 	}};
+
+	using fixed_vector_t = Fixed_capacity_vector<Move, max_legal_moves>;
 
 	constexpr Bitboard knight_mask(const Position& square)
 	{
@@ -57,7 +60,7 @@ namespace
 		return reachable_squares;
 	}
 
-	const void pawn_legal_moves(std::vector<Move>& legal_moves, const Bitboard& pawns_bb, const Bitboard& occupied_squares, const Side& active_player, const Bitboard& current_side_occupied_squares, const std::optional<Position>& en_passant_target_square, const Position& king_square = Position{-1, -1}, const Bitboard& pinned_pieces = {})
+	const void pawn_legal_moves(fixed_vector_t& legal_moves, const Bitboard& pawns_bb, const Bitboard& occupied_squares, const Side& active_player, const Bitboard& current_side_occupied_squares, const std::optional<Position>& en_passant_target_square, const Position& king_square = Position{-1, -1}, const Bitboard& pinned_pieces = {})
 	{
 		const auto rank_move = 8;
 		const bool is_white = active_player == Side::white? true:false;
@@ -123,7 +126,7 @@ namespace
 		});
 	}
 
-	const void knight_legal_moves(std::vector<Move>& legal_moves, const Bitboard& knight_bb, const Bitboard& our_occupied_squares)
+	const void knight_legal_moves(fixed_vector_t& legal_moves, const Bitboard& knight_bb, const Bitboard& our_occupied_squares)
 	{
 		knight_bb.for_each_piece([&](const auto& origin_square)
 		{
@@ -134,7 +137,7 @@ namespace
 		});
 	}
 
-	const void king_legal_moves(std::vector<Move>& legal_moves, const Position& original_square, const Bitboard& occupied_squares, const Bitboard& our_occupied_squares, const bool is_white, const Castling_rights_map<bool>& castling_rights, const Bitboard& enemy_attack_map)
+	const void king_legal_moves(fixed_vector_t& legal_moves, const Position& original_square, const Bitboard& occupied_squares, const Bitboard& our_occupied_squares, const bool is_white, const Castling_rights_map<bool>& castling_rights, const Bitboard& enemy_attack_map)
 	{
 		if(!(enemy_attack_map & (1ULL << to_index(original_square))))
 		{
@@ -179,7 +182,7 @@ namespace
 		return attack_table[magic_index];
 	}
 
-	const void rook_legal_moves(std::vector<Move>& legal_moves, const Bitboard& rook_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const Bitboard& pinned_pieces = {})
+	const void rook_legal_moves(fixed_vector_t& legal_moves, const Bitboard& rook_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const Bitboard& pinned_pieces = {})
 	{
 		rook_bb.for_each_piece([&king_square, &legal_moves, &current_sides_occupied_squares, occupied_squares, &pinned_pieces](const Position& original_square)
 		{
@@ -192,7 +195,7 @@ namespace
 		});
 	}
 
-	const void bishop_legal_moves(std::vector<Move>& legal_moves, const Bitboard& bishop_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const Bitboard& pinned_pieces = {})
+	const void bishop_legal_moves(fixed_vector_t& legal_moves, const Bitboard& bishop_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const Bitboard& pinned_pieces = {})
 	{
 		bishop_bb.for_each_piece([&king_square, &legal_moves, &current_sides_occupied_squares, occupied_squares, &pinned_pieces](const Position& original_square)
 		{
@@ -205,7 +208,7 @@ namespace
 		});
 	}
 
-	const void queen_legal_moves(std::vector<Move>& legal_moves, const Bitboard& queen_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const Bitboard& pinned_pieces = {})
+	const void queen_legal_moves(fixed_vector_t& legal_moves, const Bitboard& queen_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const Bitboard& pinned_pieces = {})
 	{
 		bishop_legal_moves(legal_moves, queen_bb, occupied_squares, current_sides_occupied_squares, king_square, pinned_pieces);
 		rook_legal_moves(legal_moves, queen_bb, occupied_squares, current_sides_occupied_squares, king_square, pinned_pieces);
@@ -248,16 +251,15 @@ namespace
 
 namespace engine
 {
-	std::vector<Move> legal_moves(const State& state) noexcept
+	Fixed_capacity_vector<Move, max_legal_moves> legal_moves(const State& state) noexcept
 	{
-		std::vector<Move> legal_moves{};
+		Fixed_capacity_vector<Move, max_legal_moves> legal_moves{};
 		const Side_position our_side = state.sides[state.side_to_move];
 		const auto& pieces = our_side.pieces;
 		const auto& our_occupied_squares = our_side.occupied_squares();
 		const auto occupied_squares = state.occupied_squares();
 		const bool in_check = state.in_check();
 		const Position king_square = our_side.pieces[Piece::king].lsb_square();
-		legal_moves.reserve(max_legal_moves);
 		const Bitboard pinned_pieces = generate_pinned_pieces(state, king_square);
 		pawn_legal_moves(legal_moves, pieces[Piece::pawn], occupied_squares, state.side_to_move, our_occupied_squares, state.en_passant_target_square, king_square, pinned_pieces);
 		knight_legal_moves(legal_moves, pieces[Piece::knight] & ~pinned_pieces, our_occupied_squares );
@@ -295,7 +297,7 @@ namespace engine
 			const auto knight_popcount = attacking_knights.popcount(), pawn_popcount = attacking_pawns.popcount();
 			if(checking_pieces.popcount() == 1 && knight_popcount == 0 && pawn_popcount == 0)
 			{
-				std::erase_if(legal_moves, [&](const Move& move)
+				legal_moves.erase_if([&](const Move& move)
 				{
 					const Position attacking_piece = checking_pieces.lsb_square();
 					const Position destination_square = move.destination_square();
@@ -313,7 +315,7 @@ namespace engine
 			else if(checking_pieces.popcount() < 1 && (knight_popcount == 1 || pawn_popcount == 1))
 			{
 				const Bitboard checking_piece = knight_popcount == 1? attacking_knights : attacking_pawns;
-				std::erase_if(legal_moves, [&](const Move& move)
+				legal_moves.erase_if([&](const Move& move)
 				{
 					return move.destination_square() != checking_piece.lsb_square();
 				});
@@ -327,14 +329,13 @@ namespace engine
 
 	Bitboard generate_attack_map(const State& state) noexcept
 	{
-		std::vector<Move> legal_moves{};
+		Fixed_capacity_vector<Move, max_legal_moves> legal_moves{};
 		Bitboard attack_map;
 		const auto& pieces = state.sides[state.side_to_move].pieces;
 		const auto& pawn_bb = pieces[Piece::pawn];
 		const bool is_white = state.side_to_move == Side::white;
 		auto occupied_squares = state.occupied_squares();
 		occupied_squares.remove_piece(state.sides[other_side(state.side_to_move)].pieces[Piece::king].lsb_square());
-		legal_moves.reserve(max_legal_moves);
 		attack_map |= is_white? ((pawn_bb & ~file_a) << (board_size-1)) : ((pawn_bb & ~file_a) >> (board_size+1));
 		attack_map |= is_white? ((pawn_bb & ~file_h) << (board_size+1)) : ((pawn_bb & ~file_h) >> (board_size-1));
 		attack_map |= king_mask(pieces[Piece::king].lsb_square());
@@ -344,16 +345,16 @@ namespace engine
 		queen_legal_moves(legal_moves, pieces[Piece::queen], occupied_squares, Bitboard{0ULL}, {});
 		for(const auto& move : legal_moves)
 		{
-			attack_map.add_piece(move.destination_square());
+			attack_map.add_piece(move->destination_square());
 		}
 		return attack_map;
 	}
 
-	std::vector<Move> noisy_moves(const State& state) noexcept
+	Fixed_capacity_vector<Move, max_legal_moves>  noisy_moves(const State& state) noexcept
 	{
 		// inefficient but that is okay also does not find checking moves
-		std::vector<Move> moves = legal_moves(state);
-		std::erase_if(moves, [&state](const Move& move)
+		Fixed_capacity_vector<Move, max_legal_moves> moves = legal_moves(state);
+		moves.erase_if([&state](const Move& move)
 		{
 			return is_free(move.destination_square(), state.sides[other_side(state.side_to_move)].occupied_squares());
 		});

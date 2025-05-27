@@ -8,7 +8,7 @@ include(cmake/CPM.cmake)
 
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
-set(CMAKE_CXX_FLAGS "-Wall -Werror -pedantic")
+set(CMAKE_CXX_FLAGS "-Wall -Werror -pedantic -O3")
 
 # for windows
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
