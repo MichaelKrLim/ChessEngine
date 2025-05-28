@@ -12,7 +12,7 @@ class Fixed_capacity_vector
 
 	constexpr T& operator[](const std::size_t& index) const noexcept { return data_[index].value(); }
 
-	constexpr std::size_t size() const noexcept { return size; };
+	constexpr std::size_t size() const noexcept { return used_capacity_; };
 	constexpr void push_back(const T& value)
 	{
 		if(used_capacity_>=size_v)
