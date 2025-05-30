@@ -134,7 +134,7 @@ namespace
 
 namespace engine
 {
-	std::optional<Move> generate_move(State state, const uci::Search_options& search_options) noexcept
+	std::optional<Move> generate_best_move(State state, const uci::Search_options& search_options) noexcept
 	{
 		Transposition_table transposition_table(20);
 
@@ -149,7 +149,7 @@ namespace engine
 
 		const auto stop_searching = [&search_options, side=state.side_to_move](const auto& start_time, const unsigned current_depth = std::numeric_limits<unsigned>::infinity())
 		{
-			if(search_options.depth && current_depth >= search_options.depth.value())
+			if(search_options.depth && current_depth > search_options.depth.value())
 				return true;
 			else
 			{
@@ -160,7 +160,7 @@ namespace engine
 			return false;
 		};
 
-		const auto quiescence_search = [&state, &stop_searching](this auto&& rec, const auto& start_time, double alpha, double beta, const unsigned additional_depth) -> double
+		const auto quiescence_search = [&state, &stop_searching](this auto&& rec, const auto& start_time, double alpha, double beta, const unsigned additional_depth=1) -> double
 		{
 			if(state.repetition_history[state.zobrist_hash] >= 3)
 				return 0.0;
@@ -174,7 +174,7 @@ namespace engine
 			if(alpha < stand_pat)
 				alpha = stand_pat;
 
-			for(const auto& move : noisy_moves(state))
+			for(const auto& move : generate_moves<Moves_type::noisy>(state))
 			{
 				state.make(move.value());
 				const double score = -rec(start_time, -beta, -alpha, additional_depth+1);
@@ -210,9 +210,9 @@ namespace engine
 			if(state.repetition_history[state.zobrist_hash] >= 3)
 				return 0.0;
 			if(remaining_depth <= 0)
-				return quiescence_search(start_time, alpha, beta, 0);
+				return quiescence_search(start_time, alpha, beta);
 
-			const auto all_legal_moves = legal_moves(state);
+			const auto all_legal_moves = generate_moves<Moves_type::legal>(state);
 			double best_seen_score{-std::numeric_limits<double>::infinity()};
 			for(const auto& move : all_legal_moves)
 			{
@@ -264,7 +264,7 @@ namespace engine
 			try
 			{
 				const double eval = nega_max(current_depth, current_best_move, time);
-				std::cout << "debug info eval " << eval << " depth " << current_depth << "\n";
+				std::cout << "info score cp " << eval << " depth " << current_depth << "\n";
 				if(eval == std::numeric_limits<double>::infinity())
 					return current_best_move;
 			}

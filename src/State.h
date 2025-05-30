@@ -81,7 +81,6 @@ namespace engine
 
 		void validate_fen(const std::array<std::string, 6>& partitioned_fen) const;
 		void parse_fen(const std::string_view fen) noexcept;
-		[[nodiscard]] std::optional<Piece> piece_at(const Position& position, const Side& side) const noexcept;
 		void update_castling_rights(const Side& side) noexcept;
 
 		public:
@@ -105,6 +104,7 @@ namespace engine
 		[[nodiscard]] bool in_check() const noexcept;
 		[[nodiscard]] std::vector<Piece_and_data> get_board_data() const noexcept;
 		[[nodiscard]] bool is_stalemate() const noexcept;
+		[[nodiscard]] std::optional<Piece> piece_at(const Position& position, const Side& side) const noexcept;
 
 		friend std::ostream& operator<<(std::ostream& os, const State& state);
 	};

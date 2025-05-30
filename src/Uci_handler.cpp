@@ -135,7 +135,7 @@ namespace
 
 	void go_handler(const Search_options& search_options) noexcept
 	{
-		const std::optional<engine::Move> best_move = engine::generate_move(state, search_options);
+		const std::optional<engine::Move> best_move = engine::generate_best_move(state, search_options);
 		if(best_move)
 			std::cout << "bestmove " << best_move.value() << "\n";
 		else

@@ -17,12 +17,15 @@ int main(int argc, char* argv[])
 		std::istringstream iss{argv[3]};
 		std::string move{""};
 		while(std::getline(iss, move, ' '))
-			base_position.make(Move{algebraic_to_position(move.substr(0, 2)), algebraic_to_position(move.substr(2, 2))});
+		{
+			const Position origin_square = algebraic_to_position(move.substr(0, 2));
+			base_position.make(Move{origin_square, algebraic_to_position(move.substr(2, 2)), base_position.piece_at(origin_square, base_position.side_to_move).value()});
+		}
 	}
 	const auto perft = [](this auto&& rec, int depth, State& state, const bool&& is_root) -> unsigned long long
 	{
 		std::uint64_t current_count, nodes{0};
-		const auto moves = legal_moves(state);
+		const auto moves = generate_moves<Moves_type::legal>(state);
 		for(const auto& move : moves)
 		{
 			if(is_root && depth <= 1)
@@ -33,7 +36,7 @@ int main(int argc, char* argv[])
 			else
 			{
 				state.make(move.value());
-				current_count = depth == 2? legal_moves(state).size() : rec(depth-1, state, false);
+				current_count = depth == 2? generate_moves<Moves_type::legal>(state).size() : rec(depth-1, state, false);
 				nodes += current_count;
 				state.unmove();
 			}

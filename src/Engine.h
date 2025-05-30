@@ -9,7 +9,7 @@
 
 namespace engine
 {
-	[[nodiscard]] std::optional<Move> generate_move(State state, const uci::Search_options&) noexcept;
+	[[nodiscard]] std::optional<Move> generate_best_move(State state, const uci::Search_options&) noexcept;
 }
 
 #endif //Engine_h_INCLUDED
