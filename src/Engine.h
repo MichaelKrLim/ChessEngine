@@ -5,6 +5,7 @@
 #include "Move.h"
 #include "Uci_handler.h"
 
+#include <chrono>
 #include <optional>
 
 namespace engine

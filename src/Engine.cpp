@@ -6,7 +6,6 @@
 #include "Transposition_table.h"
 
 #include <array>
-#include <chrono>
 #include <cstdint>
 #include <limits>
 
@@ -136,35 +135,35 @@ namespace engine
 {
 	std::optional<Move> generate_best_move(State state, const uci::Search_options& search_options) noexcept
 	{
-		Transposition_table transposition_table(20);
-
-		enum class timeout {};
-
-		const auto compute_type = [](const double alpha, const double beta, const double score)
-		{
-			if(score<=alpha)      return Search_result_type::upper_bound;
-			else if(score>=beta)  return Search_result_type::lower_bound;
-			else                  return Search_result_type::exact;
-		};
-
-		const auto stop_searching = [&search_options, side=state.side_to_move](const auto& start_time, const unsigned current_depth = std::numeric_limits<unsigned>::max())
+		const auto stop_searching = [&search_options, start_time=std::chrono::high_resolution_clock::now(), side=state.side_to_move](const unsigned current_depth = std::numeric_limits<unsigned>::max())
 		{
 			if(search_options.depth && current_depth > search_options.depth.value())
 				return true;
 			else
 			{
-				const auto used_time = std::chrono::high_resolution_clock::now()-start_time+std::chrono::milliseconds{200}; // buffer
+				const auto used_time = std::chrono::high_resolution_clock::now()-start_time+std::chrono::milliseconds{50}; // buffer
 				if((search_options.movetime && used_time > search_options.movetime.value()) || (search_options.time[side] && used_time > (search_options.time[side].value()+22*search_options.increment[side])/22))
 					return true;
 			}
 			return false;
 		};
 
-		const auto quiescence_search = [&state, &stop_searching](this auto&& rec, const auto& start_time, double alpha, double beta, const unsigned additional_depth=1) -> double
+		Transposition_table transposition_table(20);
+
+		static auto compute_type = [](const double alpha, const double beta, const double score)
+		{
+			if(score<=alpha)      return Search_result_type::upper_bound;
+			else if(score>=beta)  return Search_result_type::lower_bound;
+			else                  return Search_result_type::exact;
+		};
+
+		enum class timeout {};
+
+		const auto quiescence_search = [&state, &stop_searching](this auto&& rec, double alpha, double beta, const unsigned additional_depth=1) -> double
 		{
 			if(state.repetition_history[state.zobrist_hash] >= 3)
 				return 0.0;
-			else if(stop_searching(start_time))
+			else if(stop_searching())
 				throw timeout{};
 
 			const double stand_pat = evaluate(state);
@@ -177,7 +176,7 @@ namespace engine
 			for(const auto& move : generate_moves<Moves_type::noisy>(state))
 			{
 				state.make(move);
-				const double score = -rec(start_time, -beta, -alpha, additional_depth+1);
+				const double score = -rec(-beta, -alpha, additional_depth+1);
 				state.unmove();
 				if(score >= beta)
 					return score;
@@ -189,8 +188,11 @@ namespace engine
 			return best_score;
 		};
 
-		const auto nega_max = [&state, &quiescence_search, &transposition_table, &compute_type, &stop_searching](this auto&& rec, const unsigned remaining_depth, std::optional<Move>& best_move, const auto& start_time, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
+		const auto nega_max = [&state, &quiescence_search, &transposition_table, &stop_searching](this auto&& rec, const unsigned remaining_depth, std::optional<Move>& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
 		{
+			if(state.repetition_history[state.zobrist_hash] >= 3)
+				return 0.0;
+
 			const double original_alpha = alpha, original_beta = beta;
 			if(const auto cache_result = transposition_table[state.zobrist_hash]; cache_result && cache_result->remaining_depth >= remaining_depth)
 			{
@@ -207,21 +209,20 @@ namespace engine
 					return cache_result->eval;
 			}
 
-			if(state.repetition_history[state.zobrist_hash] >= 3)
-				return 0.0;
 			if(remaining_depth <= 0)
-				return quiescence_search(start_time, alpha, beta);
+				return quiescence_search(alpha, beta);
+			else if(stop_searching())
+				throw timeout{};
 
 			const auto all_legal_moves = generate_moves<Moves_type::legal>(state);
 			double best_seen_score{-std::numeric_limits<double>::infinity()};
 			for(const auto& move : all_legal_moves)
 			{
-				if(stop_searching(start_time))
+				if(stop_searching())
 					throw timeout{};
-
 				state.make(move);
 				std::optional<Move> opponent_move;
-				double score = -rec(remaining_depth-1, opponent_move, start_time, -beta, -alpha);
+				double score = -rec(remaining_depth-1, opponent_move, -beta, -alpha);
 				state.unmove();
 				if(score > best_seen_score || !best_move)
 				{
@@ -252,7 +253,6 @@ namespace engine
 				.search_result_type = compute_type(original_alpha, original_beta, best_seen_score),
 				.best_move = best_move.value()
 			});
-
 			return best_seen_score;
 		};
 
@@ -267,19 +267,18 @@ namespace engine
 			state.unmove();
 			return lh_eval < rh_eval;
 		});
-		const auto time = std::chrono::high_resolution_clock::now();
-		nega_max(1, best_move, time+std::chrono::seconds{1});
-		for(unsigned current_depth{1}; !stop_searching(time, current_depth); ++current_depth)
+
+		for(unsigned current_depth{1}; !stop_searching(current_depth); ++current_depth)
 		{
 			std::optional<Move> current_best_move{std::nullopt};
 			try
 			{
-				const double eval = nega_max(current_depth, current_best_move, time);
+				const double eval = nega_max(current_depth, current_best_move);
 				std::cout << "info score cp " << eval << " depth " << current_depth << "\n";
 				if(eval == std::numeric_limits<double>::infinity())
 					return current_best_move;
 			}
-			catch(const timeout&) { break; }
+			catch(const timeout&) {	return best_move; }
 			if(current_best_move)
 				best_move = current_best_move;
 		}
