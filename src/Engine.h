@@ -5,12 +5,9 @@
 #include "Move.h"
 #include "Uci_handler.h"
 
-#include <chrono>
-#include <optional>
-
 namespace engine
 {
-	[[nodiscard]] std::optional<Move> generate_best_move(State state, const uci::Search_options&) noexcept;
+	[[nodiscard]] Move generate_best_move(State state, const uci::Search_options&) noexcept;
 }
 
 #endif //Engine_h_INCLUDED

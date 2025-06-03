@@ -5,7 +5,9 @@
 #include "Pieces.h"
 #include "Transposition_table.h"
 
+#include <algorithm>
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <limits>
 
@@ -133,15 +135,15 @@ namespace
 
 namespace engine
 {
-	std::optional<Move> generate_best_move(State state, const uci::Search_options& search_options) noexcept
+	Move generate_best_move(State state, const uci::Search_options& search_options) noexcept
 	{
-		const auto stop_searching = [&search_options, start_time=std::chrono::high_resolution_clock::now(), side=state.side_to_move](const unsigned current_depth = std::numeric_limits<unsigned>::max())
+		const auto stop_searching = [&search_options, start_time=std::chrono::high_resolution_clock::now(), side=state.side_to_move](const std::optional<unsigned> current_depth = std::nullopt)
 		{
-			if(search_options.depth && current_depth > search_options.depth.value())
+			if(search_options.depth && current_depth && current_depth.value() > search_options.depth.value())
 				return true;
 			else
 			{
-				const auto used_time = std::chrono::high_resolution_clock::now()-start_time+std::chrono::milliseconds{50}; // buffer
+				const auto used_time = std::chrono::high_resolution_clock::now()-start_time+std::chrono::milliseconds{100}; // buffer
 				if((search_options.movetime && used_time > search_options.movetime.value()) || (search_options.time[side] && used_time > (search_options.time[side].value()+22*search_options.increment[side])/22))
 					return true;
 			}
@@ -159,8 +161,10 @@ namespace engine
 
 		enum class timeout {};
 
-		const auto quiescence_search = [&state, &stop_searching](this auto&& rec, double alpha, double beta, const unsigned additional_depth=1) -> double
+		const auto quiescence_search = [&state, &stop_searching](this auto&& rec, double alpha, double beta, unsigned& extended_depth, unsigned& nodes, const unsigned additional_depth=1) -> double
 		{
+			extended_depth = std::max(extended_depth, additional_depth);
+
 			if(state.repetition_history[state.zobrist_hash] >= 3)
 				return 0.0;
 			else if(stop_searching())
@@ -176,7 +180,7 @@ namespace engine
 			for(const auto& move : generate_moves<Moves_type::noisy>(state))
 			{
 				state.make(move);
-				const double score = -rec(-beta, -alpha, additional_depth+1);
+				const double score = -rec(-beta, -alpha, extended_depth, ++nodes, additional_depth+1);
 				state.unmove();
 				if(score >= beta)
 					return score;
@@ -188,7 +192,7 @@ namespace engine
 			return best_score;
 		};
 
-		const auto nega_max = [&state, &quiescence_search, &transposition_table, &stop_searching](this auto&& rec, const unsigned remaining_depth, std::optional<Move>& best_move, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
+		const auto nega_max = [&state, &quiescence_search, &transposition_table, &stop_searching](this auto&& rec, const unsigned remaining_depth, std::optional<Move>& best_move, unsigned& extended_depth, unsigned& nodes, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
 		{
 			if(state.repetition_history[state.zobrist_hash] >= 3)
 				return 0.0;
@@ -210,7 +214,7 @@ namespace engine
 			}
 
 			if(remaining_depth <= 0)
-				return quiescence_search(alpha, beta);
+				return quiescence_search(alpha, beta, extended_depth, nodes);
 			else if(stop_searching())
 				throw timeout{};
 
@@ -222,7 +226,7 @@ namespace engine
 					throw timeout{};
 				state.make(move);
 				std::optional<Move> opponent_move;
-				double score = -rec(remaining_depth-1, opponent_move, -beta, -alpha);
+				double score = -rec(remaining_depth-1, opponent_move, extended_depth, ++nodes, -beta, -alpha);
 				state.unmove();
 				if(score > best_seen_score || !best_move)
 				{
@@ -256,31 +260,39 @@ namespace engine
 			return best_seen_score;
 		};
 
-		const auto immediate_moves = generate_moves<Moves_type::legal>(state);
-		std::optional<Move> best_move = *std::max_element(immediate_moves.begin(), immediate_moves.end(), [&state](const Move& lhs, const Move& rhs)
+		Move best_move; /*= [&state]()
 		{
-			state.make(lhs);
-			const auto lh_eval = evaluate(state);
-			state.unmove();
-			state.make(rhs);
-			const auto rh_eval = evaluate(state);
-			state.unmove();
-			return lh_eval < rh_eval;
-		});
-
+			struct Move_data { Move move; double eval; };
+			const auto scores = generate_moves<Moves_type::legal>(state) | std::views::transform([&state](const Move& move)
+			{
+				state.make(move);
+				const auto eval = evaluate(state);
+				state.unmove();
+				return Move_data{move, eval};
+			});
+			const auto it=std::ranges::max_element(scores, {}, &Move_data::eval);
+			return (*it).move;
+		}();
+*/
 		for(unsigned current_depth{1}; !stop_searching(current_depth); ++current_depth)
 		{
 			std::optional<Move> current_best_move{std::nullopt};
 			try
 			{
-				const double eval = nega_max(current_depth, current_best_move);
-				std::cout << "info score cp " << eval << " depth " << current_depth << "\n";
+				unsigned extended_depth{0},
+				nodes{0};
+				const double eval = nega_max(current_depth, current_best_move, extended_depth, nodes);
+				std::cout << "info"
+				          << " score cp " << eval
+				          << " nodes " << nodes
+				          << " depth " << current_depth
+				<< " seldepth " << current_depth+extended_depth << "\n";
 				if(eval == std::numeric_limits<double>::infinity())
-					return current_best_move;
+					return current_best_move.value();
 			}
-			catch(const timeout&) {	return best_move; }
+			catch(const timeout&) { return best_move; }
 			if(current_best_move)
-				best_move = current_best_move;
+				best_move = current_best_move.value();
 		}
 		return best_move;
 	}

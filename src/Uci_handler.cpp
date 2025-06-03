@@ -16,13 +16,13 @@ using namespace uci;
 
 namespace
 {
-	engine::State state{};
+	engine::State state{engine::starting_fen};
 
 	bool debug{false};
 
 	struct Input_state
 	{
-		std::string fen{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
+		std::string fen{engine::starting_fen};
 		std::vector<engine::Move> continuation;
 	};
 
@@ -135,11 +135,8 @@ namespace
 
 	void go_handler(const Search_options& search_options) noexcept
 	{
-		const std::optional<engine::Move> best_move = engine::generate_best_move(state, search_options);
-		if(best_move)
-			std::cout << "bestmove " << best_move.value() << "\n";
-		else
-			std::cout << "no moves left\n";
+		const auto best_move = engine::generate_best_move(state, search_options);
+		std::cout << "bestmove " << best_move << "\n";
 	}
 
 	void uci_handler() noexcept
@@ -181,9 +178,8 @@ namespace uci
 {
 	void start_listening() noexcept
 	{
-		for(std::string line, command; command != "quit";)
+		for(std::string line, command; std::getline(std::cin, line) && line != "quit";)
 		{
-			std::getline(std::cin, line);
 			std::istringstream iss{line};
 			iss >> command;
 			if(const auto it{to_handler_function.find(command)}; it != to_handler_function.end())

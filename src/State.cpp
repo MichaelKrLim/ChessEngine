@@ -183,18 +183,18 @@ void State::make(const Move& move) noexcept
 		return opt.value();
 	}();
 	std::optional<Piece> piece_to_capture = piece_at(destination_square, other_side(side_to_move));
-	const auto handle_capture = [this, &opposite_side, &piece_to_capture, &destination_square, &back_rank]()
+	const auto handle_capture = [this, &opposite_side, &piece_to_capture, &destination_square, enemy_back_rank=side_to_move == Side::white? 7 : 0]()
 	{
 		opposite_side.pieces[piece_to_capture.value()].remove_piece(destination_square);
 		zobrist::invert_piece_at(zobrist_hash, destination_square, piece_to_capture.value(), other_side(side_to_move));
 		if(piece_to_capture == Piece::rook)
 		{
-			if(destination_square == Position{back_rank, 0} && opposite_side.castling_rights[Castling_rights::queenside])
+			if(destination_square == Position{enemy_back_rank, 0} && opposite_side.castling_rights[Castling_rights::queenside])
 			{
 				opposite_side.castling_rights[Castling_rights::queenside] = false;
 				zobrist::invert_castling_right(zobrist_hash, other_side(side_to_move), Castling_rights::queenside);
 			}
-			else if(destination_square == Position{back_rank, 7} && opposite_side.castling_rights[Castling_rights::kingside])
+			else if(destination_square == Position{enemy_back_rank, 7} && opposite_side.castling_rights[Castling_rights::kingside])
 			{
 				opposite_side.castling_rights[Castling_rights::kingside] = false;
 				zobrist::invert_castling_right(zobrist_hash, other_side(side_to_move), Castling_rights::kingside);

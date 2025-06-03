@@ -35,13 +35,13 @@ int main(int argc, char* argv[])
 			}
 			else
 			{
-				state.make(move.value());
+				state.make(move);
 				current_count = depth == 2? generate_moves<Moves_type::legal>(state).size() : rec(depth-1, state, false);
 				nodes += current_count;
 				state.unmove();
 			}
 			if(is_root)
-				std::cout << move.value() << ' ' << current_count << "\n";
+				std::cout << move << ' ' << current_count << "\n";
 		}
 		return nodes;
 	};
