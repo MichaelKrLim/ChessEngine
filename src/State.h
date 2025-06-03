@@ -82,6 +82,7 @@ namespace engine
 		void validate_fen(const std::array<std::string, 6>& partitioned_fen) const;
 		void parse_fen(const std::string_view fen) noexcept;
 		void update_castling_rights(const Side& side) noexcept;
+		void move_and_hash(const Position& from_square, const Position& destination_square, const Piece& piece_type_to_move) noexcept;
 
 		public:
 

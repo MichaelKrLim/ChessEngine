@@ -147,13 +147,13 @@ namespace engine
 			else                  return Search_result_type::exact;
 		};
 
-		const auto stop_searching = [&search_options, side=state.side_to_move](const auto& start_time, const unsigned current_depth = std::numeric_limits<unsigned>::infinity())
+		const auto stop_searching = [&search_options, side=state.side_to_move](const auto& start_time, const unsigned current_depth = std::numeric_limits<unsigned>::max())
 		{
 			if(search_options.depth && current_depth > search_options.depth.value())
 				return true;
 			else
 			{
-				const auto used_time = std::chrono::high_resolution_clock::now()-start_time+std::chrono::milliseconds{100}; // buffer
+				const auto used_time = std::chrono::high_resolution_clock::now()-start_time+std::chrono::milliseconds{200}; // buffer
 				if((search_options.movetime && used_time > search_options.movetime.value()) || (search_options.time[side] && used_time > (search_options.time[side].value()+22*search_options.increment[side])/22))
 					return true;
 			}
@@ -176,7 +176,7 @@ namespace engine
 
 			for(const auto& move : generate_moves<Moves_type::noisy>(state))
 			{
-				state.make(move.value());
+				state.make(move);
 				const double score = -rec(start_time, -beta, -alpha, additional_depth+1);
 				state.unmove();
 				if(score >= beta)
@@ -219,7 +219,7 @@ namespace engine
 				if(stop_searching(start_time))
 					throw timeout{};
 
-				state.make(move.value());
+				state.make(move);
 				std::optional<Move> opponent_move;
 				double score = -rec(remaining_depth-1, opponent_move, start_time, -beta, -alpha);
 				state.unmove();
@@ -256,8 +256,19 @@ namespace engine
 			return best_seen_score;
 		};
 
-		std::optional<Move> best_move;
+		const auto immediate_moves = generate_moves<Moves_type::legal>(state);
+		std::optional<Move> best_move = *std::max_element(immediate_moves.begin(), immediate_moves.end(), [&state](const Move& lhs, const Move& rhs)
+		{
+			state.make(lhs);
+			const auto lh_eval = evaluate(state);
+			state.unmove();
+			state.make(rhs);
+			const auto rh_eval = evaluate(state);
+			state.unmove();
+			return lh_eval < rh_eval;
+		});
 		const auto time = std::chrono::high_resolution_clock::now();
+		nega_max(1, best_move, time+std::chrono::seconds{1});
 		for(unsigned current_depth{1}; !stop_searching(time, current_depth); ++current_depth)
 		{
 			std::optional<Move> current_best_move{std::nullopt};

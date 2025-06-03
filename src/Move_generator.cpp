@@ -350,34 +350,27 @@ namespace engine
 		in_double_check = !single_checking_blockable_piece && !single_checking_unblockable_piece && in_check;
 		if(in_double_check) [[unlikely]]
 			return legal_moves;
-		const auto satisfies_check_requirements = [&single_checking_blockable_piece, &single_checking_unblockable_piece, &king_square, &checking_pieces, &attacking_knights_popcount, &attacking_knights, &attacking_pawns]() -> std::function<bool(const Move&)>
+		checking_pieces |= attacking_knights | attacking_pawns;
+		const auto satisfies_check_requirements = [&, checking_piece_square=checking_pieces.lsb_square()](const Move& move)
 		{
 			if(single_checking_blockable_piece)
 			{
-				const auto blocks_or_captures_checking_piece = [king_square=king_square, attacking_piece=checking_pieces.lsb_square()](const Move& move)
-				{
-					const Position destination_square = move.destination_square();
-					if(king_square.rank_ == attacking_piece.rank_)
-						return destination_square.rank_ == king_square.rank_ && destination_square.file_ >= std::min(king_square.file_, attacking_piece.file_) && destination_square.file_ <= std::max(king_square.file_, attacking_piece.file_);
-					if(king_square.file_ == attacking_piece.file_)
-						return destination_square.file_ == attacking_piece.file_ && destination_square.rank_ >= std::min(king_square.rank_, attacking_piece.rank_) && destination_square.rank_ <= std::max(king_square.rank_, attacking_piece.rank_);
-					if(king_square.diagonal_index() == attacking_piece.diagonal_index())
-						return destination_square.diagonal_index() == king_square.diagonal_index() && destination_square.rank_ >= std::min(king_square.rank_, attacking_piece.rank_) && destination_square.rank_ <= std::max(king_square.rank_, attacking_piece.rank_);
-					if(king_square.antidiagonal_index() == attacking_piece.antidiagonal_index())
-						return destination_square.antidiagonal_index() == king_square.antidiagonal_index() && destination_square.rank_ >= std::min(king_square.rank_, attacking_piece.rank_) && destination_square.rank_ <= std::max(king_square.rank_, attacking_piece.rank_);
-					std::unreachable();
-				};
-				return blocks_or_captures_checking_piece;
+				const Position destination_square = move.destination_square();
+				if(king_square.rank_ == checking_piece_square.rank_)
+					return destination_square.rank_ == king_square.rank_ && destination_square.file_ >= std::min(king_square.file_, checking_piece_square.file_) && destination_square.file_ <= std::max(king_square.file_, checking_piece_square.file_);
+				if(king_square.file_ == checking_piece_square.file_)
+					return destination_square.file_ == checking_piece_square.file_ && destination_square.rank_ >= std::min(king_square.rank_, checking_piece_square.rank_) && destination_square.rank_ <= std::max(king_square.rank_, checking_piece_square.rank_);
+				if(king_square.diagonal_index() == checking_piece_square.diagonal_index())
+					return destination_square.diagonal_index() == king_square.diagonal_index() && destination_square.rank_ >= std::min(king_square.rank_, checking_piece_square.rank_) && destination_square.rank_ <= std::max(king_square.rank_, checking_piece_square.rank_);
+				if(king_square.antidiagonal_index() == checking_piece_square.antidiagonal_index())
+					return destination_square.antidiagonal_index() == king_square.antidiagonal_index() && destination_square.rank_ >= std::min(king_square.rank_, checking_piece_square.rank_) && destination_square.rank_ <= std::max(king_square.rank_, checking_piece_square.rank_);
+				std::unreachable();
 			}
 			else if(single_checking_unblockable_piece)
-			{
-				const Bitboard checking_piece = attacking_knights_popcount == 1? attacking_knights : attacking_pawns;
-				const auto captures_checking_piece = [checking_piece_square=checking_piece.lsb_square()](const Move& move){ return move.destination_square() == checking_piece_square; };
-				return captures_checking_piece;
-			}
+				return move.destination_square() == checking_piece_square;
 			else
-				return [](const Move&){ return true; }; // !in_check
-		}();
+				return true; // !in_check
+		};
 		const Bitboard pinned_pieces = generate_pinned_pieces(state, king_square);
 		pawn_moves<moves_type>(legal_moves, pieces[Piece::pawn], occupied_squares, state.side_to_move, our_occupied_squares, state.en_passant_target_square, king_square, pinned_pieces, satisfies_check_requirements);
 		knight_moves<moves_type>(legal_moves, pieces[Piece::knight] & ~pinned_pieces, our_occupied_squares, enemy_occupied_squares, satisfies_check_requirements);
@@ -390,7 +383,7 @@ namespace engine
 
 	template Fixed_capacity_vector<Move, max_legal_moves> generate_moves<Moves_type::legal>(const State& state) noexcept;
 	template Fixed_capacity_vector<Move, max_legal_moves> generate_moves<Moves_type::noisy>(const State& state) noexcept;
-	
+
 	Bitboard generate_attack_map(const State& state) noexcept
 	{
 		Fixed_capacity_vector<Move, max_legal_moves> legal_moves{};
@@ -409,7 +402,7 @@ namespace engine
 		queen_moves<Moves_type::legal>(legal_moves, pieces[Piece::queen], occupied_squares, Bitboard{0ULL}, {});
 		for(const auto& move : legal_moves)
 		{
-			attack_map.add_piece(move->destination_square());
+			attack_map.add_piece(move.destination_square());
 		}
 		return attack_map;
 	}

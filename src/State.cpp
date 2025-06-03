@@ -1,3 +1,4 @@
+#include "Move.h"
 #include "Move_generator.h"
 #include "State.h"
 #include "Transposition_table.h"
@@ -157,6 +158,13 @@ std::optional<Piece> State::piece_at(const Position& position, const Side& side)
 	return found_piece;
 }
 
+void State::move_and_hash(const Position& from_square, const Position& destination_square, const Piece& piece_type_to_move) noexcept
+{
+	sides[side_to_move].pieces[piece_type_to_move].move_piece(from_square, destination_square);
+	zobrist::invert_piece_at(zobrist_hash, from_square, piece_type_to_move, side_to_move);
+	zobrist::invert_piece_at(zobrist_hash, destination_square, piece_type_to_move, side_to_move);
+}
+
 void State::make(const Move& move) noexcept
 {
 	const auto& history_size = history.size();
@@ -175,7 +183,7 @@ void State::make(const Move& move) noexcept
 		return opt.value();
 	}();
 	std::optional<Piece> piece_to_capture = piece_at(destination_square, other_side(side_to_move));
-	if(piece_to_capture)
+	const auto handle_capture = [this, &opposite_side, &piece_to_capture, &destination_square, &back_rank]()
 	{
 		opposite_side.pieces[piece_to_capture.value()].remove_piece(destination_square);
 		zobrist::invert_piece_at(zobrist_hash, destination_square, piece_to_capture.value(), other_side(side_to_move));
@@ -192,24 +200,8 @@ void State::make(const Move& move) noexcept
 				zobrist::invert_castling_right(zobrist_hash, other_side(side_to_move), Castling_rights::kingside);
 			}
 		}
-	}
-	const bool is_castling = piece_type == Piece::king && std::abs(destination_square.file_ - from_square.file_) > 1,
-			   is_en_passant = en_passant_target_square && piece_type == Piece::pawn && destination_square == en_passant_target_square.value();
-	const auto old_en_passant_target_square = en_passant_target_square;
-	if(en_passant_target_square)
-	{
-		zobrist::invert_en_passant_square(zobrist_hash, en_passant_target_square.value());
-		en_passant_target_square = std::nullopt;
-	}
-	if(move.is_promotion())
-	{
-		const auto promotion_piece = move.promotion_piece();
-		side.pieces[Piece::pawn].remove_piece(from_square);
-		zobrist::invert_piece_at(zobrist_hash, from_square, Piece::pawn, side_to_move);
-		side.pieces[promotion_piece].add_piece(destination_square);
-		zobrist::invert_piece_at(zobrist_hash, destination_square, promotion_piece, side_to_move);
-	}
-	else if(is_castling)
+	};
+	const auto handle_castling = [this, &destination_square, &back_rank, &side, &from_square]()
 	{
 		bool castled_kingside = destination_square.file_ == 6;
 		Position rook_destination_square, rook_origin_square;
@@ -231,13 +223,29 @@ void State::make(const Move& move) noexcept
 				zobrist::invert_castling_right(zobrist_hash, side_to_move, castling_right);
 			}
 		}
-		side.pieces[Piece::king].move_piece(from_square, destination_square);
-		zobrist::invert_piece_at(zobrist_hash, from_square, Piece::king, side_to_move);
-		zobrist::invert_piece_at(zobrist_hash, destination_square, Piece::king, side_to_move);
-		side.pieces[Piece::rook].move_piece(rook_origin_square, rook_destination_square);
-		zobrist::invert_piece_at(zobrist_hash, rook_origin_square, Piece::rook, side_to_move);
-		zobrist::invert_piece_at(zobrist_hash, rook_destination_square, Piece::rook, side_to_move);
+		move_and_hash(from_square, destination_square, Piece::king);
+		move_and_hash(rook_origin_square, rook_destination_square, Piece::rook);
+	};
+	if(piece_to_capture)
+		handle_capture();
+	const bool is_castling = piece_type == Piece::king && std::abs(destination_square.file_ - from_square.file_) > 1,
+			   is_en_passant = en_passant_target_square && piece_type == Piece::pawn && destination_square == en_passant_target_square.value();
+	const auto old_en_passant_target_square = en_passant_target_square;
+	if(en_passant_target_square)
+	{
+		zobrist::invert_en_passant_square(zobrist_hash, en_passant_target_square.value());
+		en_passant_target_square = std::nullopt;
 	}
+	if(move.is_promotion())
+	{
+		const auto promotion_piece = move.promotion_piece();
+		side.pieces[Piece::pawn].remove_piece(from_square);
+		zobrist::invert_piece_at(zobrist_hash, from_square, Piece::pawn, side_to_move);
+		side.pieces[promotion_piece].add_piece(destination_square);
+		zobrist::invert_piece_at(zobrist_hash, destination_square, promotion_piece, side_to_move);
+	}
+	else if(is_castling)
+		handle_castling();
 	else
 	{
 		const bool is_double_pawn_move = piece_type == Piece::pawn && destination_square.rank_ == from_square.rank_ + 2*pawn_direction;
@@ -252,9 +260,7 @@ void State::make(const Move& move) noexcept
 			opposite_side.pieces[Piece::pawn].remove_piece(capture_square);
 			zobrist::invert_piece_at(zobrist_hash, capture_square, Piece::pawn, other_side(side_to_move));
 		}
-		side.pieces[piece_type].move_piece(from_square, destination_square);
-		zobrist::invert_piece_at(zobrist_hash, from_square, piece_type, side_to_move);
-		zobrist::invert_piece_at(zobrist_hash, destination_square, piece_type, side_to_move);
+		move_and_hash(from_square, destination_square, piece_type);
 	}
 	history.push(State_delta
 	{
