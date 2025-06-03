@@ -73,32 +73,30 @@ namespace
 			for(const auto& piece_type : all_promotion_pieces)
 				legal_moves.push_back(Move{origin_square, destination_square, piece_type});
 		};
-		const auto add_move = [&satisfies_check_requirements, &promotion_rank, &add_promotion_legal_move, &legal_moves](const Position& origin_square, const Position& destination_square, const Move& current_move)
+		const auto add_move = [&promotion_rank, &add_promotion_legal_move, &legal_moves](const Position& origin_square, const Position& destination_square, const Move& current_move)
 		{
-			if constexpr (moves_type == Moves_type::noisy)
-			{
-				if(destination_square.rank_ == promotion_rank && satisfies_check_requirements(current_move))
-					add_promotion_legal_move(origin_square, destination_square);
-			}
-			else if constexpr (moves_type == Moves_type::legal)
-			{
-				if(satisfies_check_requirements(current_move))
-				{
-					if(destination_square.rank_ == promotion_rank)
-						add_promotion_legal_move(origin_square, destination_square);
-					else
-						legal_moves.push_back(current_move);
-				}
-			}
+			if(destination_square.rank_ == promotion_rank)
+				add_promotion_legal_move(origin_square, destination_square);
+			else
+				legal_moves.push_back(current_move);
 		};
 		Bitboard single_moves = is_white? (pawns_bb << rank_move) : (pawns_bb >> rank_move);
-		single_moves.for_each_piece([&add_move, &occupied_squares, &pinned_pieces, &pawn_direction, &king_square, &single_moves](const Position& destination_square)
+		single_moves.for_each_piece([&](const Position& destination_square)
 		{
 			const Position origin_square = Position{destination_square.rank_-pawn_direction, destination_square.file_};
 			const Move current_move{origin_square, destination_square};
 			if(is_valid_destination(destination_square, occupied_squares) && (!pinned_pieces.is_occupied(origin_square) || origin_square.file_ == king_square.file_))
 			{
-				add_move(origin_square, destination_square, current_move);
+				if constexpr (moves_type == Moves_type::noisy)
+				{
+					if(destination_square.rank_ == promotion_rank && satisfies_check_requirements(current_move))
+						add_promotion_legal_move(origin_square, destination_square);
+				}
+				else if constexpr (moves_type == Moves_type::legal)
+				{
+					if(satisfies_check_requirements(current_move))
+						add_move(origin_square, destination_square, current_move);
+				}
 			}
 			else
 				single_moves.remove_piece(destination_square);
@@ -401,9 +399,7 @@ namespace engine
 		rook_moves<Moves_type::legal>(legal_moves, pieces[Piece::rook], occupied_squares, Bitboard{0ULL}, {});
 		queen_moves<Moves_type::legal>(legal_moves, pieces[Piece::queen], occupied_squares, Bitboard{0ULL}, {});
 		for(const auto& move : legal_moves)
-		{
 			attack_map.add_piece(move.destination_square());
-		}
 		return attack_map;
 	}
 }
