@@ -12,7 +12,7 @@ namespace uci
 	{
 		std::optional<unsigned> depth{std::nullopt};
 		unsigned movestogo,
-		transposition_table_size, hash;
+		hash=engine::default_table_size;
 		engine::Side_map<std::optional<std::chrono::milliseconds>> time{std::nullopt, std::nullopt};
 		engine::Side_map<std::chrono::milliseconds> increment{std::chrono::milliseconds{}, std::chrono::milliseconds{}};
 		std::optional<std::chrono::milliseconds> movetime{std::nullopt};

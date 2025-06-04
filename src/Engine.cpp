@@ -152,7 +152,7 @@ namespace engine
 			return false;
 		};
 
-		Transposition_table transposition_table(20);
+		Transposition_table transposition_table(search_options.hash);
 
 		static auto compute_type = [](const double alpha, const double beta, const double score)
 		{

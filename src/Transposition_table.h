@@ -122,7 +122,7 @@ namespace engine
 			data[index] = t_data;
 		}
 
-		explicit Transposition_table(const unsigned table_size_log2) : data(1ULL<<table_size_log2) {};
+		explicit Transposition_table(unsigned table_size_mb) : data((table_size_mb*1024*1024)/sizeof(Transposition_data)) {};
 
 		private:
 

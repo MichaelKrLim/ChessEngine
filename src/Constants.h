@@ -39,6 +39,8 @@ namespace engine
 	max_legal_moves = 218,
 	king_max_adjacent_squares = 6;
 
+	constexpr unsigned default_table_size{16};
+
 	constexpr std::string_view name{"cpp_engine"}, author{"Michael Lim"}, starting_fen{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
 
 	constexpr std::uint64_t file_a{0x101010101010101}, file_h{0x8080808080808080};

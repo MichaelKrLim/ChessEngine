@@ -94,12 +94,8 @@ namespace
 				search_options.increment[engine::Side::black] = read_time(is);
 			else if(option == "movestogo")
 				is>>search_options.movestogo;
-			else if(option == "tt" || option == "hash")
-			{
-				is>>search_options.transposition_table_size;
-				if(option == "hash")
-					search_options.transposition_table_size*=1024;
-			}
+			else if(option == "hash")
+				is>>search_options.hash;
 			else
 				throw std::invalid_argument{"Command not found"};
 		}
@@ -141,8 +137,9 @@ namespace
 
 	void uci_handler() noexcept
 	{
-		std::cout << "id: " << engine::name << "\n" 
-				  << "author: " << engine::author << "\n"
+		std::cout << "id: " << engine::name << "\n\n" 
+				  << "author: " << engine::author << "\n\n"
+				  << "option name Hash type spin default 16 min 1 max 33554432\n"
 				  << "uciok\n";
 	}
 
