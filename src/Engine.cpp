@@ -1,6 +1,7 @@
 #include "Bitboard.h"
 #include "Constants.h"
 #include "Engine.h"
+#include "Fixed_capacity_vector.h"
 #include "Move_generator.h"
 #include "Pieces.h"
 #include "Transposition_table.h"
@@ -9,6 +10,7 @@
 #include <array>
 #include <chrono>
 #include <cstdint>
+#include <cstdio>
 #include <limits>
 
 namespace
@@ -192,17 +194,22 @@ namespace engine
 			return best_score;
 		};
 
-		const auto nega_max = [&state, &quiescence_search, &transposition_table, &stop_searching](this auto&& rec, const unsigned remaining_depth, std::optional<Move>& best_move, unsigned& extended_depth, unsigned& nodes, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
+		const auto nega_max = [&state, &quiescence_search, &transposition_table, &stop_searching](this auto&& rec, const unsigned remaining_depth, unsigned& extended_depth, unsigned& nodes, Fixed_capacity_vector<Move, 256>& principal_variation, const unsigned& depth, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
 		{
 			if(state.repetition_history[state.zobrist_hash] >= 3)
 				return 0.0;
+			else if(remaining_depth <= 0)
+				return quiescence_search(alpha, beta, extended_depth, nodes);
+			else if(stop_searching())
+				throw timeout{};
 
 			const double original_alpha = alpha, original_beta = beta;
-			if(const auto cache_result = transposition_table[state.zobrist_hash]; cache_result && cache_result->remaining_depth >= remaining_depth)
+			const auto cache_result = transposition_table[state.zobrist_hash];
+			if(cache_result && cache_result->remaining_depth >= remaining_depth)
 			{
 				if(cache_result->search_result_type == Search_result_type::exact)
 				{
-					best_move = cache_result->best_move;
+					principal_variation[depth-remaining_depth] = cache_result->best_move;
 					return cache_result->eval;
 				}
 				if(cache_result->search_result_type == Search_result_type::lower_bound)
@@ -213,28 +220,36 @@ namespace engine
 					return cache_result->eval;
 			}
 
-			if(remaining_depth <= 0)
-				return quiescence_search(alpha, beta, extended_depth, nodes);
-			else if(stop_searching())
-				throw timeout{};
+			const auto all_legal_moves = [&]()
+			{
+				auto ordered_moves = generate_moves<Moves_type::legal>(state);
+				std::ranges::sort(ordered_moves, [&](const Move& lhs, const Move& rhs)
+				{
+					const auto pv = principal_variation[depth-remaining_depth];
+					if(rhs==pv || (cache_result && rhs==cache_result->best_move))
+						return false;
+					return lhs==pv || (cache_result && lhs==cache_result->best_move);
+				});
+				return ordered_moves;
+			}();
 
-			const auto all_legal_moves = generate_moves<Moves_type::legal>(state);
-			double best_seen_score{-std::numeric_limits<double>::infinity()};
+			std::optional<Move> best_move{std::nullopt};
+			double best_score;
 			for(const auto& move : all_legal_moves)
 			{
 				if(stop_searching())
 					throw timeout{};
 				state.make(move);
-				std::optional<Move> opponent_move;
-				double score = -rec(remaining_depth-1, opponent_move, extended_depth, ++nodes, -beta, -alpha);
+				double score = -rec(remaining_depth-1, extended_depth, ++nodes, principal_variation, depth, -beta, -alpha);
 				state.unmove();
-				if(score > best_seen_score || !best_move)
+				if(!best_move || score > best_score)
 				{
-					best_seen_score = score;
+					best_score = score;
 					best_move = move;
 				}
 				if(score > alpha)
 				{
+					principal_variation[depth-remaining_depth] = move;
 					alpha = score;
 					if(alpha >= beta)
 						break;
@@ -252,15 +267,38 @@ namespace engine
 			if(best_move) transposition_table.insert(Transposition_data
 			{
 				.remaining_depth = remaining_depth,
-				.eval = best_seen_score,
+				.eval = alpha,
 				.zobrist_hash = state.zobrist_hash,
-				.search_result_type = compute_type(original_alpha, original_beta, best_seen_score),
+				.search_result_type = compute_type(original_alpha, original_beta, alpha),
 				.best_move = best_move.value()
 			});
-			return best_seen_score;
+
+			return alpha;
 		};
 
-		Move best_move; /*= [&state]()
+		const auto output_info = [](const auto& eval, const auto& nodes, const auto& current_depth, const auto& extended_depth, const auto& principal_variation)
+		{
+			const auto output_pv = [](const Fixed_capacity_vector<Move, 256>& principal_variation)
+			{
+				bool first{true};
+				for(const auto& move : principal_variation)
+				{
+					if(!first) std::cout<<' ';
+					std::cout<<move;
+					first=false;
+				}
+			};
+			std::cout << "info"
+			          << " score cp " << eval
+			          << " nodes " << nodes
+			          << " depth " << current_depth
+			<< " seldepth " << current_depth+extended_depth
+			<< " pv ";
+			output_pv(principal_variation);
+			std::cout << "\n";
+		};
+
+		/*Move best_move; = [&state]()
 		{
 			struct Move_data { Move move; double eval; };
 			const auto scores = generate_moves<Moves_type::legal>(state) | std::views::transform([&state](const Move& move)
@@ -272,28 +310,22 @@ namespace engine
 			});
 			const auto it=std::ranges::max_element(scores, {}, &Move_data::eval);
 			return (*it).move;
-		}();
-*/
+		}();*/
+		
+		Fixed_capacity_vector<Move, 256> principal_variation;
 		for(unsigned current_depth{1}; !stop_searching(current_depth); ++current_depth)
 		{
-			std::optional<Move> current_best_move{std::nullopt};
 			try
 			{
 				unsigned extended_depth{0},
 				nodes{0};
-				const double eval = nega_max(current_depth, current_best_move, extended_depth, nodes);
-				std::cout << "info"
-				          << " score cp " << eval
-				          << " nodes " << nodes
-				          << " depth " << current_depth
-				<< " seldepth " << current_depth+extended_depth << "\n";
-				if(eval == std::numeric_limits<double>::infinity())
-					return current_best_move.value();
+				const double eval = nega_max(current_depth, extended_depth, nodes, principal_variation, current_depth);
+				output_info(eval, nodes, current_depth, extended_depth, principal_variation);
+				if(std::abs(eval) == std::numeric_limits<double>::infinity())
+					return principal_variation.front();
 			}
-			catch(const timeout&) { return best_move; }
-			if(current_best_move)
-				best_move = current_best_move.value();
+			catch(const timeout&) { return principal_variation.front(); }
 		}
-		return best_move;
+		return principal_variation.front();
 	}
 }

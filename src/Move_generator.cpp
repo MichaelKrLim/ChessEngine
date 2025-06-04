@@ -60,8 +60,8 @@ namespace
 		return reachable_squares;
 	}
 
-	template <Moves_type moves_type>
-	void pawn_moves(fixed_vector_t& legal_moves, const Bitboard& pawns_bb, const Bitboard& occupied_squares, const Side& active_player, const Bitboard& current_side_occupied_squares, const std::optional<Position>& en_passant_target_square, const Position& king_square = Position{-1, -1}, const Bitboard& pinned_pieces = {}, const std::function<bool(const Move&)>& satisfies_check_requirements = [](const Move&){ return true; })
+	template <Moves_type moves_type, typename T>
+	void pawn_moves(fixed_vector_t& legal_moves, const Bitboard& pawns_bb, const Bitboard& occupied_squares, const Side& active_player, const Bitboard& current_side_occupied_squares, const std::optional<Position>& en_passant_target_square, const T& satisfies_check_requirements, const Position& king_square = Position{-1, -1}, const Bitboard& pinned_pieces = {})
 	{
 		const auto rank_move = 8;
 		const bool is_white = active_player == Side::white? true:false;
@@ -138,7 +138,13 @@ namespace
 	}
 
 	template <Moves_type moves_type>
-	void knight_moves(fixed_vector_t& legal_moves, const Bitboard& knight_bb, const Bitboard& our_occupied_squares, const Bitboard& enemy_occupied_squares = {}, const std::function<bool(const Move&)>& satisfies_check_requirements = [](const Move&){ return true; })
+	void pawn_moves(fixed_vector_t& legal_moves, const Bitboard& pawns_bb, const Bitboard& occupied_squares, const Side& active_player, const Bitboard& current_side_occupied_squares, const std::optional<Position>& en_passant_target_square, const Position& king_square = Position{-1, -1}, const Bitboard& pinned_pieces = {})
+	{
+		pawn_moves<moves_type>(legal_moves, pawns_bb, occupied_squares, active_player, current_side_occupied_squares, en_passant_target_square, [](const Move& move){ return true; }, king_square, pinned_pieces);
+	}
+
+	template <Moves_type moves_type, typename T>
+	void knight_moves(fixed_vector_t& legal_moves, const Bitboard& knight_bb, const Bitboard& our_occupied_squares, const T& satisfies_check_requirements, const Bitboard& enemy_occupied_squares = {})
 	{
 		knight_bb.for_each_piece([&](const auto& origin_square)
 		{
@@ -158,6 +164,12 @@ namespace
 				}
 			});
 		});
+	}
+
+	template <Moves_type moves_type>
+	void knight_moves(fixed_vector_t& legal_moves, const Bitboard& knight_bb, const Bitboard& our_occupied_squares, const Bitboard& enemy_occupied_squares = {})
+	{
+		knight_moves<moves_type>(legal_moves, knight_bb, our_occupied_squares, [](const Move& move){ return true; }, enemy_occupied_squares);
 	}
 
 	template <Moves_type moves_type>
@@ -212,13 +224,13 @@ namespace
 		return attack_table[magic_index];
 	}
 
-	template <Moves_type moves_type>
-	void rook_moves(fixed_vector_t& legal_moves, const Bitboard& rook_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const Bitboard& pinned_pieces = {}, const Bitboard& enemy_occupied_squares = {}, const std::function<bool(const Move&)>& satisfies_check_requirements = [](const Move&){ return true; })
+	template <Moves_type moves_type, typename T>
+	void rook_moves(fixed_vector_t& legal_moves, const Bitboard& rook_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const T& satisfies_check_requirements, const Bitboard& pinned_pieces = {}, const Bitboard& enemy_occupied_squares = {})
 	{
 		rook_bb.for_each_piece([&](const Position& original_square)
 		{
 			const Bitboard rook_moves = rook_legal_moves_bb(original_square, occupied_squares) & ~current_sides_occupied_squares;
-			rook_moves.for_each_piece([&enemy_occupied_squares, &king_square, &legal_moves, &original_square, &pinned_pieces, &satisfies_check_requirements](const auto& destination_square)
+			rook_moves.for_each_piece([&](const auto& destination_square)
 			{
 				const bool move_stays_pinned = (original_square.rank_ == king_square.rank_ && destination_square.rank_ == king_square.rank_) || (original_square.file_ == king_square.file_ && destination_square.file_ == king_square.file_);
 				const Move current_move = Move{original_square, destination_square};
@@ -237,12 +249,18 @@ namespace
 	}
 
 	template <Moves_type moves_type>
-	void bishop_moves(fixed_vector_t& legal_moves, const Bitboard& bishop_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const Bitboard& pinned_pieces = {}, const Bitboard& enemy_occupied_squares = {}, const std::function<bool(const Move&)>& satisfies_check_requirements = [](const Move&){ return true; })
+	void rook_moves(fixed_vector_t& legal_moves, const Bitboard& rook_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const Bitboard& pinned_pieces = {}, const Bitboard& enemy_occupied_squares = {})
+	{
+		rook_moves<moves_type>(legal_moves, rook_bb, occupied_squares, current_sides_occupied_squares, king_square, [](const Move& move){ return true; }, pinned_pieces, enemy_occupied_squares);
+	}
+
+	template <Moves_type moves_type, typename T>
+	void bishop_moves(fixed_vector_t& legal_moves, const Bitboard& bishop_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const T& satisfies_check_requirements, const Bitboard& pinned_pieces = {}, const Bitboard& enemy_occupied_squares = {})
 	{
 		bishop_bb.for_each_piece([&](const Position& original_square)
 		{
 			const Bitboard bishop_moves = bishop_legal_moves_bb(original_square, occupied_squares) & ~current_sides_occupied_squares;
-			bishop_moves.for_each_piece([&enemy_occupied_squares, &king_square, &legal_moves, &original_square, &pinned_pieces, &satisfies_check_requirements](const auto& destination_square)
+			bishop_moves.for_each_piece([&](const auto& destination_square)
 			{
 				const bool move_stays_pinned = (original_square.diagonal_index() == king_square.diagonal_index() && destination_square.diagonal_index() == king_square.diagonal_index()) || (original_square.antidiagonal_index() == king_square.antidiagonal_index() && destination_square.antidiagonal_index() == king_square.antidiagonal_index());
 				const Move current_move = Move{original_square, destination_square};
@@ -261,10 +279,22 @@ namespace
 	}
 
 	template <Moves_type moves_type>
-	void queen_moves(fixed_vector_t& legal_moves, const Bitboard& queen_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const Bitboard& pinned_pieces = {}, const Bitboard& enemy_occupied_squares = {}, const std::function<bool(const Move&)>& satisfies_check_requirements = [](const Move&){ return true; })
+	void bishop_moves(fixed_vector_t& legal_moves, const Bitboard& bishop_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const Bitboard& pinned_pieces = {}, const Bitboard& enemy_occupied_squares = {})
 	{
-		bishop_moves<moves_type>(legal_moves, queen_bb, occupied_squares, current_sides_occupied_squares, king_square, pinned_pieces, enemy_occupied_squares, satisfies_check_requirements);
-		rook_moves<moves_type>(legal_moves, queen_bb, occupied_squares, current_sides_occupied_squares, king_square, pinned_pieces, enemy_occupied_squares, satisfies_check_requirements);
+		bishop_moves<moves_type>(legal_moves, bishop_bb, occupied_squares, current_sides_occupied_squares, king_square, [](const Move& move){ return true; }, pinned_pieces, enemy_occupied_squares);
+	}
+
+	template <Moves_type moves_type, typename T>
+	void queen_moves(fixed_vector_t& legal_moves, const Bitboard& queen_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const T& satisfies_check_requirements, const Bitboard& pinned_pieces = {}, const Bitboard& enemy_occupied_squares = {})
+	{
+		bishop_moves<moves_type>(legal_moves, queen_bb, occupied_squares, current_sides_occupied_squares, king_square, satisfies_check_requirements, pinned_pieces, enemy_occupied_squares);
+		rook_moves<moves_type>(legal_moves, queen_bb, occupied_squares, current_sides_occupied_squares, king_square, satisfies_check_requirements, pinned_pieces, enemy_occupied_squares);
+	}
+
+	template <Moves_type moves_type>
+	void queen_moves(fixed_vector_t& legal_moves, const Bitboard& queen_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const Bitboard& pinned_pieces = {}, const Bitboard& enemy_occupied_squares = {})
+	{
+		queen_moves<moves_type>(legal_moves, queen_bb, occupied_squares, current_sides_occupied_squares, king_square, [](const Move& move){ return true; }, pinned_pieces, enemy_occupied_squares);
 	}
 
 	[[nodiscard]] const Bitboard generate_pinned_pieces(const State& state, const Position& king_square) noexcept
@@ -370,12 +400,12 @@ namespace engine
 				return true; // !in_check
 		};
 		const Bitboard pinned_pieces = generate_pinned_pieces(state, king_square);
-		pawn_moves<moves_type>(legal_moves, pieces[Piece::pawn], occupied_squares, state.side_to_move, our_occupied_squares, state.en_passant_target_square, king_square, pinned_pieces, satisfies_check_requirements);
-		knight_moves<moves_type>(legal_moves, pieces[Piece::knight] & ~pinned_pieces, our_occupied_squares, enemy_occupied_squares, satisfies_check_requirements);
+		pawn_moves<moves_type>(legal_moves, pieces[Piece::pawn], occupied_squares, state.side_to_move, our_occupied_squares, state.en_passant_target_square, satisfies_check_requirements, king_square, pinned_pieces);
+		knight_moves<moves_type>(legal_moves, pieces[Piece::knight] & ~pinned_pieces, our_occupied_squares, satisfies_check_requirements, enemy_occupied_squares);
 
-		bishop_moves<moves_type>(legal_moves, pieces[Piece::bishop], occupied_squares, our_occupied_squares, king_square, pinned_pieces, enemy_occupied_squares, satisfies_check_requirements);
-		rook_moves<moves_type>(legal_moves, pieces[Piece::rook], occupied_squares, our_occupied_squares, king_square,  pinned_pieces, enemy_occupied_squares, satisfies_check_requirements);
-		queen_moves<moves_type>(legal_moves, pieces[Piece::queen], occupied_squares, our_occupied_squares, king_square, pinned_pieces, enemy_occupied_squares, satisfies_check_requirements);
+		bishop_moves<moves_type>(legal_moves, pieces[Piece::bishop], occupied_squares, our_occupied_squares, king_square,satisfies_check_requirements, pinned_pieces, enemy_occupied_squares);
+		rook_moves<moves_type>(legal_moves, pieces[Piece::rook], occupied_squares, our_occupied_squares, king_square, satisfies_check_requirements,  pinned_pieces, enemy_occupied_squares);
+		queen_moves<moves_type>(legal_moves, pieces[Piece::queen], occupied_squares, our_occupied_squares, king_square, satisfies_check_requirements, pinned_pieces, enemy_occupied_squares);
 		return legal_moves;
 	}
 

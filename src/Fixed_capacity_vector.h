@@ -3,7 +3,6 @@
 
 #include <array>
 #include <concepts>
-#include <stdexcept>
 #include <type_traits>
 
 template <typename T, std::size_t size_v> requires (std::is_trivially_destructible_v<T> && std::default_initializable<T>)
@@ -11,15 +10,23 @@ class Fixed_capacity_vector
 {
 	public:
 
-	constexpr T& operator[](const std::size_t& index) const noexcept { return data_[index]; }
+	constexpr T& operator[](const std::size_t index) noexcept
+	{
+		if(index >= used_capacity_)
+			used_capacity_ = index+1;
+		return data_[index];
+	}
+
+	constexpr const T& operator[](const std::size_t index) const noexcept { return data_[index]; }
+
+	constexpr T& front() noexcept { return data_[0]; }
+
+	constexpr T& back() noexcept { return data_[used_capacity_-1]; }
 
 	constexpr std::size_t size() const noexcept { return used_capacity_; };
 
 	constexpr void push_back(const T& value)
 	{
-		if(used_capacity_>=size_v)
-			throw std::out_of_range{"Pushed element beyond capacity"};
-
 		data_[used_capacity_++]=value;
 	}
 
@@ -58,7 +65,7 @@ class Fixed_capacity_vector
 	private:
 
 	std::size_t used_capacity_{0};
-	std::array<T, size_v> data_{};
+	std::array<T, size_v> data_;
 };
 
 #endif // Fixed_capacity_vector_h_INCLUDED
