@@ -17,8 +17,6 @@ class Fixed_capacity_vector
 		return data_[index];
 	}
 
-	constexpr const T& operator[](const std::size_t index) const noexcept { return data_[index]; }
-
 	constexpr T& front() noexcept { return data_[0]; }
 
 	constexpr T& back() noexcept { return data_[used_capacity_-1]; }
@@ -28,6 +26,11 @@ class Fixed_capacity_vector
 	constexpr void push_back(const T& value)
 	{
 		data_[used_capacity_++]=value;
+	}
+
+	constexpr void pop_back()
+	{
+		--used_capacity_;
 	}
 
 	constexpr void erase_if(const auto& predicate) noexcept
@@ -45,9 +48,14 @@ class Fixed_capacity_vector
 		used_capacity_ = new_index;
 	}
 
+	constexpr void insert(const auto& pos, const auto& r_begin, const auto& r_end) noexcept
+	{
+		used_capacity_ += std::distance(r_begin, r_end);
+		std::copy(r_begin, r_end, pos);
+	}
+
 	constexpr void clear() noexcept
 	{
-		data_ = {};
 		used_capacity_ = 0;
 	}
 

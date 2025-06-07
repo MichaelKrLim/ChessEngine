@@ -11,24 +11,20 @@
 
 namespace engine
 {
-	enum class Move_type
-	{
-		normal = 0,
-		promotion = 1,
-		en_passant = 2,
-		castling = 3
-	};
+	enum class Is_capture { yes, no };
 
 	class Move
 	{
 		public:
 
 		constexpr Move() = default;
-		constexpr Move(Position current_square, Position desired_square)
+		constexpr Move(Position current_square, Position desired_square, Is_capture is_capture = Is_capture::no)
 		{
 			move_data_ |= (to_index(current_square)<<6) | to_index(desired_square);
+			if(is_capture == Is_capture::yes)
+				move_data_ |= (1U << 15);
 		};
-		constexpr Move(Position current_square, Position desired_square, Piece piece_type) : Move(current_square, desired_square)
+		constexpr Move(Position current_square, Position desired_square, Piece piece_type, Is_capture is_capture = Is_capture::no) : Move(current_square, desired_square, is_capture)
 		{
 			move_data_ |= (1U<<14) | ((static_cast<std::uint16_t>(piece_type)-static_cast<std::uint16_t>(Piece::knight))<<12);
 		};
@@ -39,20 +35,21 @@ namespace engine
 		{
 			return Position((move_data_>>6) & (board_size*board_size-1));
 		}
-
 		constexpr Position destination_square() const
 		{
 			return Position(move_data_ & (board_size*board_size-1));
 		}
-
 		constexpr Piece promotion_piece() const
 		{
 			return static_cast<Piece>(((move_data_ >> 12) & 0b11) + static_cast<std::uint8_t>(Piece::knight));
 		}
-
 		constexpr bool is_promotion() const
 		{
 			return move_data_ & (1U << 14);
+		}
+		constexpr bool is_capture() const
+		{
+			return move_data_ & (1U << 15);
 		}
 
 		private:
@@ -63,6 +60,7 @@ namespace engine
 		// bits 6-11, origin square
 		// bits 12-13, promotion piece type, (Piece::, from knight to queen)
 		// bit 14 promotion flag
+		// bit 15 capture flag
 		std::uint16_t move_data_{0};
 
 		friend std::ostream& operator<<(std::ostream& os, const Move& move);
