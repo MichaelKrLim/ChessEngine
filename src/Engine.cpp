@@ -223,9 +223,14 @@ namespace engine
 			{
 				const auto lhs_victim_value = std::to_underlying(state.piece_at(lhs.destination_square(), other_side(state.side_to_move)).value());
 				const auto rhs_victim_value = std::to_underlying(state.piece_at(rhs.destination_square(), other_side(state.side_to_move)).value());
+				if(lhs_victim_value < rhs_victim_value)
+					return false;
+				if(lhs_victim_value > rhs_victim_value)
+					return true;
+
 				const auto lhs_attacker_value = std::to_underlying(state.piece_at(lhs.from_square(), state.side_to_move).value());
 				const auto rhs_attacker_value = std::to_underlying(state.piece_at(rhs.from_square(), state.side_to_move).value());
-				if(lhs_victim_value-lhs_attacker_value > rhs_victim_value-rhs_attacker_value)
+				if(lhs_attacker_value < rhs_attacker_value)
 					return true;
 				return false;
 			};
@@ -266,21 +271,24 @@ namespace engine
 
 			Move best_move;
 			double best_score{-std::numeric_limits<double>::infinity()};
-			std::optional<Fixed_capacity_vector<Move, 256>> best_child_pv;
+			std::array<Fixed_capacity_vector<Move, 256>, 2> child_pvs;
+			int best_child_pv_index{0};
 			for(const auto& move : all_legal_moves)
 			{
 				if(stop_searching())
 					throw timeout{};
 
+				const auto inferior_child_pv_index = (best_child_pv_index+1)%2;
+				auto& inferior_child_pv = child_pvs[inferior_child_pv_index];
+				inferior_child_pv.clear();
 				state.make(move);
-				Fixed_capacity_vector<Move, 256> child_pv;
-				double score = -rec(remaining_depth-1, extended_depth, nodes, depth, child_pv, -beta, -alpha);
+				double score = -rec(remaining_depth-1, extended_depth, nodes, depth, inferior_child_pv, -beta, -alpha);
 				state.unmove();
 				if(score > best_score)
 				{
 					best_score = score;
 					best_move = move;
-					best_child_pv = std::move(child_pv);
+					best_child_pv_index = inferior_child_pv_index;
 				}
 				if(score > alpha)
 				{
@@ -298,11 +306,11 @@ namespace engine
 					return 0.0;
 			}
 
-			if(best_child_pv)
+			if(const auto& best_child_pv = child_pvs[best_child_pv_index]; !best_child_pv.empty())
 			{
 				pv.clear();
 				pv.push_back(best_move);
-				pv.insert(pv.end(), best_child_pv->begin(), best_child_pv->end());
+				pv.insert(pv.end(), best_child_pv.begin(), best_child_pv.end());
 			}
 
 			transposition_table.insert(Transposition_data
