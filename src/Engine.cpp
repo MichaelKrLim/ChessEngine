@@ -223,14 +223,9 @@ namespace engine
 			{
 				const auto lhs_victim_value = std::to_underlying(state.piece_at(lhs.destination_square(), other_side(state.side_to_move)).value());
 				const auto rhs_victim_value = std::to_underlying(state.piece_at(rhs.destination_square(), other_side(state.side_to_move)).value());
-				if(lhs_victim_value < rhs_victim_value)
-					return false;
-				if(lhs_victim_value > rhs_victim_value)
-					return true;
-
 				const auto lhs_attacker_value = std::to_underlying(state.piece_at(lhs.from_square(), state.side_to_move).value());
 				const auto rhs_attacker_value = std::to_underlying(state.piece_at(rhs.from_square(), state.side_to_move).value());
-				if(lhs_attacker_value < rhs_attacker_value)
+				if(lhs_victim_value-lhs_attacker_value > rhs_victim_value-rhs_attacker_value)
 					return true;
 				return false;
 			};

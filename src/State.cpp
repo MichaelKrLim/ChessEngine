@@ -341,24 +341,14 @@ void State::unmove() noexcept
 	{
 		if(was_en_passant)
 		{
-			const auto direction = was_whites_move? 1 : -1;
-			const Position destination_square = move.destination_square();
-			const Position pawn_to_return = Position{destination_square.rank_-direction, destination_square.file_};
+			const auto direction = was_whites_move? 1:-1;
+			const Position pawn_to_return = Position{previous_move_destination.rank_-direction, previous_move_destination.file_};
 			current_side_to_move.pieces[Piece::pawn].add_piece(pawn_to_return);
 		}
 		side_to_unmove.pieces[moved_piece].move_piece(move.destination_square(), move.from_square());
 	}
 	if(captured_piece)
-	{
-		if(was_en_passant)
-		{
-			const int pawn_direction = was_whites_move ? 1 : -1;
-			const Position captured_pawn_square{move.destination_square().rank_-pawn_direction, move.destination_square().file_};
-			current_side_to_move.pieces[captured_piece.value()].add_piece(captured_pawn_square);
-		}
-		else
-			current_side_to_move.pieces[captured_piece.value()].add_piece(move.destination_square());
-	}
+		current_side_to_move.pieces[captured_piece.value()].add_piece(move.destination_square());
 	side_to_unmove.castling_rights = old_castling_rights;
 	side_to_move = last_moved_side;
 	enemy_attack_map = attack_map;
