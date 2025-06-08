@@ -121,12 +121,11 @@ namespace
 			double total{0};
 			for(const auto& piece : all_pieces)
 			{
-				for(std::uint8_t index{0}; index<board_size*board_size; ++index)
+				const auto& piece_bb = state.sides[side].pieces[piece];
+				piece_bb.for_each_piece([&](const Position& current_square)
 				{
-					const Position current_square{index};
-					if(!is_free(current_square, state.sides[side].pieces[piece])) [[unlikely]]
-						total += weightmaps[side][piece][index] + piece_values[piece];
-				}
+					total += weightmaps[side][piece][to_index(current_square)]+piece_values[piece];
+				});
 			}
 			return total;
 		};
@@ -271,24 +270,44 @@ namespace engine
 
 			Move best_move;
 			double best_score{-std::numeric_limits<double>::infinity()};
-			std::array<Fixed_capacity_vector<Move, 256>, 2> child_pvs;
-			int best_child_pv_index{0};
+			bool found_move{false};
+			class
+			{
+				public:
+
+				void invert_best_pv_index()
+				{
+					best_index+=1;
+					best_index%=2;
+				}
+				auto& best_child_pv()
+				{
+					return child_pvs[best_index];
+				}
+				auto& inferior_child_pv()
+				{
+					return child_pvs[(best_index+1)%2];
+				}
+
+				private:
+
+				unsigned best_index{0};
+				std::array<Fixed_capacity_vector<Move, 256>, 2> child_pvs{};
+			} child_pvs;
 			for(const auto& move : all_legal_moves)
 			{
 				if(stop_searching())
 					throw timeout{};
 
-				const auto inferior_child_pv_index = (best_child_pv_index+1)%2;
-				auto& inferior_child_pv = child_pvs[inferior_child_pv_index];
-				inferior_child_pv.clear();
 				state.make(move);
-				double score = -rec(remaining_depth-1, extended_depth, nodes, depth, inferior_child_pv, -beta, -alpha);
+				double score = -rec(remaining_depth-1, extended_depth, nodes, depth, child_pvs.inferior_child_pv(), -beta, -alpha);
 				state.unmove();
 				if(score > best_score)
 				{
+					found_move = true;
 					best_score = score;
 					best_move = move;
-					best_child_pv_index = inferior_child_pv_index;
+					child_pvs.invert_best_pv_index();
 				}
 				if(score > alpha)
 				{
@@ -306,11 +325,11 @@ namespace engine
 					return 0.0;
 			}
 
-			if(const auto& best_child_pv = child_pvs[best_child_pv_index]; !best_child_pv.empty())
+			if(found_move)
 			{
 				pv.clear();
 				pv.push_back(best_move);
-				pv.insert(pv.end(), best_child_pv.begin(), best_child_pv.end());
+				pv.insert(pv.end(), child_pvs.best_child_pv().begin(), child_pvs.best_child_pv().end());
 			}
 
 			transposition_table.insert(Transposition_data
