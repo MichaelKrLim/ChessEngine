@@ -60,7 +60,6 @@ namespace engine
 		// bits 6-11, origin square
 		// bits 12-13, promotion piece type, (Piece::, from knight to queen)
 		// bit 14 promotion flag
-		// bit 15 capture flag
 		std::uint16_t move_data_{0};
 
 		friend std::ostream& operator<<(std::ostream& os, const Move& move);

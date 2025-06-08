@@ -3,13 +3,13 @@
 
 #include <array>
 #include <type_traits>
+#include <utility>
 
 template <typename enum_type, typename mapped_type, std::size_t number_of_values>
 	requires std::is_enum_v<enum_type> //&& std::is_default_constructible_v<mapped_type>
 class Enum_map
 {
 	public:
-	using underlying=std::underlying_type_t<enum_type>;
 
 	static constexpr auto initialized_with(const mapped_type& value) noexcept
 	{
@@ -21,8 +21,8 @@ class Enum_map
 		return create(std::make_index_sequence<number_of_values>{});
 	}
 
-	constexpr auto& operator[](enum_type v) noexcept { return data[static_cast<underlying>(v)]; }
-	constexpr const auto& operator[](enum_type v) const noexcept { return data[static_cast<underlying>(v)]; }
+	constexpr auto& operator[](enum_type v) noexcept { return data[std::to_underlying(v)]; }
+	constexpr const auto& operator[](enum_type v) const noexcept { return data[std::to_underlying(v)]; }
 
 	constexpr auto begin() noexcept { return data.begin(); }
 	constexpr auto end() noexcept { return data.end(); }

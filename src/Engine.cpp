@@ -10,7 +10,6 @@
 #include <array>
 #include <chrono>
 #include <cstdint>
-#include <cstdio>
 #include <limits>
 
 namespace
@@ -220,21 +219,54 @@ namespace engine
 					return cache_result->eval;
 			}
 
-			const auto move_priority = [&](const Move& move)
+			const auto most_valuable_vicitim_least_valuable_attacker = [&](const Move& lhs, const Move& rhs)
 			{
-				int score{0};
-				if(cache_result && move == cache_result->best_move)
-					score += 10000;
-				const auto pv_index = depth - remaining_depth;
-				if(pv_index < principal_variation.size() && move == principal_variation[pv_index])
-					score += 5000;
-				return score;
+				const auto lhs_victim_value = std::to_underlying(state.piece_at(lhs.destination_square(), other_side(state.side_to_move)).value());
+				const auto rhs_victim_value = std::to_underlying(state.piece_at(rhs.destination_square(), other_side(state.side_to_move)).value());
+				if(lhs_victim_value < rhs_victim_value)
+					return false;
+				if(lhs_victim_value > rhs_victim_value)
+					return true;
+
+				const auto lhs_attacker_value = std::to_underlying(state.piece_at(lhs.from_square(), state.side_to_move).value());
+				const auto rhs_attacker_value = std::to_underlying(state.piece_at(rhs.from_square(), state.side_to_move).value());
+				if(lhs_attacker_value < rhs_attacker_value)
+					return true;
+				return false;
 			};
 
 			auto all_legal_moves = generate_moves<Moves_type::legal>(state);
 			std::ranges::sort(all_legal_moves, [&](const Move& lhs, const Move& rhs)
 			{
-				return move_priority(lhs) > move_priority(rhs);	
+				if(cache_result)
+				{
+					const auto cached_move = cache_result->best_move;
+					const bool lhs_is_cached_move = lhs == cached_move,
+					rhs_is_cached_move = rhs == cached_move;
+					if(lhs_is_cached_move)
+						return true;
+					if(rhs_is_cached_move)
+						return false;
+				}
+				if(const auto pv_index = depth - remaining_depth; pv_index < principal_variation.size())
+				{
+					const auto pv_move = principal_variation[pv_index];
+					const bool lhs_is_pv_move = lhs == pv_move,
+					rhs_is_pv_move = rhs == pv_move;
+					if(lhs_is_pv_move)
+						return true;
+					if(rhs_is_pv_move)
+						return false;
+				}
+				const bool lhs_is_capture = !is_free(lhs.destination_square(), state.sides[other_side(state.side_to_move)].occupied_squares()),
+				rhs_is_capture = !is_free(rhs.destination_square(), state.sides[other_side(state.side_to_move)].occupied_squares());
+				if(lhs_is_capture && rhs_is_capture)
+					return most_valuable_vicitim_least_valuable_attacker(lhs, rhs);
+				if(lhs_is_capture)
+					return true;
+				if(rhs_is_capture)
+					return false;
+				return false;
 			});
 
 			Move best_move;
@@ -334,7 +366,7 @@ namespace engine
 				unsigned extended_depth{0},
 				nodes{0};
 				Fixed_capacity_vector<Move, 256> current_pv;
-				const double eval = nega_max(current_depth, extended_depth, nodes, current_depth, current_pv);
+				const double eval = nega_max(current_depth, extended_depth, nodes, current_depth, current_pv)*(state.side_to_move==Side::black?-1:1);
 				principal_variation = current_pv;
 				output_info(eval, nodes, current_depth, extended_depth, principal_variation);
 				if(std::abs(eval) == std::numeric_limits<double>::infinity())
