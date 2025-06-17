@@ -8,14 +8,14 @@ include(cmake/CPM.cmake)
 
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
-set(CMAKE_CXX_FLAGS "-Wall -Werror -pedantic -O3")
+set(CMAKE_CXX_FLAGS "-Wall -Werror -funroll-loops -pedantic -O3")
 
 # for windows
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 
 set(common_sources
-	src/Engine.h src/Engine.cpp
+	src/Engine.h
 	src/Position.h
 	src/Constants.h
 	src/Move.h
@@ -52,12 +52,6 @@ if(ENGINE_BUILD_TESTS)
 		GIT_REPOSITORY https://github.com/doctest/doctest.git
 		GIT_TAG v2.4.11
 	)
-	CPMAddPackage(
-		NAME perftree
-		GIT_REPOSITORY https://github.com/agausmann/perftree.git
-		GIT_TAG 0f5bc12
-		DOWNLOAD_ONLY TRUE
-	)
 	file(GLOB test_sources CONFIGURE_DEPENDS src/*.tests.cpp)
 	add_executable(tests
 		${test_sources}
@@ -76,20 +70,7 @@ if(ENGINE_BUILD_TESTS)
 	set_property(TARGET tests PROPERTY CXX_EXTENSIONS OFF)
 	set_property(TARGET perft PROPERTY CXX_STANDARD 23)
 	set_property(TARGET perft PROPERTY CXX_EXTENSIONS OFF)
-	# get perftree
-	set(RUST_PACKAGE_DIRS "${CMAKE_BINARY_DIR}/_deps")
-	add_custom_target(
-		build_rust
-		COMMAND cargo build --bin perftree --release --manifest-path=${RUST_PACKAGE_DIRS}/perftree-src/Cargo.toml
-		WORKING_DIRECTORY ${RUST_PACKAGE_DIRS}/perftree-build
-		COMMENT "Building perftree..."
-	)
-	add_custom_command(
-		TARGET build_rust POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy ${RUST_PACKAGE_DIRS}/perftree-src/target/release/perftree ${CMAKE_BINARY_DIR}
-		COMMENT "Copying Rust executable to project directory"
-	)
-	add_dependencies(tests build_rust perft generate_magics)
+	add_dependencies(tests perft generate_magics)
 endif()
 
 add_executable(${PROJECT_NAME} src/main.cpp
