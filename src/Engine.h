@@ -3,7 +3,6 @@
 
 #include "Bitboard.h"
 #include "Constants.h"
-#include "Engine.h"
 #include "Fixed_capacity_vector.h"
 #include "Move.h"
 #include "Move_generator.h"
@@ -15,12 +14,11 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
-#include <cstdint>
 #include <limits>
 
 namespace engine
 {
-	Move generate_best_move(State state, const uci::Search_options& search_options)
+	inline Move generate_best_move(State state, const uci::Search_options& search_options)
 	{
 		const auto stop_searching = [&search_options, start_time=std::chrono::high_resolution_clock::now(), side=state.side_to_move](const std::optional<unsigned> current_depth = std::nullopt)
 		{
@@ -82,6 +80,7 @@ namespace engine
 		const auto nega_max = [&](this auto&& rec, const unsigned remaining_depth, unsigned& extended_depth, unsigned& nodes, const unsigned& depth, Fixed_capacity_vector<Move, 256>& pv, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
 		{
 			++nodes;
+			pv.clear();
 			if(state.repetition_history[state.zobrist_hash] >= 3)
 				return 0.0;
 			else if(remaining_depth <= 0)
@@ -94,7 +93,10 @@ namespace engine
 			if(cache_result && cache_result->remaining_depth >= remaining_depth)
 			{
 				if(cache_result->search_result_type == Search_result_type::exact)
+				{
+					pv.push_back(cache_result->best_move);
 					return cache_result->eval;
+				}
 				if(cache_result->search_result_type == Search_result_type::lower_bound)
 					alpha = std::max(alpha, cache_result->eval);
 				if(cache_result->search_result_type == Search_result_type::upper_bound)
@@ -212,7 +214,6 @@ namespace engine
 
 			if(found_move)
 			{
-				pv.clear();
 				pv.push_back(best_move);
 				pv.insert(pv.end(), child_pvs.best_child_pv().begin(), child_pvs.best_child_pv().end());
 			}

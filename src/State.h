@@ -8,9 +8,9 @@
 #include "Position.h"
 
 #include <array>
+#include <flat_map>
 #include <optional>
 #include <stack>
-#include <unordered_map>
 #include <vector>
 
 namespace engine
@@ -200,7 +200,7 @@ namespace engine
 		Bitboard enemy_attack_map;
 		std::optional<Position> en_passant_target_square{std::nullopt};
 		std::uint64_t zobrist_hash;
-		std::unordered_map<std::uint64_t, unsigned> repetition_history{};
+		std::flat_map<std::uint64_t, unsigned> repetition_history;
 		std::stack<State_delta> history{};
 		double evaluation;
 

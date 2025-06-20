@@ -365,7 +365,8 @@ void State::unmove() noexcept
 	side_to_move = last_moved_side;
 	enemy_attack_map = attack_map;
 	en_passant_target_square = previous_en_passant_target_square;
-	--repetition_history[zobrist_hash];
+	if(--repetition_history[zobrist_hash]==0)
+		repetition_history.erase(zobrist_hash);
 	zobrist_hash = old_zobrist_hash;
 	evaluation = old_evaluation;
 }
