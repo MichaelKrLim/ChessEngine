@@ -56,7 +56,7 @@ namespace engine
 
 			const double& stand_pat = state.evaluation*(state.side_to_move==Side::white? 1:-1);
 			double best_score = stand_pat;
-			if(stand_pat >= beta || additional_depth >= 3)
+			if(stand_pat >= beta)
 				return stand_pat;
 			if(alpha < stand_pat)
 				alpha = stand_pat;
