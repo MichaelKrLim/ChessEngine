@@ -184,13 +184,25 @@ namespace engine
 				unsigned best_index{0};
 				std::array<Fixed_capacity_vector<Move, 256>, 2> child_pvs{};
 			} child_pvs;
-			for(const auto& move : all_legal_moves)
+			for(std::size_t move_index{0}; move_index<all_legal_moves.size(); ++move_index)
 			{
+				const auto& move = all_legal_moves[move_index];
+
 				if(stop_searching())
 					throw timeout{};
 
+				unsigned reduction{1};
+				if(move_index>1)
+				{
+					reduction+=move_index<=6? 1:remaining_depth/3;
+					if(reduction>remaining_depth)
+						reduction=remaining_depth;
+				}
+
 				state.make(move);
-				double score = -rec(remaining_depth-1, extended_depth, nodes, depth, child_pvs.inferior_child_pv(), -beta, -alpha);
+				double score = -rec(remaining_depth-reduction, extended_depth, nodes, depth, child_pvs.inferior_child_pv(), -beta, -alpha);
+				if(score>alpha && reduction>1)
+					score = -rec(remaining_depth-1, extended_depth, nodes, depth, child_pvs.inferior_child_pv(), -beta, -alpha);
 				state.unmove();
 				if(score > best_score)
 				{
