@@ -1,3 +1,4 @@
+#include "Chess_data.h"
 #include "Move.h"
 #include "Move_generator.h"
 #include "State.h"
@@ -69,7 +70,7 @@ void State::parse_fen(const std::string_view fen) noexcept
 				const Piece piece_type = to_piece(std::tolower(fen_section[i]));
 				const std::uint64_t mask = (1ULL << to_shift(board_index));
 				sides[side].pieces[piece_type] |= mask;
-				evaluation+=piece_values[side][piece_type]+weightmaps[side][piece_type][board_index];
+				evaluation+=chess_data::piece_values[side][piece_type]+chess_data::weightmaps[side][piece_type][board_index];
 			};
 			if(fen_section[i] == '/')
 				continue;
@@ -164,7 +165,7 @@ void State::move_and_hash(const Position& from_square, const Position& destinati
 	sides[side_to_move].pieces[piece_type_to_move].move_piece(from_square, destination_square);
 	zobrist::invert_piece_at(zobrist_hash, from_square, piece_type_to_move, side_to_move);
 	zobrist::invert_piece_at(zobrist_hash, destination_square, piece_type_to_move, side_to_move);
-	const auto& weightmap=weightmaps[side_to_move][piece_type_to_move];
+	const auto& weightmap=chess_data::weightmaps[side_to_move][piece_type_to_move];
 	const auto delta_positional_value{weightmap[to_index(destination_square)]-weightmap[to_index(from_square)]};
 	evaluation+=delta_positional_value;
 }
@@ -191,7 +192,7 @@ void State::make(const Move& move) noexcept
 	const auto handle_capture = [this, &opposite_side, &piece_to_capture, &destination_square, enemy_back_rank=side_to_move == Side::white? 7 : 0]()
 	{
 		opposite_side.pieces[piece_to_capture.value()].remove_piece(destination_square);
-		evaluation-=piece_values[other_side(side_to_move)][piece_to_capture.value()]+weightmaps[other_side(side_to_move)][piece_to_capture.value()][to_index(destination_square)];
+		evaluation-=chess_data::piece_values[other_side(side_to_move)][piece_to_capture.value()]+chess_data::weightmaps[other_side(side_to_move)][piece_to_capture.value()][to_index(destination_square)];
 		zobrist::invert_piece_at(zobrist_hash, destination_square, piece_to_capture.value(), other_side(side_to_move));
 		if(piece_to_capture == Piece::rook)
 		{
@@ -246,8 +247,8 @@ void State::make(const Move& move) noexcept
 	{
 		const auto promotion_piece = move.promotion_piece();
 		side.pieces[Piece::pawn].remove_piece(from_square);
-		const auto& weightmap=weightmaps[side_to_move];
-		const auto& side_piece_values=piece_values[side_to_move];
+		const auto& weightmap=chess_data::weightmaps[side_to_move];
+		const auto& side_piece_values=chess_data::piece_values[side_to_move];
 		evaluation-=side_piece_values[Piece::pawn]+weightmap[Piece::pawn][to_index(from_square)];
 		zobrist::invert_piece_at(zobrist_hash, from_square, Piece::pawn, side_to_move);
 		side.pieces[promotion_piece].add_piece(destination_square);
@@ -268,7 +269,7 @@ void State::make(const Move& move) noexcept
 		{
 			const Position capture_square{destination_square.rank_-pawn_direction, destination_square.file_};
 			opposite_side.pieces[Piece::pawn].remove_piece(capture_square);
-			evaluation-=piece_values[other_side(side_to_move)][Piece::pawn]+weightmaps[other_side(side_to_move)][Piece::pawn][to_index(capture_square)];
+			evaluation-=chess_data::piece_values[other_side(side_to_move)][Piece::pawn]+chess_data::weightmaps[other_side(side_to_move)][Piece::pawn][to_index(capture_square)];
 			zobrist::invert_piece_at(zobrist_hash, capture_square, Piece::pawn, other_side(side_to_move));
 		}
 		move_and_hash(from_square, destination_square, piece_type);

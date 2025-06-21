@@ -2,6 +2,7 @@
 #define Engine_h_INCLUDED
 
 #include "Bitboard.h"
+#include "Chess_data.h"
 #include "Constants.h"
 #include "Fixed_capacity_vector.h"
 #include "Move.h"
@@ -63,6 +64,8 @@ namespace engine
 
 			for(const auto& move : generate_moves<Moves_type::noisy>(state))
 			{
+				if(std::optional<Piece> piece_to_capture=state.piece_at(move.destination_square(), other_side(state.side_to_move)); piece_to_capture && stand_pat+chess_data::piece_values[Side::white][piece_to_capture.value()]<=alpha)
+					continue;
 				state.make(move);
 				const double score = -rec(-beta, -alpha, extended_depth, nodes, additional_depth+1);
 				state.unmove();
