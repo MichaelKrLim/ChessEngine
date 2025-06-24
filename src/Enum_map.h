@@ -6,19 +6,17 @@
 #include <utility>
 
 template <typename enum_type, typename mapped_type, std::size_t number_of_values>
-	requires std::is_enum_v<enum_type> //&& std::is_default_constructible_v<mapped_type>
+	requires std::is_enum_v<enum_type> && std::is_default_constructible_v<mapped_type>
 class Enum_map
 {
 	public:
 
-	static constexpr auto initialized_with(const mapped_type& value) noexcept
+	constexpr static Enum_map initialised_with(const mapped_type& value) noexcept
 	{
-		const auto create = [&]<std::size_t... indices>(std::index_sequence<indices...>)
-		{
-			return Enum_map{{[&](auto){ return value; }(indices)...}};
-		};
-
-		return create(std::make_index_sequence<number_of_values>{});
+		Enum_map result;
+		for(std::size_t i{0}; i<number_of_values; ++i)
+			result[i]=value;
+		return result;
 	}
 
 	constexpr auto& operator[](enum_type v) noexcept { return data[std::to_underlying(v)]; }
@@ -37,7 +35,7 @@ class Enum_map
 
 	constexpr friend auto operator<=>(const Enum_map&, const Enum_map&) = default;
 
-	std::array<mapped_type,number_of_values> data{};
+	std::array<mapped_type, number_of_values> data{};
 };
 
 template <typename enum_type, typename mapped_type>
