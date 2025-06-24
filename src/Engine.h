@@ -104,7 +104,7 @@ namespace engine
 					alpha = std::max(alpha, cache_result->eval);
 				if(cache_result->search_result_type == Search_result_type::upper_bound)
 					beta = std::min(beta, cache_result->eval);
-				if(alpha >= beta)
+				if(alpha>=beta)
 					return cache_result->eval;
 			}
 
@@ -184,6 +184,7 @@ namespace engine
 				unsigned best_index{0};
 				std::array<Fixed_capacity_vector<Move, 256>, 2> child_pvs{};
 			} child_pvs;
+			bool raised_alpha{false};
 			for(std::size_t move_index{0}; move_index<all_legal_moves.size(); ++move_index)
 			{
 				const auto& move = all_legal_moves[move_index];
@@ -200,21 +201,42 @@ namespace engine
 				}
 
 				state.make(move);
-				double score = -rec(remaining_depth-reduction, extended_depth, nodes, depth, child_pvs.inferior_child_pv(), -beta, -alpha);
-				if(score>alpha && reduction>1)
-					score = -rec(remaining_depth-1, extended_depth, nodes, depth, child_pvs.inferior_child_pv(), -beta, -alpha);
-				state.unmove();
-				if(score > best_score)
+
+				struct { double alpha, beta; } null_window{alpha, alpha+1};
+				const auto scout_potential_improvement = [&](const unsigned reduction) -> bool
 				{
-					found_move = true;
-					best_score = score;
-					best_move = move;
+					double null_window_search_score{-rec(remaining_depth-reduction, extended_depth, nodes, depth, child_pvs.inferior_child_pv(), -null_window.beta, -null_window.alpha)};
+					Search_result_type null_window_result{compute_type(null_window.alpha, null_window.beta, null_window_search_score)};
+					return null_window_result==Search_result_type::lower_bound;
+				};
+
+				if(reduction!=1 && !scout_potential_improvement(reduction))
+				{
+					state.unmove();
+					continue;
+				}
+
+				if(const unsigned no_reduction{1}; raised_alpha && remaining_depth>2 && beta-alpha>1 && !scout_potential_improvement(no_reduction))
+				{
+					state.unmove();
+					continue;
+				}
+
+				double score=-rec(remaining_depth-1, extended_depth, nodes, depth, child_pvs.inferior_child_pv(), -beta, -alpha);
+
+				state.unmove();
+				if(score>best_score)
+				{
+					found_move=true;
+					best_score=score;
+					best_move=move;
 					child_pvs.invert_best_pv_index();
 				}
-				if(score > alpha)
+				if(score>alpha)
 				{
-					alpha = score;
-					if(alpha >= beta)
+					raised_alpha=true;
+					alpha=score;
+					if(alpha>=beta)
 						break;
 				}
 			}
