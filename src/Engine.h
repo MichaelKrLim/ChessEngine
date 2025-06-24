@@ -15,7 +15,6 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
-#include <flat_set>
 #include <limits>
 
 namespace engine
@@ -84,22 +83,21 @@ namespace engine
 		{
 			public:
 
-			void insert_and_replace(const Move& move)
+			void insert_and_overwrite(const Move& move) noexcept
 			{
-				older_move=move;
-				std::swap(older_move, newer_move);
+				killer_moves[older_index]=move;
+				++older_index%=2; // (+1)%2 :)
 			}
 
-			[[nodiscard]] bool contains(const Move& move)
+			[[nodiscard]] bool contains(const Move& move) const noexcept
 			{
-				return older_move==move || newer_move==move;
+				return killer_moves.front()==move || killer_moves.back()==move;
 			}
 
 			private:
 
-			Move& older_move;
-			Move& newer_move;
-			std::pair<Move, Move> killer_moves;
+			std::size_t older_index{0};
+			std::array<Move, 2> killer_moves{};
 		};
 		Fixed_capacity_vector<Killer_move_storage, max_depth> killer_moves;
 		Fixed_capacity_vector<Move, 256> principal_variation;
@@ -160,6 +158,7 @@ namespace engine
 					if(rhs_is_cached_move)
 						return false;
 				}
+
 				if(const auto pv_index = depth - remaining_depth; pv_index < principal_variation.size())
 				{
 					const auto pv_move = principal_variation[pv_index];
@@ -170,14 +169,26 @@ namespace engine
 					if(rhs_is_pv_move)
 						return false;
 				}
+
 				const bool lhs_is_capture = !is_free(lhs.destination_square(), state.sides[other_side(state.side_to_move)].occupied_squares()),
-				rhs_is_capture = !is_free(rhs.destination_square(), state.sides[other_side(state.side_to_move)].occupied_squares());
+						   rhs_is_capture = !is_free(rhs.destination_square(), state.sides[other_side(state.side_to_move)].occupied_squares());
 				if(lhs_is_capture && rhs_is_capture)
 					return most_valuable_vicitim_least_valuable_attacker(lhs, rhs);
 				if(lhs_is_capture)
 					return true;
 				if(rhs_is_capture)
 					return false;
+
+				// non capture heuristics
+				const bool lhs_is_killer{killer_moves[remaining_depth].contains(lhs)},
+						   rhs_is_killer{killer_moves[remaining_depth].contains(rhs)};
+				if(lhs_is_killer && rhs_is_killer)
+					return false;
+				if(lhs_is_killer)
+					return true;
+				if(rhs_is_killer)
+					return false;
+
 				return false;
 			});
 
@@ -188,23 +199,25 @@ namespace engine
 			{
 				public:
 
-				void invert_best_pv_index()
+				void invert_best_pv_index() noexcept
 				{
 					best_index+=1;
 					best_index%=2;
 				}
-				auto& best_child_pv()
+
+				[[nodiscard]] auto& best_child_pv() noexcept
 				{
 					return child_pvs[best_index];
 				}
-				auto& inferior_child_pv()
+
+				[[nodiscard]] auto& inferior_child_pv() noexcept
 				{
 					return child_pvs[(best_index+1)%2];
 				}
 
 				private:
 
-				unsigned best_index{0};
+				std::size_t best_index{0};
 				std::array<Fixed_capacity_vector<Move, 256>, 2> child_pvs{};
 			} child_pvs;
 			bool raised_alpha{false};
@@ -223,12 +236,10 @@ namespace engine
 					if(reduction>remaining_depth)
 						reduction=remaining_depth;
 				}
-
 				if(in_check)
 					--reduction;
 
 				state.make(move);
-
 				struct { double alpha, beta; } null_window{alpha, alpha+1};
 				const auto scout_potential_improvement = [&](const unsigned reduction) -> bool
 				{
@@ -250,8 +261,8 @@ namespace engine
 				}
 
 				double score=-rec(remaining_depth-1, extended_depth, nodes, depth, child_pvs.inferior_child_pv(), -beta, -alpha);
-
 				state.unmove();
+
 				if(score>best_score)
 				{
 					found_move=true;
@@ -259,12 +270,16 @@ namespace engine
 					best_move=move;
 					child_pvs.invert_best_pv_index();
 				}
+
 				if(score>alpha)
 				{
 					raised_alpha=true;
 					alpha=score;
 					if(alpha>=beta)
+					{
+						killer_moves[remaining_depth].insert_and_overwrite(move);
 						break;
+					}
 				}
 			}
 
