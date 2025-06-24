@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <flat_set>
 #include <limits>
 
 namespace engine
@@ -79,6 +80,28 @@ namespace engine
 			return best_score;
 		};
 
+		class Killer_move_storage
+		{
+			public:
+
+			void insert_and_replace(const Move& move)
+			{
+				older_move=move;
+				std::swap(older_move, newer_move);
+			}
+
+			[[nodiscard]] bool contains(const Move& move)
+			{
+				return older_move==move || newer_move==move;
+			}
+
+			private:
+
+			Move& older_move;
+			Move& newer_move;
+			std::pair<Move, Move> killer_moves;
+		};
+		Fixed_capacity_vector<Killer_move_storage, max_depth> killer_moves;
 		Fixed_capacity_vector<Move, 256> principal_variation;
 		const auto nega_max = [&](this auto&& rec, const unsigned remaining_depth, unsigned& extended_depth, unsigned& nodes, const unsigned& depth, Fixed_capacity_vector<Move, 256>& pv, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
 		{

@@ -38,7 +38,7 @@ class Enum_map
 	std::array<mapped_type, number_of_values> data{};
 };
 
-template <typename enum_type, typename mapped_type>
-using Enum_map_from_size = Enum_map<enum_type, mapped_type, static_cast<std::size_t>(enum_type::size)>;
+template <typename enum_type, typename mapped_type> 
+using Enum_map_from_size = Enum_map<enum_type, mapped_type, std::to_underlying(enum_type::size)>;
 
 #endif // Enum_map_h_INCLUDED

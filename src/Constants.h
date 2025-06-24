@@ -37,6 +37,7 @@ namespace engine
 	white_en_passant_target_rank = 3,
 	black_en_passant_target_rank = 6,
 	max_legal_moves = 218,
+	max_depth = 64,
 	king_max_adjacent_squares = 6;
 
 	constexpr unsigned default_table_size{16};
