@@ -185,6 +185,7 @@ namespace engine
 				std::array<Fixed_capacity_vector<Move, 256>, 2> child_pvs{};
 			} child_pvs;
 			bool raised_alpha{false};
+			const bool in_check{state.in_check()};
 			for(std::size_t move_index{0}; move_index<all_legal_moves.size(); ++move_index)
 			{
 				const auto& move = all_legal_moves[move_index];
@@ -199,6 +200,9 @@ namespace engine
 					if(reduction>remaining_depth)
 						reduction=remaining_depth;
 				}
+
+				if(in_check)
+					--reduction;
 
 				state.make(move);
 
