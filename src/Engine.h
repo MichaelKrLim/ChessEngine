@@ -50,18 +50,18 @@ namespace engine
 		{
 			++nodes;
 			extended_depth = std::max(extended_depth, current_extended_depth);
-			
-			if(state.repetition_history[state.zobrist_hash] >= 3)
+
+			if(state.repetition_history[state.zobrist_hash]>=3)
 				return 0.0;
 			else if(stop_searching())
 				throw timeout{};
 
-			const double& stand_pat = state.evaluation*(state.side_to_move==Side::white? 1:-1);
-			double best_score = stand_pat;
-			if(stand_pat >= beta)
+			const double& stand_pat=state.evaluation*(state.side_to_move==Side::white? 1:-1);
+			double best_score=stand_pat;
+			if(stand_pat>=beta)
 				return stand_pat;
-			if(alpha < stand_pat)
-				alpha = stand_pat;
+			if(alpha<stand_pat)
+				alpha=stand_pat;
 
 			for(const auto& move : generate_moves<Moves_type::noisy>(state))
 			{
@@ -106,9 +106,10 @@ namespace engine
 		{
 			++nodes;
 			pv.clear();
+			auto all_legal_moves = generate_moves<Moves_type::legal>(state);
 			if(state.repetition_history[state.zobrist_hash] >= 3)
 				return 0.0;
-			else if(remaining_depth <= 0)
+			else if(remaining_depth <= 0 && !all_legal_moves.empty())
 				return quiescence_search(alpha, beta, extended_depth, current_extended_depth, nodes);
 			else if(stop_searching())
 				throw timeout{};
@@ -146,7 +147,6 @@ namespace engine
 				return false;
 			};
 
-			auto all_legal_moves = generate_moves<Moves_type::legal>(state);
 			std::ranges::sort(all_legal_moves, [&](const Move& lhs, const Move& rhs)
 			{
 				if(cache_result)
@@ -193,9 +193,8 @@ namespace engine
 				return false;
 			});
 
-			Move best_move;
+			Move best_move{};
 			double best_score{-std::numeric_limits<double>::infinity()};
-			bool found_move{false};
 			class
 			{
 				public:
@@ -275,7 +274,6 @@ namespace engine
 
 				if(score>best_score)
 				{
-					found_move=true;
 					best_score=score;
 					best_move=move;
 					child_pvs.invert_best_pv_index();
@@ -301,11 +299,12 @@ namespace engine
 					return 0.0;
 			}
 
-			if(found_move)
-			{
-				pv.push_back(best_move);
-				pv.insert(pv.end(), child_pvs.best_child_pv().begin(), child_pvs.best_child_pv().end());
-			}
+			if(best_move == Move{})
+				best_move=all_legal_moves.front();
+
+			pv.push_back(best_move);
+			const auto& child_pv{child_pvs.best_child_pv()};
+			pv.insert(pv.end(), child_pv.begin(), child_pv.end());
 
 			transposition_table.insert(Transposition_data
 			{
@@ -327,11 +326,14 @@ namespace engine
 				for(const auto& move : principal_variation)
 				{
 					if(!first) std::cout<<' ';
-					std::cout<<move;
 					first=false;
+					std::cout<<move;
 				}
 			};
-			std::print("info score cp {} nodes {} depth {} seldepth {} pv ", eval, nodes, current_depth, current_depth+extended_depth);
+			if(std::abs(eval) != std::numeric_limits<double>::infinity())
+				std::print("info score cp {} nodes {} depth {} seldepth {} pv ", eval, nodes, current_depth, current_depth+extended_depth);
+			else
+				std::print("info score cp {} nodes {} depth {} seldepth {} mate ", eval, nodes, current_depth, current_depth+extended_depth);
 			output_pv(principal_variation);
 			std::cout << "\n"; // std::println() soon!
 		};
@@ -364,8 +366,7 @@ namespace engine
 				principal_variation = current_pv;
 				output_info(eval, nodes, current_depth, extended_depth, principal_variation);
 				if(std::abs(eval) == std::numeric_limits<double>::infinity())
-					return principal_variation.front();
-				principal_variation.clear();
+					break;
 			}
 			catch(const timeout&) { break; }
 		}
