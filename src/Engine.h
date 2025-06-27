@@ -16,6 +16,7 @@
 #include <array>
 #include <chrono>
 #include <limits>
+#include <print>
 
 namespace engine
 {
@@ -45,11 +46,11 @@ namespace engine
 
 		enum class timeout {};
 
-		const auto quiescence_search = [&state, &stop_searching](this auto&& rec, double alpha, double beta, unsigned& extended_depth, unsigned& nodes, const unsigned additional_depth=1) -> double
+		const auto quiescence_search = [&state, &stop_searching](this auto&& rec, double alpha, double beta, unsigned& extended_depth, const unsigned& current_extended_depth, unsigned& nodes) -> double
 		{
 			++nodes;
-			extended_depth = std::max(extended_depth, additional_depth);
-
+			extended_depth = std::max(extended_depth, current_extended_depth);
+			
 			if(state.repetition_history[state.zobrist_hash] >= 3)
 				return 0.0;
 			else if(stop_searching())
@@ -67,7 +68,7 @@ namespace engine
 				if(std::optional<Piece> piece_to_capture=state.piece_at(move.destination_square(), other_side(state.side_to_move)); piece_to_capture && stand_pat+chess_data::piece_values[Side::white][piece_to_capture.value()]<=alpha)
 					continue;
 				state.make(move);
-				const double score = -rec(-beta, -alpha, extended_depth, nodes, additional_depth+1);
+				const double score = -rec(-beta, -alpha, extended_depth, current_extended_depth+1, nodes);
 				state.unmove();
 				if(score >= beta)
 					return score;
@@ -101,18 +102,18 @@ namespace engine
 		};
 		Fixed_capacity_vector<Killer_move_storage, max_depth> killer_moves;
 		Fixed_capacity_vector<Move, 256> principal_variation;
-		const auto nega_max = [&](this auto&& rec, const unsigned remaining_depth, unsigned& extended_depth, unsigned& nodes, const unsigned& depth, Fixed_capacity_vector<Move, 256>& pv, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
+		const auto nega_max = [&](this auto&& rec, const unsigned remaining_depth, unsigned& extended_depth, unsigned current_extended_depth, unsigned number_of_checks_in_current_line, unsigned& nodes, const unsigned& depth, Fixed_capacity_vector<Move, 256>& pv, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
 		{
 			++nodes;
 			pv.clear();
 			if(state.repetition_history[state.zobrist_hash] >= 3)
 				return 0.0;
 			else if(remaining_depth <= 0)
-				return quiescence_search(alpha, beta, extended_depth, nodes);
+				return quiescence_search(alpha, beta, extended_depth, current_extended_depth, nodes);
 			else if(stop_searching())
 				throw timeout{};
 
-			const double original_alpha = alpha, original_beta = beta;
+			const double original_alpha{alpha}, original_beta{beta};
 			const auto cache_result = transposition_table[state.zobrist_hash];
 			if(cache_result && cache_result->remaining_depth >= remaining_depth)
 			{
@@ -159,7 +160,7 @@ namespace engine
 						return false;
 				}
 
-				if(const auto pv_index = depth - remaining_depth; pv_index < principal_variation.size())
+				if(const auto pv_index=depth-remaining_depth; pv_index<principal_variation.size())
 				{
 					const auto pv_move = principal_variation[pv_index];
 					const bool lhs_is_pv_move = lhs == pv_move,
@@ -232,18 +233,27 @@ namespace engine
 				unsigned reduction{1};
 				if(move_index>1)
 				{
-					reduction+=move_index<=6? 1:remaining_depth/3;
+					if(move_index<=6)
+						++reduction;
+					else
+						reduction+=remaining_depth/3;
+
 					if(reduction>remaining_depth)
 						reduction=remaining_depth;
 				}
-				if(in_check)
+				if(in_check && number_of_checks_in_current_line <= 3)
+				{
 					--reduction;
-
+					++number_of_checks_in_current_line;
+				}
+				if(reduction!=1)
+					current_extended_depth+=reduction-1;
+				
 				state.make(move);
 				struct { double alpha, beta; } null_window{alpha, alpha+1};
 				const auto scout_potential_improvement = [&](const unsigned reduction) -> bool
 				{
-					double null_window_search_score{-rec(remaining_depth-reduction, extended_depth, nodes, depth, child_pvs.inferior_child_pv(), -null_window.beta, -null_window.alpha)};
+					double null_window_search_score{-rec(remaining_depth-reduction, extended_depth, current_extended_depth+reduction, number_of_checks_in_current_line, nodes, depth, child_pvs.inferior_child_pv(), -null_window.beta, -null_window.alpha)};
 					Search_result_type null_window_result{compute_type(null_window.alpha, null_window.beta, null_window_search_score)};
 					return null_window_result==Search_result_type::lower_bound;
 				};
@@ -260,7 +270,7 @@ namespace engine
 					continue;
 				}
 
-				double score=-rec(remaining_depth-1, extended_depth, nodes, depth, child_pvs.inferior_child_pv(), -beta, -alpha);
+				double score=-rec(remaining_depth-1, extended_depth, current_extended_depth+reduction, number_of_checks_in_current_line, nodes, depth, child_pvs.inferior_child_pv(), -beta, -alpha);
 				state.unmove();
 
 				if(score>best_score)
@@ -321,17 +331,13 @@ namespace engine
 					first=false;
 				}
 			};
-			std::cout << "info"
-			          << " score cp " << eval
-			          << " nodes " << nodes
-			          << " depth " << current_depth
-			          << " seldepth " << current_depth+extended_depth
-			          << " pv ";
+			std::print("info score cp {} nodes {} depth {} seldepth {} pv ", eval, nodes, current_depth, current_depth+extended_depth);
 			output_pv(principal_variation);
-			std::cout << "\n";
+			std::cout << "\n"; // std::println() soon!
 		};
 
-		/*Move best_move; = [&state]()
+/*
+		Move best_move; = [&state]()
 		{
 			struct Move_data { Move move; double eval; };
 			const auto scores = generate_moves<Moves_type::legal>(state) | std::views::transform([&state](const Move& move)
@@ -343,7 +349,8 @@ namespace engine
 			});
 			const auto it=std::ranges::max_element(scores, {}, &Move_data::eval);
 			return (*it).move;
-		}();*/
+		}();
+*/
 		
 		for(unsigned current_depth{1}; !stop_searching(current_depth); ++current_depth)
 		{
@@ -353,7 +360,7 @@ namespace engine
 				unsigned extended_depth{0},
 				nodes{0};
 				Fixed_capacity_vector<Move, 256> current_pv;
-				const double eval = nega_max(current_depth, extended_depth, nodes, current_depth, current_pv)*(state.side_to_move==Side::black?-1:1);
+				const double eval = nega_max(current_depth, extended_depth, 0,  0, nodes, current_depth, current_pv)*(state.side_to_move==Side::black?-1:1);
 				principal_variation = current_pv;
 				output_info(eval, nodes, current_depth, extended_depth, principal_variation);
 				if(std::abs(eval) == std::numeric_limits<double>::infinity())

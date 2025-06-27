@@ -114,7 +114,7 @@ namespace
 		else if(option == "off")
 			debug = false;
 		else
-			std::cout << "debug must be on or off";
+			std::println("debug must be on or off");
 	}
 
 	void ucinewgame_handler() noexcept
@@ -137,10 +137,7 @@ namespace
 
 	void uci_handler() noexcept
 	{
-		std::cout << "id: " << engine::name << "\n\n" 
-				  << "author: " << engine::author << "\n\n"
-				  << "option name Hash type spin default 16 min 1 max 33554432\n"
-				  << "uciok\n";
+		std::println("id: {}\n\nauthor: {}\n\noption name Hash type spin default 16 min 1 max 33554432\nuciok", engine::name, engine::author);
 	}
 
 	template <auto>
@@ -182,10 +179,7 @@ namespace uci
 			if(const auto it{to_handler_function.find(command)}; it != to_handler_function.end())
 				it->second(iss);
 			else
-			{
-				std::cout << "Command: " << command << " not found";
-				return;
-			}
+				std::println("command: {} not found", command);
 		}
 	}
 }
