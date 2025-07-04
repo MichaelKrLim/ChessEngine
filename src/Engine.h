@@ -333,7 +333,7 @@ namespace engine
 			if(std::abs(eval)!=std::numeric_limits<double>::infinity())
 				std::print("info score cp {} nodes {} depth {} seldepth {} pv ", eval, nodes, current_depth, current_depth+extended_depth);
 			else
-				std::print("info score cp {} nodes {} depth {} seldepth {} mate ", eval, nodes, current_depth, current_depth+extended_depth);
+				std::print("info nodes {} depth {} seldepth {} mate ", nodes, current_depth, current_depth+extended_depth);
 			output_pv(principal_variation);
 			std::cout << "\n"; // std::println() soon!
 		};
