@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
 	}
 	const auto perft = [](this auto&& rec, int depth, State& state, const bool&& is_root) -> unsigned long long
 	{
-		std::uint64_t current_count, nodes{0};
+		auto current_count{0}, nodes{0};
 		const auto moves = generate_moves<Moves_type::legal>(state);
 		for(const auto& move : moves)
 		{
@@ -45,6 +45,6 @@ int main(int argc, char* argv[])
 		}
 		return nodes;
 	};
-	const std::uint64_t total_nodes = perft(depth, base_position, true);
+	const auto total_nodes = perft(depth, base_position, true);
 	std::cout << "\n" << total_nodes;
 }

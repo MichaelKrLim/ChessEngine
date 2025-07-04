@@ -68,13 +68,13 @@ namespace engine
 				if(std::optional<Piece> piece_to_capture=state.piece_at(move.destination_square(), other_side(state.side_to_move)); piece_to_capture && stand_pat+chess_data::piece_values[Side::white][piece_to_capture.value()]<=alpha)
 					continue;
 				state.make(move);
-				const double score = -rec(-beta, -alpha, extended_depth, current_extended_depth+1, nodes);
+				const double score=-rec(-beta, -alpha, extended_depth, current_extended_depth+1, nodes);
 				state.unmove();
-				if(score >= beta)
+				if(score>=beta)
 					return score;
-				if(score > best_score)
+				if(score>best_score)
 					best_score = score;
-				if(score > alpha)
+				if(score>alpha)
 					alpha = score;
 			}
 			return best_score;
@@ -107,25 +107,25 @@ namespace engine
 			++nodes;
 			pv.clear();
 			auto all_legal_moves = generate_moves<Moves_type::legal>(state);
-			if(state.repetition_history[state.zobrist_hash] >= 3)
+			if(state.repetition_history[state.zobrist_hash]>=3)
 				return 0.0;
-			else if(remaining_depth <= 0 && !all_legal_moves.empty())
+			else if(remaining_depth<=0 && !all_legal_moves.empty())
 				return quiescence_search(alpha, beta, extended_depth, current_extended_depth, nodes);
 			else if(stop_searching())
 				throw timeout{};
 
 			const double original_alpha{alpha}, original_beta{beta};
-			const auto cache_result = transposition_table[state.zobrist_hash];
-			if(cache_result && cache_result->remaining_depth >= remaining_depth)
+			const auto cache_result=transposition_table[state.zobrist_hash];
+			if(cache_result && cache_result->remaining_depth>=remaining_depth)
 			{
 				if(cache_result->search_result_type == Search_result_type::exact)
 				{
 					pv.push_back(cache_result->best_move);
 					return cache_result->eval;
 				}
-				if(cache_result->search_result_type == Search_result_type::lower_bound)
+				if(cache_result->search_result_type==Search_result_type::lower_bound)
 					alpha = std::max(alpha, cache_result->eval);
-				if(cache_result->search_result_type == Search_result_type::upper_bound)
+				if(cache_result->search_result_type==Search_result_type::upper_bound)
 					beta = std::min(beta, cache_result->eval);
 				if(alpha>=beta)
 					return cache_result->eval;
@@ -151,9 +151,9 @@ namespace engine
 			{
 				if(cache_result)
 				{
-					const auto cached_move = cache_result->best_move;
-					const bool lhs_is_cached_move = lhs == cached_move,
-					rhs_is_cached_move = rhs == cached_move;
+					const auto cached_move=cache_result->best_move;
+					const bool lhs_is_cached_move=lhs == cached_move,
+					rhs_is_cached_move=rhs == cached_move;
 					if(lhs_is_cached_move)
 						return true;
 					if(rhs_is_cached_move)
@@ -162,9 +162,9 @@ namespace engine
 
 				if(const auto pv_index=depth-remaining_depth; pv_index<principal_variation.size())
 				{
-					const auto pv_move = principal_variation[pv_index];
-					const bool lhs_is_pv_move = lhs == pv_move,
-					rhs_is_pv_move = rhs == pv_move;
+					const auto pv_move=principal_variation[pv_index];
+					const bool lhs_is_pv_move=lhs == pv_move,
+					rhs_is_pv_move=rhs == pv_move;
 					if(lhs_is_pv_move)
 						return true;
 					if(rhs_is_pv_move)
@@ -299,7 +299,7 @@ namespace engine
 					return 0.0;
 			}
 
-			if(best_move == Move{})
+			if(best_move==Move{})
 				best_move=all_legal_moves.front();
 
 			pv.push_back(best_move);
@@ -308,11 +308,11 @@ namespace engine
 
 			transposition_table.insert(Transposition_data
 			{
-				.remaining_depth = remaining_depth,
-				.eval = best_score,
-				.zobrist_hash = state.zobrist_hash,
-				.search_result_type = compute_type(original_alpha, original_beta, alpha),
-				.best_move = best_move
+				.remaining_depth=remaining_depth,
+				.eval=alpha,
+				.zobrist_hash=state.zobrist_hash,
+				.search_result_type=compute_type(original_alpha, original_beta, alpha),
+				.best_move=best_move
 			});
 
 			return best_score;
@@ -330,7 +330,7 @@ namespace engine
 					std::cout<<move;
 				}
 			};
-			if(std::abs(eval) != std::numeric_limits<double>::infinity())
+			if(std::abs(eval)!=std::numeric_limits<double>::infinity())
 				std::print("info score cp {} nodes {} depth {} seldepth {} pv ", eval, nodes, current_depth, current_depth+extended_depth);
 			else
 				std::print("info score cp {} nodes {} depth {} seldepth {} mate ", eval, nodes, current_depth, current_depth+extended_depth);
@@ -362,11 +362,9 @@ namespace engine
 				unsigned extended_depth{0},
 				nodes{0};
 				Fixed_capacity_vector<Move, 256> current_pv;
-				const double eval = nega_max(current_depth, extended_depth, 0,  0, nodes, current_depth, current_pv)*(state.side_to_move==Side::black?-1:1);
+				const double eval = nega_max(current_depth, extended_depth, 0, 0, nodes, current_depth, current_pv)*(state.side_to_move==Side::black?-1:1);
 				principal_variation = current_pv;
 				output_info(eval, nodes, current_depth, extended_depth, principal_variation);
-				if(std::abs(eval) == std::numeric_limits<double>::infinity())
-					break;
 			}
 			catch(const timeout&) { break; }
 		}
