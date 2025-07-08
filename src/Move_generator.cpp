@@ -302,32 +302,23 @@ namespace
 		Bitboard pinned_pieces{0ULL};
 		const auto& side = state.sides[state.side_to_move];
 		const auto& enemy_side = state.sides[other_side(state.side_to_move)];
-		auto find = [&](const auto& moves, const Bitboard& our_occupied_squares, const Bitboard& sliding_piece)
+		auto generate_pins_from=[&](const Bitboard& sliding_pieces, const auto& legal_moves)
 		{
-			for(const auto& move : moves)
+			Bitboard pinning_rays{0ULL};
+			sliding_pieces.for_each_piece([&](const Position& position)
 			{
-				std::optional<Position> found_pinnable_piece{std::nullopt};
-				for(Position current_square{king_square+move}; is_on_board(current_square); current_square+=move)
-				{
-					if(found_pinnable_piece && sliding_piece.is_occupied(current_square))
-					{
-						pinned_pieces.add_piece(found_pinnable_piece.value());
-						break;
-					}
-					if(enemy_side.occupied_squares().is_occupied(current_square))
-						break;
-					if(our_occupied_squares.is_occupied(current_square))
-					{
-						if(!found_pinnable_piece.has_value())
-							found_pinnable_piece = current_square;
-						else
-							break;
-					}
-				}
-			}
+				const Bitboard pinning_ray{legal_moves(position, state.occupied_squares())};
+				pinning_rays|=pinning_ray;
+			});
+			return legal_moves(king_square, side.occupied_squares()) & pinning_rays & side.occupied_squares();
 		};
-		find(bishop_moves_, side.occupied_squares(), enemy_side.pieces[Piece::bishop] | enemy_side.pieces[Piece::queen]);
-		find(rook_moves_, side.occupied_squares(), enemy_side.pieces[Piece::rook] | enemy_side.pieces[Piece::queen]);
+		const Bitboard enemy_bishop_likes=enemy_side.pieces[Piece::bishop] | enemy_side.pieces[Piece::queen];
+		if(const Bitboard attacking_bishop_likes=bishop_legal_moves_bb(king_square, enemy_bishop_likes) & enemy_bishop_likes; (attacking_bishop_likes)>0)
+			pinned_pieces|=generate_pins_from(attacking_bishop_likes, bishop_legal_moves_bb);
+
+		const Bitboard enemy_rook_likes=enemy_side.pieces[Piece::rook] | enemy_side.pieces[Piece::queen];
+		if(const Bitboard attacking_rook_likes=rook_legal_moves_bb(king_square, enemy_rook_likes) & enemy_rook_likes; (attacking_rook_likes) > 0)
+			pinned_pieces|=generate_pins_from(attacking_rook_likes, rook_legal_moves_bb);
 		return pinned_pieces;
 	}
 }
@@ -414,22 +405,18 @@ namespace engine
 
 	Bitboard generate_attack_map(const State& state) noexcept
 	{
-		Fixed_capacity_vector<Move, max_legal_moves> legal_moves{};
-		Bitboard attack_map;
-		const auto& pieces = state.sides[state.side_to_move].pieces;
-		const auto& pawn_bb = pieces[Piece::pawn];
-		const bool is_white = state.side_to_move == Side::white;
+		Bitboard attack_map{0ULL};
+		const auto& pieces=state.sides[state.side_to_move].pieces;
+		const auto& pawn_bb=pieces[Piece::pawn];
+		const bool is_white=state.side_to_move == Side::white;
 		auto occupied_squares = state.occupied_squares();
 		occupied_squares.remove_piece(state.sides[other_side(state.side_to_move)].pieces[Piece::king].lsb_square());
-		attack_map |= is_white? ((pawn_bb & ~file_a) << (board_size-1)) : ((pawn_bb & ~file_a) >> (board_size+1));
-		attack_map |= is_white? ((pawn_bb & ~file_h) << (board_size+1)) : ((pawn_bb & ~file_h) >> (board_size-1));
-		attack_map |= king_mask(pieces[Piece::king].lsb_square());
-		knight_moves<Moves_type::legal>(legal_moves, pieces[Piece::knight], Bitboard{0ULL});
-		bishop_moves<Moves_type::legal>(legal_moves, pieces[Piece::bishop], occupied_squares, Bitboard{0ULL}, {});
-		rook_moves<Moves_type::legal>(legal_moves, pieces[Piece::rook], occupied_squares, Bitboard{0ULL}, {});
-		queen_moves<Moves_type::legal>(legal_moves, pieces[Piece::queen], occupied_squares, Bitboard{0ULL}, {});
-		for(const auto& move : legal_moves)
-			attack_map.add_piece(move.destination_square());
+		attack_map|=is_white? ((pawn_bb & ~file_a) << (board_size-1)) : ((pawn_bb & ~file_a) >> (board_size+1));
+		attack_map|=is_white? ((pawn_bb & ~file_h) << (board_size+1)) : ((pawn_bb & ~file_h) >> (board_size-1));
+		attack_map|=king_mask(pieces[Piece::king].lsb_square());
+		pieces[Piece::knight].for_each_piece([&](const Position& position){ attack_map|=knight_mask(position); });
+		(pieces[Piece::bishop] | pieces[Piece::queen]).for_each_piece([&](const Position& position){ attack_map|=bishop_legal_moves_bb(position, occupied_squares); });
+		(pieces[Piece::rook] | pieces[Piece::queen]).for_each_piece([&](const Position& position){ attack_map|=rook_legal_moves_bb(position, occupied_squares); });
 		return attack_map;
 	}
 }

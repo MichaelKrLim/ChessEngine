@@ -37,21 +37,26 @@ namespace engine
 
 		Transposition_table transposition_table(search_options.hash);
 
-		static auto compute_type = [](const double alpha, const double beta, const double score)
+		const static auto compute_type=[](const double alpha, const double beta, const double score)
 		{
 			if(score<=alpha)      return Search_result_type::upper_bound;
 			else if(score>=beta)  return Search_result_type::lower_bound;
 			else                  return Search_result_type::exact;
 		};
 
+		const auto is_threefold_repetition=[&]()
+		{
+			return std::ranges::count(state.repetition_history | std::views::reverse | std::views::take(50), state.zobrist_hash)>=3;
+		};
+
 		enum class timeout {};
 
-		const auto quiescence_search = [&state, &stop_searching](this auto&& rec, double alpha, double beta, unsigned& extended_depth, const unsigned& current_extended_depth, unsigned& nodes) -> double
+		const auto quiescence_search = [&](this auto&& rec, double alpha, double beta, unsigned& extended_depth, const unsigned& current_extended_depth, unsigned& nodes) -> double
 		{
 			++nodes;
 			extended_depth = std::max(extended_depth, current_extended_depth);
 
-			if(state.repetition_history[state.zobrist_hash]>=3)
+			if(is_threefold_repetition())
 				return 0.0;
 			else if(stop_searching())
 				throw timeout{};
@@ -100,14 +105,16 @@ namespace engine
 			std::size_t older_index{0};
 			std::array<Move, 2> killer_moves{};
 		};
-		Fixed_capacity_vector<Killer_move_storage, max_depth> killer_moves;
+		std::vector<Killer_move_storage> killer_moves;
+		killer_moves.reserve(max_depth);
 		Fixed_capacity_vector<Move, 256> principal_variation;
 		const auto nega_max = [&](this auto&& rec, const unsigned remaining_depth, unsigned& extended_depth, unsigned current_extended_depth, unsigned number_of_checks_in_current_line, unsigned& nodes, const unsigned& depth, Fixed_capacity_vector<Move, 256>& pv, double alpha = -std::numeric_limits<double>::infinity(), double beta = std::numeric_limits<double>::infinity())
 		{
+			killer_moves.resize(std::max<std::size_t>(killer_moves.size(), remaining_depth+1));
 			++nodes;
 			pv.clear();
 			auto all_legal_moves = generate_moves<Moves_type::legal>(state);
-			if(state.repetition_history[state.zobrist_hash]>=3)
+			if(is_threefold_repetition())
 				return 0.0;
 			else if(remaining_depth<=0 && !all_legal_moves.empty())
 				return quiescence_search(alpha, beta, extended_depth, current_extended_depth, nodes);
@@ -306,14 +313,17 @@ namespace engine
 			const auto& child_pv{child_pvs.best_child_pv()};
 			pv.insert(pv.end(), child_pv.begin(), child_pv.end());
 
-			transposition_table.insert(Transposition_data
+			if(raised_alpha)
 			{
-				.remaining_depth=remaining_depth,
-				.eval=alpha,
-				.zobrist_hash=state.zobrist_hash,
-				.search_result_type=compute_type(original_alpha, original_beta, alpha),
-				.best_move=best_move
-			});
+				transposition_table.insert(Transposition_data
+				{
+					.remaining_depth=remaining_depth,
+					.eval=best_score,
+					.zobrist_hash=state.zobrist_hash,
+					.search_result_type=compute_type(original_alpha, original_beta, alpha),
+					.best_move=best_move
+				});
+			}
 
 			return best_score;
 		};

@@ -24,13 +24,13 @@ int main(int argc, char* argv[])
 	}
 	const auto perft = [](this auto&& rec, int depth, State& state, const bool&& is_root) -> unsigned long long
 	{
-		auto current_count{0}, nodes{0};
+		unsigned long long current_count{0}, nodes{0};
 		const auto moves = generate_moves<Moves_type::legal>(state);
 		for(const auto& move : moves)
 		{
 			if(is_root && depth <= 1)
 			{
-				current_count = 1;
+				current_count=1;
 				++nodes;
 			}
 			else

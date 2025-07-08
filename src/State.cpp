@@ -138,12 +138,13 @@ void State::parse_fen(const std::string_view fen) noexcept
 
 State::State(const std::string_view fen)
 {
+	repetition_history.reserve(max_depth);
 	parse_fen(fen);
 	side_to_move = other_side(side_to_move);
 	enemy_attack_map = generate_attack_map(*this);
 	side_to_move = other_side(side_to_move);
 	zobrist_hash = zobrist::hash(*this);
-	++repetition_history[zobrist_hash];
+	repetition_history.push_back(zobrist_hash);
 }
 
 std::optional<Piece> State::piece_at(const Position& position, const Side& side) const noexcept
@@ -309,7 +310,7 @@ void State::make(const Move& move) noexcept
 	enemy_attack_map = generate_attack_map(*this);
 	zobrist::invert_side_to_move(zobrist_hash);
 	side_to_move = other_side(side_to_move);
-	++repetition_history[zobrist_hash];
+	repetition_history.push_back(zobrist_hash);
 	assert(history.size() > history_size);
 }
 
@@ -366,8 +367,7 @@ void State::unmove() noexcept
 	side_to_move = last_moved_side;
 	enemy_attack_map = attack_map;
 	en_passant_target_square = previous_en_passant_target_square;
-	if(--repetition_history[zobrist_hash]==0)
-		repetition_history.erase(zobrist_hash);
+	repetition_history.pop_back();
 	zobrist_hash = old_zobrist_hash;
 	evaluation = old_evaluation;
 }
