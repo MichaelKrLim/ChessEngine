@@ -68,6 +68,7 @@ namespace
 		const auto initial_rank = active_player == Side::white ? 1 : 6;
 		const auto pawn_direction = is_white? 1 : -1;
 		const auto promotion_rank = is_white? 7 : 0;
+		const auto enemy_occupied_squares = occupied_squares & ~current_side_occupied_squares;
 		const auto add_promotion_legal_move = [&legal_moves](const Position& origin_square, const Position& destination_square)
 		{
 			for(const auto& piece_type : all_promotion_pieces)
@@ -115,24 +116,32 @@ namespace
 		}
 		Bitboard pawns_to_move = pawns_bb & ~file_h;
 		const Bitboard right_captures = is_white? (pawns_to_move << (rank_move+1)) : (pawns_to_move >> (rank_move-1));
-		right_captures.for_each_piece([&add_move, &pinned_pieces, &king_square, &occupied_squares, &pawn_direction, &current_side_occupied_squares, &is_white, &satisfies_check_requirements, &en_passant_target_square](const Position& destination_square)
+		auto capture_mask = enemy_occupied_squares;
+		if(en_passant_target_square && right_captures.is_occupied(en_passant_target_square.value()))
+			capture_mask.add_piece(en_passant_target_square.value());
+		(right_captures & capture_mask).for_each_piece([&add_move, &pinned_pieces, &king_square, &occupied_squares, &pawn_direction, &current_side_occupied_squares, &is_white, &satisfies_check_requirements, &en_passant_target_square](const Position& destination_square)
 		{
-			const bool can_capture = !is_free(destination_square, occupied_squares & ~current_side_occupied_squares) || destination_square == en_passant_target_square;
 			const Position origin_square = Position{destination_square.rank_-pawn_direction, destination_square.file_-1};
 			const auto relative_diagonal = is_white? &Position::diagonal_index : &Position::antidiagonal_index;
 			const Move current_move{origin_square, destination_square};
-			if(is_on_board(destination_square) && can_capture && (!pinned_pieces.is_occupied(origin_square) || std::invoke(relative_diagonal, &king_square) == std::invoke(relative_diagonal, &destination_square)) && satisfies_check_requirements(current_move))
+			if(is_on_board(destination_square) && (!pinned_pieces.is_occupied(origin_square) || std::invoke(relative_diagonal, &king_square) == std::invoke(relative_diagonal, &destination_square)) && satisfies_check_requirements(current_move))
 				add_move(origin_square, destination_square, current_move);
 		});
 		pawns_to_move = pawns_bb & ~file_a;
 		const auto left_captures = is_white? (pawns_to_move << (rank_move-1)) : (pawns_to_move >> (rank_move+1));
-		left_captures.for_each_piece([&add_move, &pinned_pieces, &occupied_squares, &pawn_direction, &is_white, &current_side_occupied_squares, &en_passant_target_square, &king_square, &satisfies_check_requirements](const Position& destination_square)
+		if(en_passant_target_square)
 		{
-			const bool can_capture = !is_free(destination_square, occupied_squares & ~current_side_occupied_squares) || destination_square == en_passant_target_square;
+			if(capture_mask.is_occupied(en_passant_target_square.value()))
+				capture_mask.remove_piece(en_passant_target_square.value());
+			else if(left_captures.is_occupied(en_passant_target_square.value()))
+				capture_mask.add_piece(en_passant_target_square.value());
+		}
+		(left_captures & capture_mask).for_each_piece([&add_move, &pinned_pieces, &occupied_squares, &pawn_direction, &is_white, &current_side_occupied_squares, &en_passant_target_square, &king_square, &satisfies_check_requirements](const Position& destination_square)
+		{
 			const Position origin_square = Position{destination_square.rank_-pawn_direction, destination_square.file_+1};
 			const auto relative_diagonal = is_white? &Position::antidiagonal_index : &Position::diagonal_index;
 			const Move current_move{origin_square, destination_square};
-			if(is_on_board(destination_square) && can_capture && (!pinned_pieces.is_occupied(origin_square) || std::invoke(relative_diagonal, &king_square) == std::invoke(relative_diagonal, &destination_square)) && satisfies_check_requirements(current_move))
+			if(is_on_board(destination_square) && (!pinned_pieces.is_occupied(origin_square) || std::invoke(relative_diagonal, &king_square) == std::invoke(relative_diagonal, &destination_square)) && satisfies_check_requirements(current_move))
 				add_move(origin_square, destination_square, current_move);
 		});
 	}
@@ -148,20 +157,13 @@ namespace
 	{
 		knight_bb.for_each_piece([&](const auto& origin_square)
 		{
-			const Bitboard knight_moves = knight_mask(origin_square) & ~our_occupied_squares;
+			Bitboard knight_moves = knight_mask(origin_square) & ~our_occupied_squares;
+			if constexpr (moves_type == Moves_type::noisy)
+				knight_moves &= enemy_occupied_squares;
 			knight_moves.for_each_piece([&](const auto& destination_square)
 			{
-				const Move current_move = Move{origin_square, destination_square};
-				if(satisfies_check_requirements(current_move))
-				{
-					if constexpr (moves_type == Moves_type::noisy)
-					{
-						if(!is_free(destination_square, enemy_occupied_squares))
-							legal_moves.push_back(current_move);
-					}
-					else if constexpr (moves_type == Moves_type::legal)
-						legal_moves.push_back(current_move);
-				}
+				if(const Move current_move = Move{origin_square, destination_square}; satisfies_check_requirements(current_move))
+					legal_moves.push_back(current_move);
 			});
 		});
 	}
@@ -229,21 +231,15 @@ namespace
 	{
 		rook_bb.for_each_piece([&](const Position& original_square)
 		{
-			const Bitboard rook_moves = rook_legal_moves_bb(original_square, occupied_squares) & ~current_sides_occupied_squares;
+			Bitboard rook_moves = rook_legal_moves_bb(original_square, occupied_squares) & ~current_sides_occupied_squares;
+			if constexpr (moves_type == Moves_type::noisy)
+				rook_moves &= enemy_occupied_squares;
 			rook_moves.for_each_piece([&](const auto& destination_square)
 			{
 				const bool move_stays_pinned = (original_square.rank_ == king_square.rank_ && destination_square.rank_ == king_square.rank_) || (original_square.file_ == king_square.file_ && destination_square.file_ == king_square.file_);
 				const Move current_move = Move{original_square, destination_square};
 				if((!pinned_pieces.is_occupied(original_square) || move_stays_pinned) && satisfies_check_requirements(current_move))
-				{
-					if constexpr (moves_type == Moves_type::noisy)
-					{
-						if(!is_free(destination_square, enemy_occupied_squares))
-							legal_moves.push_back(current_move);
-					}
-					else if constexpr (moves_type == Moves_type::legal)
-						legal_moves.push_back(current_move);
-				}
+					legal_moves.push_back(current_move);
 			});
 		});
 	}
@@ -259,7 +255,9 @@ namespace
 	{
 		bishop_bb.for_each_piece([&](const Position& original_square)
 		{
-			const Bitboard bishop_moves = bishop_legal_moves_bb(original_square, occupied_squares) & ~current_sides_occupied_squares;
+			Bitboard bishop_moves = bishop_legal_moves_bb(original_square, occupied_squares) & ~current_sides_occupied_squares;
+			if constexpr (moves_type == Moves_type::noisy)
+				bishop_moves &= enemy_occupied_squares;
 			bishop_moves.for_each_piece([&](const auto& destination_square)
 			{
 				const bool move_stays_pinned = (original_square.diagonal_index() == king_square.diagonal_index() && destination_square.diagonal_index() == king_square.diagonal_index()) || (original_square.antidiagonal_index() == king_square.antidiagonal_index() && destination_square.antidiagonal_index() == king_square.antidiagonal_index());
@@ -310,7 +308,7 @@ namespace
 				const Bitboard pinning_ray{legal_moves(position, state.occupied_squares())};
 				pinning_rays|=pinning_ray;
 			});
-			return legal_moves(king_square, side.occupied_squares()) & pinning_rays & side.occupied_squares();
+			return legal_moves(king_square, state.occupied_squares()) & pinning_rays & side.occupied_squares();
 		};
 		const Bitboard enemy_bishop_likes=enemy_side.pieces[Piece::bishop] | enemy_side.pieces[Piece::queen];
 		if(const Bitboard attacking_bishop_likes=bishop_legal_moves_bb(king_square, enemy_bishop_likes) & enemy_bishop_likes; (attacking_bishop_likes)>0)
