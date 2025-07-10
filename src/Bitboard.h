@@ -39,6 +39,7 @@ namespace engine
 		constexpr bool operator> (std::uint64_t value) const { return data_ > value; }
 		constexpr bool operator< (std::uint64_t value) const { return data_ < value; }
 		constexpr bool operator==(std::uint64_t value) const { return data_ == value; }
+		constexpr bool operator==(const Bitboard& bitboard) const { return data_ == bitboard.data_; }
 		constexpr bool operator! ()                    const { return data_ == 0; }
 		constexpr bool operator!=(Bitboard bitboard)   const { return data_ != bitboard.data_; };
 		constexpr bool operator!=(std::uint64_t value) const { return data_ != value; }

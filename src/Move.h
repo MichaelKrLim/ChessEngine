@@ -11,20 +11,16 @@
 
 namespace engine
 {
-	enum class Is_capture { yes, no };
-
 	class Move
 	{
 		public:
 
 		constexpr Move() = default;
-		constexpr Move(Position current_square, Position desired_square, Is_capture is_capture = Is_capture::no)
+		constexpr Move(Position current_square, Position desired_square)
 		{
 			move_data_ |= (to_index(current_square)<<6) | to_index(desired_square);
-			if(is_capture == Is_capture::yes)
-				move_data_ |= (1U << 15);
 		};
-		constexpr Move(Position current_square, Position desired_square, Piece piece_type, Is_capture is_capture = Is_capture::no) : Move(current_square, desired_square, is_capture)
+		constexpr Move(Position current_square, Position desired_square, Piece piece_type) : Move(current_square, desired_square)
 		{
 			move_data_ |= (1U<<14) | ((static_cast<std::uint16_t>(piece_type)-static_cast<std::uint16_t>(Piece::knight))<<12);
 		};

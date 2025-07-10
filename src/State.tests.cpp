@@ -1,120 +1,126 @@
 #include <doctest/doctest.h>
 
 #include "State.h"
-#include "Move.h"
-#include "Move_generator.h"
-#include "Chess_data.h"
 #include "Transposition_table.h"
 
 using namespace engine;
 
+void require_states_are_equal(const State& s1, const State& s2)
+{
+	REQUIRE(s1.zobrist_hash == s2.zobrist_hash);
+	REQUIRE(s1.evaluation == s2.evaluation);
+	REQUIRE(s1.side_to_move == s2.side_to_move);
+	REQUIRE(s1.half_move_clock == s2.half_move_clock);
+	REQUIRE(s1.full_move_clock == s2.full_move_clock);
+	REQUIRE(s1.en_passant_target_square == s2.en_passant_target_square);
+	for(const auto i : all_sides)
+	{
+		REQUIRE(s1.sides[i].castling_rights[Castling_rights::kingside] == s2.sides[i].castling_rights[Castling_rights::kingside]);
+		REQUIRE(s1.sides[i].castling_rights[Castling_rights::queenside] == s2.sides[i].castling_rights[Castling_rights::queenside]);
+	}
+	for(const auto side_idx : all_sides)
+		for(const auto piece_idx : all_pieces)
+			REQUIRE(s1.sides[side_idx].pieces[piece_idx] == s2.sides[side_idx].pieces[piece_idx]);
+}
+
 TEST_SUITE("State")
 {
-    TEST_CASE("State constructor from valid FEN initializes correctly")
-    {
-        State state{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
-
-        CHECK(state.side_to_move == Side::white);
-        CHECK(state.full_move_clock == 1);
-        CHECK(state.half_move_clock == 0);
-        CHECK(!state.get_board_data().empty());
-    }
-
-    TEST_CASE("piece_at returns correct piece")
-    {
-        State state{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1"};
-        auto piece = state.piece_at(Position{0, 0}, Side::white);
-        CHECK(piece.has_value());
-        CHECK(piece.value() == Piece::rook);
-    }
-
-	TEST_CASE("make and unmove from complex position: e2e4")
+	TEST_CASE("Make and Unmove Reversibility")
 	{
-		// Original FEN
-		State state{"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"};
-		// Save initial state
-		auto before_hash = state.zobrist_hash;
-		auto before_eval = state.evaluation;
-		auto before_side = state.side_to_move;
-		auto before_halfmove = state.half_move_clock;
-		auto before_fullmove = state.full_move_clock;
-		auto before_en_passant = state.en_passant_target_square;
-		auto before_board = state.get_board_data();
-		auto before_occupied = state.occupied_squares();
+		State state("rnbq1kr1/pp1Pbppp/2p5/8/2B4P/8/PPP1NnP1/RNBQK2R w KQ - 1 8");
+		const State initial_state = state;
+		std::stack<std::uint64_t> zobrist_history;
+		std::stack<int> evaluation_history;
+		std::vector moves = {
+			Move(Position{3, 7}, Position{4, 7}), // 1. h4h5
+			Move(Position{6, 7}, Position{5, 7}), // 1. h7h6
+		};
+		for(const auto& move : moves)
+		{
+			zobrist_history.push(state.zobrist_hash);
+			evaluation_history.push(state.evaluation);
+			state.make(move);
+		}
 
-		// Move pawn e2 -> e4 (rank 1, file 4) -> (rank 3, file 4)
-		Move move{Position{1, 4}, Position{3, 4}};
-		state.make(move);
-
-		// Check side to move flipped to black
-		CHECK(state.side_to_move == Side::black);
-
-		// Halfmove clock resets (pawn move)
-		CHECK(state.half_move_clock == 0);
-
-		// Full move clock stays at 8 (since white just moved)
-		CHECK(state.full_move_clock == before_fullmove);
-
-		// En passant target should now be e3 (rank 2, file 4)
-		REQUIRE(state.en_passant_target_square.has_value());
-		CHECK(state.en_passant_target_square.value() == Position{2, 4});
-
-		// History stack should now have 1 entry
-		CHECK(state.history.size() == 1);
-
-		// Zobrist hash and evaluation must change
-		CHECK(state.zobrist_hash != before_hash);
-		CHECK(state.evaluation != before_eval);
-
-		// Occupied squares must be different
-		CHECK(state.occupied_squares() != before_occupied);
-
-		// The pawn should now be on e4
-		auto piece_e4 = state.piece_at(Position{3, 4}, Side::white);
-		REQUIRE(piece_e4.has_value());
-		CHECK(piece_e4.value() == Piece::pawn);
-
-		// e2 must now be empty
-		auto piece_e2 = state.piece_at(Position{1, 4}, Side::white);
-		CHECK_FALSE(piece_e2.has_value());
-
-		// --- Undo the move ---
-		state.unmove();
-
-		// Should return to original state
-		CHECK(state.side_to_move == before_side);
-		CHECK(state.half_move_clock == before_halfmove);
-		CHECK(state.full_move_clock == before_fullmove);
-		CHECK(state.zobrist_hash == before_hash);
-		CHECK(state.evaluation == before_eval);
-		CHECK(state.history.empty());
-		CHECK(state.en_passant_target_square == before_en_passant);
-
-		// Pawn back on e2
-		auto piece_e2_after = state.piece_at(Position{1, 4}, Side::white);
-		REQUIRE(piece_e2_after.has_value());
-		CHECK(piece_e2_after.value() == Piece::pawn);
+		for(int i = moves.size() - 1; i >= 0; --i)
+		{
+			state.unmove();
+			CHECK(state.zobrist_hash == zobrist_history.top());
+			CHECK(state.evaluation == evaluation_history.top());
+			zobrist_history.pop();
+			evaluation_history.pop();
+		}
+		require_states_are_equal(state, initial_state);
 	}
 
+	TEST_CASE("En Passant Make/Unmove")
+	{
+		State state("rnbqkbnr/ppp2ppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2");
+		const State initial_state = state;
+		Move en_passant_move(Position{4, 4}, Position{5, 3}); // e5xd6
+		state.make(en_passant_move);
+		REQUIRE_FALSE(state.piece_at(Position{3, 3}, Side::black).has_value()); // Black pawn at d5 should be gone
+		REQUIRE(state.piece_at(Position{5, 3}, Side::white) == Piece::pawn);   // White pawn should be at d6
+		REQUIRE(state.side_to_move == Side::black);
+		state.unmove();
+		require_states_are_equal(state, initial_state);
+	}
+	
+	TEST_CASE("Castling Make/Unmove")
+	{
+		State state("r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1");
+		const State initial_state_w = state;
 
-    TEST_CASE("occupied_squares returns non-zero bitboard")
-    {
-        State state{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1"};
-        auto occupied = state.occupied_squares();
-        CHECK(occupied != 0);
-    }
+		SUBCASE("White Kingside Castle")
+		{
+			Move castle_move(Position{0, 4}, Position{0, 6}); // O-O
+			state.make(castle_move);
+			REQUIRE(state.piece_at(Position{0, 6}, Side::white) == Piece::king);
+			REQUIRE(state.piece_at(Position{0, 5}, Side::white) == Piece::rook);
+			REQUIRE_FALSE(state.sides[Side::white].castling_rights[Castling_rights::kingside]);
+			REQUIRE_FALSE(state.sides[Side::white].castling_rights[Castling_rights::queenside]);
+			state.unmove();
+			require_states_are_equal(state, initial_state_w);
+		}
+		
+		SUBCASE("Black Queenside Castle")
+		{
+			state.side_to_move = Side::black;
+			zobrist::invert_side_to_move(state.zobrist_hash);
+			const State initial_state_b = state;
+			Move castle_move(Position{7, 4}, Position{7, 2}); // o-o-o
+			state.make(castle_move);
+			REQUIRE(state.piece_at(Position{7, 2}, Side::black) == Piece::king);
+			REQUIRE(state.piece_at(Position{7, 3}, Side::black) == Piece::rook);
+			REQUIRE_FALSE(state.sides[Side::black].castling_rights[Castling_rights::kingside]);
+			REQUIRE_FALSE(state.sides[Side::black].castling_rights[Castling_rights::queenside]);
+			state.unmove();
+			require_states_are_equal(state, initial_state_b);
+		}
+	}
 
-    TEST_CASE("in_check returns false for starting position")
-    {
-        State state{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1"};
-        CHECK_FALSE(state.in_check());
-    }
-
-    TEST_CASE("get_board_data returns correct number of pieces at start")
-    {
-        State state{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1"};
-        auto data = state.get_board_data();
-        CHECK(data.size() == 32); // 16 pieces per side
-    }
-
+	TEST_CASE("Promotion Make/Unmove")
+	{
+		State state("rnbq1bnr/pPppkppp/8/8/8/8/1PP1PPPP/RNBQKBNR w KQ - 1 5");
+		const State initial_state = state;
+		SUBCASE("Promotion to Queen without capture")
+		{
+			Move promotion_move(Position{6, 1}, Position{7, 1}, Piece::queen); // b7-b8=Q
+			state.make(promotion_move);
+			REQUIRE(state.piece_at(Position{7, 1}, Side::white) == Piece::queen);
+			REQUIRE_FALSE(state.piece_at(Position{6, 1}, Side::white).has_value());
+			state.unmove();
+			require_states_are_equal(state, initial_state);
+		}
+		
+		SUBCASE("Promotion to Knight with capture")
+		{
+			Move promotion_move(Position{6, 1}, Position{7, 0}, Piece::knight); // b7xa8=N
+			state.make(promotion_move);
+			REQUIRE(state.piece_at(Position{7, 0}, Side::white) == Piece::knight);
+			REQUIRE_FALSE(state.piece_at(Position{6, 1}, Side::white).has_value());
+			state.unmove();
+			require_states_are_equal(state, initial_state);
+		}
+	}
 }

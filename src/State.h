@@ -115,7 +115,7 @@ namespace engine
 	inline std::ostream& operator<<(std::ostream& os, const State& state)
 	{
 		os << "hash: " << state.zobrist_hash << "\n"
-		<< "repetition count: " << state.repetition_history.at(state.zobrist_hash) << "\n"
+		<< "repetition count: " << std::ranges::count(state.repetition_history | std::views::reverse | std::views::take(50), state.zobrist_hash) << "\n"
 		<< state.occupied_squares() << "\n"
 		<< "half move clock: " << state.half_move_clock << "\n"
 		<< "full move clock: " << state.full_move_clock << "\n"

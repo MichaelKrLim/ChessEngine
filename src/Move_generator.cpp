@@ -148,20 +148,14 @@ namespace
 	{
 		knight_bb.for_each_piece([&](const auto& origin_square)
 		{
-			const Bitboard knight_moves = knight_mask(origin_square) & ~our_occupied_squares;
+			Bitboard knight_moves = knight_mask(origin_square) & ~our_occupied_squares;
+			if constexpr (moves_type == Moves_type::noisy)
+				knight_moves &= enemy_occupied_squares;
 			knight_moves.for_each_piece([&](const auto& destination_square)
 			{
 				const Move current_move = Move{origin_square, destination_square};
 				if(satisfies_check_requirements(current_move))
-				{
-					if constexpr (moves_type == Moves_type::noisy)
-					{
-						if(!is_free(destination_square, enemy_occupied_squares))
-							legal_moves.push_back(current_move);
-					}
-					else if constexpr (moves_type == Moves_type::legal)
-						legal_moves.push_back(current_move);
-				}
+					legal_moves.push_back(current_move);
 			});
 		});
 	}
@@ -229,21 +223,15 @@ namespace
 	{
 		rook_bb.for_each_piece([&](const Position& original_square)
 		{
-			const Bitboard rook_moves = rook_legal_moves_bb(original_square, occupied_squares) & ~current_sides_occupied_squares;
+			Bitboard rook_moves = rook_legal_moves_bb(original_square, occupied_squares) & ~current_sides_occupied_squares;
+			if constexpr (moves_type == Moves_type::noisy)
+				rook_moves &= enemy_occupied_squares;
 			rook_moves.for_each_piece([&](const auto& destination_square)
 			{
 				const bool move_stays_pinned = (original_square.rank_ == king_square.rank_ && destination_square.rank_ == king_square.rank_) || (original_square.file_ == king_square.file_ && destination_square.file_ == king_square.file_);
 				const Move current_move = Move{original_square, destination_square};
 				if((!pinned_pieces.is_occupied(original_square) || move_stays_pinned) && satisfies_check_requirements(current_move))
-				{
-					if constexpr (moves_type == Moves_type::noisy)
-					{
-						if(!is_free(destination_square, enemy_occupied_squares))
-							legal_moves.push_back(current_move);
-					}
-					else if constexpr (moves_type == Moves_type::legal)
-						legal_moves.push_back(current_move);
-				}
+					legal_moves.push_back(current_move);
 			});
 		});
 	}
@@ -259,21 +247,15 @@ namespace
 	{
 		bishop_bb.for_each_piece([&](const Position& original_square)
 		{
-			const Bitboard bishop_moves = bishop_legal_moves_bb(original_square, occupied_squares) & ~current_sides_occupied_squares;
+			Bitboard bishop_moves = bishop_legal_moves_bb(original_square, occupied_squares) & ~current_sides_occupied_squares;
+			if constexpr (moves_type == Moves_type::noisy)
+				bishop_moves &= enemy_occupied_squares;
 			bishop_moves.for_each_piece([&](const auto& destination_square)
 			{
 				const bool move_stays_pinned = (original_square.diagonal_index() == king_square.diagonal_index() && destination_square.diagonal_index() == king_square.diagonal_index()) || (original_square.antidiagonal_index() == king_square.antidiagonal_index() && destination_square.antidiagonal_index() == king_square.antidiagonal_index());
 				const Move current_move = Move{original_square, destination_square};
 				if((!pinned_pieces.is_occupied(original_square) || move_stays_pinned) && satisfies_check_requirements(current_move))
-				{
-					if constexpr (moves_type == Moves_type::noisy)
-					{
-						if(!is_free(destination_square, enemy_occupied_squares))
-							legal_moves.push_back(current_move);
-					}
-					else if constexpr (moves_type == Moves_type::legal)
-						legal_moves.push_back(current_move);
-				}
+					legal_moves.push_back(current_move);
 			});
 		});
 	}
