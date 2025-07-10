@@ -18,7 +18,7 @@ namespace engine
 		explicit constexpr Bitboard(const std::uint64_t& data) : data_(data) {}
 		constexpr Bitboard() = default;
 
-		explicit operator size_t() const { return static_cast<size_t>(data_); }
+		explicit constexpr operator size_t() const { return static_cast<size_t>(data_); }
 
 		constexpr Bitboard 		operator& (std::uint64_t value) 	  const { return Bitboard(data_ & value); }
 		constexpr Bitboard 		operator& (const Bitboard& bitboard)  const { return Bitboard(data_ & bitboard.data_); }

@@ -55,16 +55,4 @@ namespace engine
 	}
 }
 
-namespace std
-{
-	template <>
-	struct hash<engine::Position>
-	{
-		std::size_t operator()(const engine::Position& position) const 
-		{
-			return std::hash<int>{}(position.rank_) ^ (std::hash<int>{}(position.file_) << 1);
-		}
-	};
-}
-
 #endif // Position_h_INCLUDED

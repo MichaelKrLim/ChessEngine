@@ -34,6 +34,7 @@ add_executable(generate_magics src/magic_main.cpp
 	src/Constants.h
 	src/Pieces.h
 	src/Position.h
+	src/Magic_generation_util.h
 )
 
 set_property(TARGET generate_magics PROPERTY CXX_STANDARD 23)
@@ -56,6 +57,7 @@ if(ENGINE_BUILD_TESTS)
 	add_executable(tests
 		${test_sources}
 		${common_sources}
+		src/Magic_generation_util.h
 		src/test_main.cpp
 	)
 	add_executable(perft
@@ -70,7 +72,10 @@ if(ENGINE_BUILD_TESTS)
 	set_property(TARGET tests PROPERTY CXX_EXTENSIONS OFF)
 	set_property(TARGET perft PROPERTY CXX_STANDARD 23)
 	set_property(TARGET perft PROPERTY CXX_EXTENSIONS OFF)
-	add_dependencies(tests perft generate_magics)
+	if(NOT EXISTS "${CMAKE_SOURCE_DIR}/src/magic_squares.h")
+		add_dependencies(tests perft generate_magics)
+	endif()
+	target_link_libraries(tests PRIVATE doctest)
 endif()
 
 add_executable(${PROJECT_NAME} src/main.cpp

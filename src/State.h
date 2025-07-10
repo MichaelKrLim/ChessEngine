@@ -1,5 +1,5 @@
-#ifndef Board_h_INCLUDED
-#define Board_h_INCLUDED
+#ifndef State_h_INCLUDED
+#define State_h_INCLUDED
 
 #include "Bitboard.h"
 #include "Constants.h"
@@ -131,4 +131,4 @@ namespace engine
 	}
 }
 
-#endif // Board_h_INCLUDED
+#endif // State_h_INCLUDED
