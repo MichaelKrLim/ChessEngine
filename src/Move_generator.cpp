@@ -178,12 +178,6 @@ namespace
 		});
 	}
 
-	template <Moves_type moves_type>
-	void pawn_moves(fixed_vector_t& legal_moves, const Bitboard& pawns_bb, const Bitboard& occupied_squares, const Side& active_player, const Bitboard& current_side_occupied_squares, const std::optional<Position>& en_passant_target_square, const Bitboard& enemy_rook_likes, const Position& king_square = Position{-1, -1}, const Bitboard& pinned_pieces = {})
-	{
-		pawn_moves<moves_type>(legal_moves, pawns_bb, occupied_squares, active_player, current_side_occupied_squares, en_passant_target_square, [](const Move& move){ return true; }, enemy_rook_likes, king_square, pinned_pieces);
-	}
-
 	template <Moves_type moves_type, typename T>
 	void knight_moves(fixed_vector_t& legal_moves, const Bitboard& knight_bb, const Bitboard& our_occupied_squares, const T& satisfies_check_requirements, const Bitboard& enemy_occupied_squares = {})
 	{
@@ -199,12 +193,6 @@ namespace
 					legal_moves.push_back(current_move);
 			});
 		});
-	}
-
-	template <Moves_type moves_type>
-	void knight_moves(fixed_vector_t& legal_moves, const Bitboard& knight_bb, const Bitboard& our_occupied_squares, const Bitboard& enemy_occupied_squares = {})
-	{
-		knight_moves<moves_type>(legal_moves, knight_bb, our_occupied_squares, [](const Move& move){ return true; }, enemy_occupied_squares);
 	}
 
 	template <Moves_type moves_type>
@@ -259,12 +247,6 @@ namespace
 		});
 	}
 
-	template <Moves_type moves_type>
-	void rook_moves(fixed_vector_t& legal_moves, const Bitboard& rook_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const Bitboard& pinned_pieces = {}, const Bitboard& enemy_occupied_squares = {})
-	{
-		rook_moves<moves_type>(legal_moves, rook_bb, occupied_squares, current_sides_occupied_squares, king_square, [](const Move& move){ return true; }, pinned_pieces, enemy_occupied_squares);
-	}
-
 	template <Moves_type moves_type, typename T>
 	void bishop_moves(fixed_vector_t& legal_moves, const Bitboard& bishop_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const T& satisfies_check_requirements, const Bitboard& pinned_pieces = {}, const Bitboard& enemy_occupied_squares = {})
 	{
@@ -283,23 +265,11 @@ namespace
 		});
 	}
 
-	template <Moves_type moves_type>
-	void bishop_moves(fixed_vector_t& legal_moves, const Bitboard& bishop_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const Bitboard& pinned_pieces = {}, const Bitboard& enemy_occupied_squares = {})
-	{
-		bishop_moves<moves_type>(legal_moves, bishop_bb, occupied_squares, current_sides_occupied_squares, king_square, [](const Move& move){ return true; }, pinned_pieces, enemy_occupied_squares);
-	}
-
 	template <Moves_type moves_type, typename T>
 	void queen_moves(fixed_vector_t& legal_moves, const Bitboard& queen_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const T& satisfies_check_requirements, const Bitboard& pinned_pieces = {}, const Bitboard& enemy_occupied_squares = {})
 	{
 		bishop_moves<moves_type>(legal_moves, queen_bb, occupied_squares, current_sides_occupied_squares, king_square, satisfies_check_requirements, pinned_pieces, enemy_occupied_squares);
 		rook_moves<moves_type>(legal_moves, queen_bb, occupied_squares, current_sides_occupied_squares, king_square, satisfies_check_requirements, pinned_pieces, enemy_occupied_squares);
-	}
-
-	template <Moves_type moves_type>
-	void queen_moves(fixed_vector_t& legal_moves, const Bitboard& queen_bb, const Bitboard& occupied_squares, const Bitboard& current_sides_occupied_squares, const Position& king_square, const Bitboard& pinned_pieces = {}, const Bitboard& enemy_occupied_squares = {})
-	{
-		queen_moves<moves_type>(legal_moves, queen_bb, occupied_squares, current_sides_occupied_squares, king_square, [](const Move& move){ return true; }, pinned_pieces, enemy_occupied_squares);
 	}
 
 	[[nodiscard]] const Bitboard generate_pinned_pieces(const State& state, const Position& king_square) noexcept
@@ -413,7 +383,6 @@ namespace engine
 
 	Bitboard generate_attack_map(const State& state) noexcept
 	{
-		Fixed_capacity_vector<Move, max_legal_moves> legal_moves{};
 		Bitboard attack_map;
 		const auto& pieces = state.sides[state.side_to_move].pieces;
 		const auto& pawn_bb = pieces[Piece::pawn];
@@ -423,12 +392,18 @@ namespace engine
 		attack_map |= is_white? ((pawn_bb & ~Bitboard{file_a}) << (board_size-1)) : ((pawn_bb & ~Bitboard{file_a}) >> (board_size+1));
 		attack_map |= is_white? ((pawn_bb & ~Bitboard{file_h}) << (board_size+1)) : ((pawn_bb & ~Bitboard{file_h}) >> (board_size-1));
 		attack_map |= king_mask(pieces[Piece::king].lsb_square());
-		knight_moves<Moves_type::legal>(legal_moves, pieces[Piece::knight], Bitboard{0ULL});
-		bishop_moves<Moves_type::legal>(legal_moves, pieces[Piece::bishop], occupied_squares, Bitboard{0ULL}, {});
-		rook_moves<Moves_type::legal>(legal_moves, pieces[Piece::rook], occupied_squares, Bitboard{0ULL}, {});
-		queen_moves<Moves_type::legal>(legal_moves, pieces[Piece::queen], occupied_squares, Bitboard{0ULL}, {});
-		for(const auto& move : legal_moves)
-			attack_map.add_piece(move.destination_square());
+		pieces[Piece::knight].for_each_piece([&](const Position& position)
+		{
+			attack_map |= knight_mask(position);
+		});
+		(pieces[Piece::bishop] | pieces[Piece::queen]).for_each_piece([&](const Position& position)
+		{
+			attack_map |= bishop_legal_moves_bb(position, occupied_squares);
+		});
+		(pieces[Piece::rook] | pieces[Piece::queen]).for_each_piece([&](const Position& position)
+		{
+			attack_map |= rook_legal_moves_bb(position, occupied_squares);
+		});
 		return attack_map;
 	}
 }

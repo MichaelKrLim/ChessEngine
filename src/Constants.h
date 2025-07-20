@@ -40,7 +40,7 @@ namespace engine
 	max_depth = 64,
 	king_max_adjacent_squares = 6;
 
-	constexpr unsigned default_table_size{16};
+	constexpr unsigned default_table_size{1024};
 
 	constexpr std::string_view name{"cpp_engine"}, author{"Michael Lim"}, starting_fen{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
 

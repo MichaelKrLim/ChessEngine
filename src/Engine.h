@@ -250,8 +250,6 @@ namespace engine
 					--reduction;
 					++number_of_checks_in_current_line;
 				}
-				if(reduction!=1)
-					current_extended_depth+=reduction-1;
 				
 				state.make(move);
 				struct { double alpha, beta; } null_window{alpha, alpha+1};
