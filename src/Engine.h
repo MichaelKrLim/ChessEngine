@@ -46,7 +46,7 @@ namespace engine
 
 		const auto is_threefold_repetition=[&]()
 		{
-			return std::ranges::count(state.repetition_history | std::views::reverse | std::views::take(50), state.zobrist_hash)>=3;
+			return std::ranges::count(state.repetition_history | std::views::reverse | std::views::take(state.half_move_clock), state.zobrist_hash)>=3;
 		};
 
 		enum class timeout {};
@@ -56,9 +56,7 @@ namespace engine
 			++nodes;
 			extended_depth = std::max(extended_depth, current_extended_depth);
 
-			if(is_threefold_repetition())
-				return 0.0;
-			else if(stop_searching())
+			if(stop_searching())
 				throw timeout{};
 
 			const double& stand_pat=state.evaluation*(state.side_to_move==Side::white? 1:-1);
