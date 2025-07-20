@@ -7,8 +7,8 @@
 #include "Move.h"
 #include "Position.h"
 
+#include <algorithm>
 #include <array>
-#include <flat_map>
 #include <optional>
 #include <stack>
 #include <vector>
@@ -67,7 +67,8 @@ namespace engine
 			const Bitboard enemy_attack_map;
 			const std::optional<Position> en_passant_target_square;
 			const bool was_en_passant;
-			const Castling_rights_map<bool> castling_rights;
+			const Castling_rights_map<bool> white_castling_rights;
+			const Castling_rights_map<bool> black_castling_rights;
 			const std::uint64_t previous_zobrist_hash;
 			const unsigned half_move_clock;
 			const double evaluation;

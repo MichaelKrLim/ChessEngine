@@ -41,7 +41,7 @@ namespace engine
 
 	constexpr bool is_on_board(const Position& position)
 	{
-		return position.rank_ < 8 && position.file_ < 8 && position.file_ > -1 && position.rank_ > -1;
+		return position.rank_ < board_size && position.file_ < board_size && position.file_ > -1 && position.rank_ > -1;
 	}
 	
 	constexpr Position algebraic_to_position(const std::string_view algebraic)

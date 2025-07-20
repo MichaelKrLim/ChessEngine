@@ -40,23 +40,23 @@ namespace engine
 			6, 5, 5, 5, 5, 5, 5, 6
 		};
 
-		constexpr std::uint64_t rook_mask(const Position& square)
+		constexpr Bitboard rook_mask(const Position& square)
 		{
-			std::uint64_t result{0ULL};
-			for(int r = square.rank_+1; r <= 6; r++) result |= (1ULL << (square.file_ + r*8));
-			for(int r = square.rank_-1; r >= 1; r--) result |= (1ULL << (square.file_ + r*8));
-			for(int f = square.file_+1; f <= 6; f++) result |= (1ULL << (f + square.rank_*8));
-			for(int f = square.file_-1; f >= 1; f--) result |= (1ULL << (f + square.rank_*8)); 
+			Bitboard result{0ULL};
+			for(int r = square.rank_+1; r <= 6; r++) result |= Bitboard{1ULL} << to_index(Position{r, square.file_});
+			for(int r = square.rank_-1; r >= 1; r--) result |= Bitboard{1ULL} << to_index(Position{r, square.file_});
+			for(int f = square.file_+1; f <= 6; f++) result |= Bitboard{1ULL} << to_index(Position{square.rank_, f});
+			for(int f = square.file_-1; f >= 1; f--) result |= Bitboard{1ULL} << to_index(Position{square.rank_, f}); 
 			return result;
 		}
 
-		constexpr std::uint64_t bishop_mask(const Position& square)
+		constexpr Bitboard bishop_mask(const Position& square)
 		{
-			std::uint64_t result{0ULL};
-			for(int r = square.rank_+1, f = square.file_+1; r<=6 && f<=6; r++, f++) result |= (1ULL << (f + r*8));
-			for(int r = square.rank_+1, f = square.file_-1; r<=6 && f>=1; r++, f--) result |= (1ULL << (f + r*8));
-			for(int r = square.rank_-1, f = square.file_+1; r>=1 && f<=6; r--, f++) result |= (1ULL << (f + r*8));
-			for(int r = square.rank_-1, f = square.file_-1; r>=1 && f>=1; r--, f--) result |= (1ULL << (f + r*8));
+			Bitboard result{0ULL};
+			for(int r = square.rank_+1, f = square.file_+1; r<=6 && f<=6; r++, f++) result |= Bitboard{1ULL} << to_index(Position{r, f});
+			for(int r = square.rank_+1, f = square.file_-1; r<=6 && f>=1; r++, f--) result |= Bitboard{1ULL} << to_index(Position{r, f});
+			for(int r = square.rank_-1, f = square.file_+1; r>=1 && f<=6; r--, f++) result |= Bitboard{1ULL} << to_index(Position{r, f});
+			for(int r = square.rank_-1, f = square.file_-1; r>=1 && f>=1; r--, f--) result |= Bitboard{1ULL} << to_index(Position{r, f});
 			return result;
 		}
 
@@ -64,9 +64,9 @@ namespace engine
 		{
 			std::vector<Bitboard> blocker_configurations{};
 			blocker_configurations.push_back(Bitboard{0ULL});
-			bool is_bishop = piece_type == Piece::bishop;
-			const std::uint64_t attack_mask = is_bishop? bishop_mask(square) : rook_mask(square);
-			for(std::uint64_t blockers = attack_mask; blockers != 0; blockers = (blockers - 1) & attack_mask) 
+			const bool is_bishop{piece_type == Piece::bishop};
+			const Bitboard attack_mask{is_bishop? bishop_mask(square) : rook_mask(square)};
+			for(Bitboard blockers{attack_mask}; !blockers.is_empty(); blockers = Bitboard{(static_cast<std::uint64_t>(blockers) - 1)} & attack_mask) 
 			{
 				blocker_configurations.push_back(Bitboard{blockers});
 			}
@@ -95,7 +95,7 @@ namespace engine
 			{
 				const Position offset{dr, df};
 				for(Position target_square{bishop_square+offset}; is_on_board(target_square); target_square+=offset)
-				{	
+				{
 					valid_moves.add_piece(target_square);
 					if(!is_free(target_square, occupied_squares)) break;
 				}
@@ -103,27 +103,28 @@ namespace engine
 			return valid_moves;
 		}
 
-		const std::uint64_t random_uint64()
+		inline const std::uint64_t random_uint64()
 		{
 			static std::random_device rd;
 			static std::mt19937_64 gen(rd());
 			return gen();
 		}
 
-		const std::uint64_t random_uint64_fewbits()
+		inline const std::uint64_t random_uint64_fewbits()
 		{
 			return random_uint64() & random_uint64() & random_uint64();
 		}
 
-		Magic_square find_magic(const Position& square, const Piece& piece_type)
+		inline Magic_square find_magic(const Position& square, const Piece& piece_type)
 		{
 			try
 			{
 				const auto square_index = to_index(square);
 				const bool is_bishop = piece_type == Piece::bishop;
-				const auto relevant_bits = is_bishop? bishop_relevant_bits[square_index] : rook_relevant_bits[square_index];
-				const auto shift = 64-relevant_bits;
-				const std::uint64_t mask = is_bishop? bishop_mask(square) : rook_mask(square);
+				const unsigned relevant_bits = is_bishop? bishop_relevant_bits[square_index] : rook_relevant_bits[square_index];
+				const unsigned shift = 64-relevant_bits;
+				const Bitboard mask{is_bishop? bishop_mask(square) : rook_mask(square)};
+				const Bitboard unused{0xFFFFFFFFFFFFFFFFULL};
 				const auto& reachable_squares = is_bishop? bishop_reachable_squares : rook_reachable_squares;
 				const std::vector<Bitboard> blocker_configurations = generate_blocker_configurations(square, piece_type);
 				const std::vector<Bitboard> attacks = [&reachable_squares, &blocker_configurations, &square]()
@@ -137,17 +138,21 @@ namespace engine
 				}();
 				for(std::size_t k{0}; k < 100000000; ++k) 
 				{
-					std::vector<Bitboard> used(1 << relevant_bits, Bitboard{0xFFFFFFFFFFFFFFFFULL});
+					std::vector<Bitboard> used(1 << relevant_bits, unused);
 					const std::uint64_t magic = random_uint64_fewbits();
-					if(std::popcount((mask * magic) & 0xFF00000000000000ULL) < 6) continue;
+					if(std::popcount((static_cast<std::uint64_t>(mask) * magic) & 0xFF00000000000000ULL) < 6)
+						continue;
 					bool fail{false};
 					for(std::size_t i{0}; !fail && i < blocker_configurations.size(); ++i) 
 					{
-						const std::uint64_t magic_index = magic_hash(blocker_configurations[i], magic, shift);
-						if(used[magic_index] == 0xFFFFFFFFFFFFFFFFULL) used[magic_index] = attacks[i];
-						else if(used[magic_index] != attacks[i]) fail = true;
+						const unsigned magic_index = magic_hash(blocker_configurations[i], magic, shift);
+						if(used[magic_index] == unused)
+							used[magic_index] = attacks[i];
+						else if(used[magic_index] != attacks[i])
+							fail = true;
 					}
-					if(!fail) return Magic_square{used, mask, magic, std::uint8_t(64-relevant_bits)};
+					if(!fail)
+						return Magic_square{used, mask, magic, 64-relevant_bits};
 				}
 				throw std::runtime_error("could not find magic in: find_magic(...)");
 			}

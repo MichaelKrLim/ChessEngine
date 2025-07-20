@@ -10,14 +10,14 @@ namespace engine
 	struct Magic_square
 	{
 		std::vector<Bitboard> attack_table;
-		std::uint64_t mask;
+		Bitboard mask;
 		std::uint64_t magic;
-		std::uint8_t shift;
+		unsigned shift;
 	};
 
-	constexpr std::uint64_t magic_hash(const Bitboard& key, const std::uint64_t& magic, int shift) 
+	constexpr unsigned magic_hash(const Bitboard& key, const std::uint64_t& magic, int shift) 
 	{
-		return (key*magic) >> shift;
+		return (static_cast<std::uint64_t>(key)*magic) >> shift;
 	}
 
 	constexpr std::array<Position, 4> rook_moves_ =

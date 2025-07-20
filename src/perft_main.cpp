@@ -1,5 +1,4 @@
 #include "Move_generator.h"
-#include "Position.h"
 
 #include <iostream>
 #include <sstream>
@@ -15,12 +14,8 @@ int main(int argc, char* argv[])
 	if(argc == 4)
 	{
 		std::istringstream iss{argv[3]};
-		std::string move{""};
-		while(std::getline(iss, move, ' '))
-		{
-			const Position origin_square = algebraic_to_position(move.substr(0, 2));
-			base_position.make(Move{origin_square, algebraic_to_position(move.substr(2, 2)), base_position.piece_at(origin_square, base_position.side_to_move).value()});
-		}
+		for(Move move; iss>>move;)
+			base_position.make(move);
 	}
 	const auto perft = [](this auto&& rec, int depth, State& state, const bool&& is_root) -> unsigned long long
 	{

@@ -113,8 +113,8 @@ namespace
 					legal_moves.push_back(current_move);
 			});
 		}
-		Bitboard pawns_to_move = pawns_bb & ~file_h;
-		const Bitboard right_captures = is_white? (pawns_to_move << (rank_move+1)) : (pawns_to_move >> (rank_move-1));
+		Bitboard pawns_to_move{pawns_bb & ~Bitboard{file_h}};
+		const Bitboard right_captures{is_white? (pawns_to_move << (rank_move+1)) : (pawns_to_move >> (rank_move-1))};
 		right_captures.for_each_piece([&add_move, &pinned_pieces, &king_square, &occupied_squares, &pawn_direction, &current_side_occupied_squares, &is_white, &satisfies_check_requirements, &en_passant_target_square](const Position& destination_square)
 		{
 			const bool can_capture = !is_free(destination_square, occupied_squares & ~current_side_occupied_squares) || destination_square == en_passant_target_square;
@@ -124,8 +124,8 @@ namespace
 			if(is_on_board(destination_square) && can_capture && (!pinned_pieces.is_occupied(origin_square) || std::invoke(relative_diagonal, &king_square) == std::invoke(relative_diagonal, &destination_square)) && satisfies_check_requirements(current_move))
 				add_move(origin_square, destination_square, current_move);
 		});
-		pawns_to_move = pawns_bb & ~file_a;
-		const auto left_captures = is_white? (pawns_to_move << (rank_move-1)) : (pawns_to_move >> (rank_move+1));
+		pawns_to_move = pawns_bb & ~Bitboard{file_a};
+		const Bitboard left_captures{is_white? (pawns_to_move << (rank_move-1)) : (pawns_to_move >> (rank_move+1))};
 		left_captures.for_each_piece([&add_move, &pinned_pieces, &occupied_squares, &pawn_direction, &is_white, &current_side_occupied_squares, &en_passant_target_square, &king_square, &satisfies_check_requirements](const Position& destination_square)
 		{
 			const bool can_capture = !is_free(destination_square, occupied_squares & ~current_side_occupied_squares) || destination_square == en_passant_target_square;
@@ -175,14 +175,14 @@ namespace
 			if(castling_rights[Castling_rights::kingside])
 			{
 				Bitboard blocking_pieces_mask{is_white? 0x60ULL : 0x60ULL << (board_size*7)};
-				if(!(occupied_squares & blocking_pieces_mask) && !(blocking_pieces_mask & enemy_attack_map))
+				if((occupied_squares & blocking_pieces_mask).is_empty() && (blocking_pieces_mask & enemy_attack_map).is_empty())
 					legal_moves.push_back(Move{original_square, Position{original_square.rank_, original_square.file_+2}});
 			}
 			if(castling_rights[Castling_rights::queenside])
 			{
 				Bitboard queenside_check_mask{is_white? 0xcULL : 0xcULL << (board_size*7)};
 				Bitboard blocking_pieces_mask{is_white? 0xeULL : 0xeULL << (board_size*7)};
-				if(!(occupied_squares & blocking_pieces_mask) && !(queenside_check_mask & enemy_attack_map))
+				if((occupied_squares & blocking_pieces_mask).is_empty() && (queenside_check_mask & enemy_attack_map).is_empty())
 					legal_moves.push_back(Move{original_square, Position{original_square.rank_, original_square.file_-2}});
 			}
 		}
@@ -203,18 +203,18 @@ namespace
 	const Bitboard bishop_legal_moves_bb(const Position& original_square, const Bitboard& occupied_squares)
 	{
 		const auto square_index = to_index(original_square);
-		const auto& magic_square = bishop_magic_squares_[square_index];
+		const Magic_square& magic_square = bishop_magic_squares_[square_index];
 		const auto& attack_table = magic_square.attack_table;
-		std::uint64_t magic_index = magic_hash(occupied_squares & magic_square.mask, magic_square.magic, magic_square.shift);
+		unsigned magic_index = magic_hash(occupied_squares & magic_square.mask, static_cast<std::uint64_t>(magic_square.magic), magic_square.shift);
 		return attack_table[magic_index];
 	}
 
 	const Bitboard rook_legal_moves_bb(const Position& original_square, const Bitboard& occupied_squares)
 	{
 		const auto square_index = to_index(original_square);
-		const auto& magic_square = rook_magic_squares_[square_index];
+		const Magic_square& magic_square = rook_magic_squares_[square_index];
 		const auto& attack_table = magic_square.attack_table;
-		std::uint64_t magic_index = magic_hash(occupied_squares & magic_square.mask, magic_square.magic, magic_square.shift);
+		unsigned magic_index = magic_hash(occupied_squares & magic_square.mask, static_cast<std::uint64_t>(magic_square.magic), magic_square.shift);
 		return attack_table[magic_index];
 	}
 
@@ -295,11 +295,11 @@ namespace
 			return legal_moves(king_square, state.occupied_squares()) & pinning_rays & side.occupied_squares();
 		};
 		const Bitboard enemy_bishop_likes=enemy_side.pieces[Piece::bishop] | enemy_side.pieces[Piece::queen];
-		if(const Bitboard attacking_bishop_likes=bishop_legal_moves_bb(king_square, enemy_bishop_likes) & enemy_bishop_likes; (attacking_bishop_likes)>0)
+		if(const Bitboard attacking_bishop_likes=bishop_legal_moves_bb(king_square, enemy_bishop_likes) & enemy_bishop_likes; !attacking_bishop_likes.is_empty())
 			pinned_pieces|=generate_pins_from(attacking_bishop_likes, bishop_legal_moves_bb);
 
 		const Bitboard enemy_rook_likes=enemy_side.pieces[Piece::rook] | enemy_side.pieces[Piece::queen];
-		if(const Bitboard attacking_rook_likes=rook_legal_moves_bb(king_square, enemy_rook_likes) & enemy_rook_likes; (attacking_rook_likes) > 0)
+		if(const Bitboard attacking_rook_likes=rook_legal_moves_bb(king_square, enemy_rook_likes) & enemy_rook_likes; !attacking_rook_likes.is_empty())
 			pinned_pieces|=generate_pins_from(attacking_rook_likes, rook_legal_moves_bb);
 		return pinned_pieces;
 	}
@@ -340,9 +340,9 @@ namespace engine
 		const Bitboard attacking_knights = knight_mask(king_square) & enemy_side.pieces[Piece::knight];
 		const auto& pieces = our_side.pieces;
 		const Bitboard& our_king_bb = pieces[Piece::king];
-		const Bitboard left_attacking_pawn = state.side_to_move == Side::white? (our_king_bb & ~file_h) << (board_size+1) : (our_king_bb & ~file_h) >> (board_size-1);
-		const Bitboard right_attacking_pawn = state.side_to_move == Side::white? (our_king_bb & ~file_a) << (board_size-1) : (our_king_bb & ~file_a) >> (board_size+1);
-		const Bitboard attacking_pawns = enemy_side.pieces[Piece::pawn] & (left_attacking_pawn | right_attacking_pawn);
+		const Bitboard left_attacking_pawn{state.side_to_move == Side::white? (our_king_bb & ~Bitboard{file_h}) << (board_size+1) : (our_king_bb & ~Bitboard{file_h}) >> (board_size-1)};
+		const Bitboard right_attacking_pawn{state.side_to_move == Side::white? (our_king_bb & ~Bitboard{file_a}) << (board_size-1) : (our_king_bb & ~Bitboard{file_a}) >> (board_size+1)};
+		const Bitboard attacking_pawns{enemy_side.pieces[Piece::pawn] & (left_attacking_pawn | right_attacking_pawn)};
 		const auto attacking_knights_popcount = attacking_knights.popcount(),
 		attacking_pawns_popcount = attacking_pawns.popcount();
 		king_moves<moves_type>(legal_moves, king_square, occupied_squares, our_occupied_squares | state.enemy_attack_map, state.side_to_move == Side::white? true : false, our_side.castling_rights, state.enemy_attack_map);
@@ -392,10 +392,10 @@ namespace engine
 		const auto& pieces = state.sides[state.side_to_move].pieces;
 		const auto& pawn_bb = pieces[Piece::pawn];
 		const bool is_white = state.side_to_move == Side::white;
-		auto occupied_squares = state.occupied_squares();
+		Bitboard occupied_squares{state.occupied_squares()};
 		occupied_squares.remove_piece(state.sides[other_side(state.side_to_move)].pieces[Piece::king].lsb_square());
-		attack_map |= is_white? ((pawn_bb & ~file_a) << (board_size-1)) : ((pawn_bb & ~file_a) >> (board_size+1));
-		attack_map |= is_white? ((pawn_bb & ~file_h) << (board_size+1)) : ((pawn_bb & ~file_h) >> (board_size-1));
+		attack_map |= is_white? ((pawn_bb & ~Bitboard{file_a}) << (board_size-1)) : ((pawn_bb & ~Bitboard{file_a}) >> (board_size+1));
+		attack_map |= is_white? ((pawn_bb & ~Bitboard{file_h}) << (board_size+1)) : ((pawn_bb & ~Bitboard{file_h}) >> (board_size-1));
 		attack_map |= king_mask(pieces[Piece::king].lsb_square());
 		knight_moves<Moves_type::legal>(legal_moves, pieces[Piece::knight], Bitboard{0ULL});
 		bishop_moves<Moves_type::legal>(legal_moves, pieces[Piece::bishop], occupied_squares, Bitboard{0ULL}, {});

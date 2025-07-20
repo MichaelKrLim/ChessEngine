@@ -13,9 +13,13 @@ int main()
 	std::ofstream magic_header("magic_squares.h");
 	std::array<Magic_square, 64> bishop_magic_squares{};
 	magic_header << 
-R"(
-std::array<Magic_square, 64> bishop_magic_squares_ = []() {
-std::array<Magic_square, 64> bishop_magic_squares{};
+R"(#include <array>
+
+#include "Bitboard.h"
+#include "Magic_util.h"
+
+const std::array<engine::Magic_square, 64> bishop_magic_squares_ = []() {
+std::array<engine::Magic_square, 64> bishop_magic_squares{};
 
 )";
 	for(std::size_t rank{0}; rank<board_size; ++rank)
@@ -32,9 +36,9 @@ std::array<Magic_square, 64> bishop_magic_squares{};
 				magic_header << "Bitboard{" << static_cast<std::uint64_t>(bb) << "ULL}, ";
 			}
 			magic_header << "},\n"
-			<< current_magic_square.mask << "ULL, "
+			<< "Bitboard{" << static_cast<std::uint64_t>(current_magic_square.mask) << "ULL}, "
 			<< current_magic_square.magic << "ULL, "
-			<< static_cast<int>(current_magic_square.shift) << "};\n";
+			<< static_cast<int>(current_magic_square.shift) << "u};\n";
 		}
 	}
 	magic_header << " return bishop_magic_squares; }();\n";
@@ -42,8 +46,8 @@ std::array<Magic_square, 64> bishop_magic_squares{};
 	std::array<Magic_square, 64> rook_magic_squares{};
 	magic_header << 
 R"(
-std::array<Magic_square, 64> rook_magic_squares_ = []() {
-std::array<Magic_square, 64> rook_magic_squares{};
+const std::array<engine::Magic_square, 64> rook_magic_squares_ = []() {
+std::array<engine::Magic_square, 64> rook_magic_squares{};
 
 )";
 	for(std::size_t rank{0}; rank<board_size; ++rank)
@@ -60,9 +64,9 @@ std::array<Magic_square, 64> rook_magic_squares{};
 				magic_header << "Bitboard{" << static_cast<std::uint64_t>(bb) << "ULL}, ";
 			}
 			magic_header << "},\n"
-			<< current_magic_square.mask << "ULL, "
+			<< "Bitboard{" << static_cast<std::uint64_t>(current_magic_square.mask) << "ULL}, "
 			<< current_magic_square.magic << "ULL, "
-			<< static_cast<int>(current_magic_square.shift) << "};\n";
+			<< static_cast<int>(current_magic_square.shift) << "u};\n";
 		}
 	}
 	magic_header << " return rook_magic_squares; }();\n";
