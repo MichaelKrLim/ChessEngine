@@ -43,10 +43,6 @@ namespace engine
 		{
 			return move_data_ & (1U << 14);
 		}
-		constexpr bool is_capture() const
-		{
-			return move_data_ & (1U << 15);
-		}
 
 		private:
 
