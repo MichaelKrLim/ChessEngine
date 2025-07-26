@@ -15,10 +15,7 @@
 
 namespace engine
 {
-	enum class Castling_rights
-	{
-		kingside, queenside, size
-	};
+	enum class Castling_rights { kingside, queenside, size };
 	template <typename Mapped_type>
 	using Castling_rights_map = Enum_map_from_size<Castling_rights, Mapped_type>;
 	constexpr auto all_castling_rights = {Castling_rights::kingside, Castling_rights::queenside};
@@ -40,6 +37,8 @@ namespace engine
 				occupied_squares |= piece_bb;
 			return occupied_squares;
 		};
+
+		constexpr bool operator==(const Side_position&) const = default;
 	};
 
 	inline std::ostream& operator<<(std::ostream& os, const Castling_rights_map<bool>& castling_rights_map)
@@ -57,6 +56,40 @@ namespace engine
 
 	struct State
 	{
+		public:
+
+		explicit State(const std::string_view fen);
+		State() = default;
+
+		struct Piece_and_data
+		{
+			Piece piece;
+			Position position;
+			Side side;
+		};
+
+		Enum_map<Side, Side_position, 2> sides{};
+		unsigned half_move_clock{}, full_move_clock{};
+		Side side_to_move{Side::white};
+		Bitboard enemy_attack_map;
+		std::optional<Position> en_passant_target_square{std::nullopt};
+		std::uint64_t zobrist_hash;
+		std::vector<std::uint64_t> repetition_history;
+		double evaluation;
+
+		void make(const Move& move) noexcept;
+		void unmove() noexcept;
+		[[nodiscard]] Bitboard occupied_squares() const noexcept;
+		[[nodiscard]] inline bool is_square_attacked(const Position& position) const noexcept { return enemy_attack_map.is_occupied(position); }
+		[[nodiscard]] bool in_check() const noexcept;
+		[[nodiscard]] std::vector<Piece_and_data> get_board_data() const noexcept;
+		[[nodiscard]] bool is_stalemate() const noexcept;
+		[[nodiscard]] std::optional<Piece> piece_at(const Position& position, const Side& side) const noexcept;
+
+		friend std::ostream& operator<<(std::ostream& os, const State& state);
+
+		constexpr bool operator==(const State& state) const = default;
+
 		private:
 
 		struct State_delta
@@ -72,45 +105,16 @@ namespace engine
 			const std::uint64_t previous_zobrist_hash;
 			const unsigned half_move_clock;
 			const double evaluation;
+
+			constexpr bool operator==(const State_delta& state_delta) const = default;
 		};
 
-		struct Piece_and_data
-		{
-			Piece piece;
-			Position position;
-			Side side;
-		};
+		std::stack<State_delta> history{};
 
 		void validate_fen(const std::array<std::string, 6>& partitioned_fen) const;
 		void parse_fen(const std::string_view fen) noexcept;
 		void update_castling_rights(const Side& side) noexcept;
 		void move_and_hash(const Position& from_square, const Position& destination_square, const Piece& piece_type_to_move) noexcept;
-
-		public:
-
-		explicit State(const std::string_view fen);
-		State() = default;
-
-		Enum_map<Side, Side_position, 2> sides{};
-		unsigned half_move_clock{}, full_move_clock{};
-		Side side_to_move{Side::white};
-		Bitboard enemy_attack_map;
-		std::optional<Position> en_passant_target_square{std::nullopt};
-		std::uint64_t zobrist_hash;
-		std::vector<std::uint64_t> repetition_history;
-		std::stack<State_delta> history{};
-		double evaluation;
-
-		void make(const Move& move) noexcept;
-		void unmove() noexcept;
-		[[nodiscard]] Bitboard occupied_squares() const noexcept;
-		[[nodiscard]] inline bool is_square_attacked(const Position& position) const noexcept { return enemy_attack_map.is_occupied(position); }
-		[[nodiscard]] bool in_check() const noexcept;
-		[[nodiscard]] std::vector<Piece_and_data> get_board_data() const noexcept;
-		[[nodiscard]] bool is_stalemate() const noexcept;
-		[[nodiscard]] std::optional<Piece> piece_at(const Position& position, const Side& side) const noexcept;
-
-		friend std::ostream& operator<<(std::ostream& os, const State& state);
 	};
 
 	inline std::ostream& operator<<(std::ostream& os, const State& state)

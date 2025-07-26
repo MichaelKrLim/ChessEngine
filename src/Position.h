@@ -3,6 +3,7 @@
 
 #include "Constants.h"
 
+#include <cstdint>
 #include <iostream>
 #include <type_traits>
 
@@ -26,8 +27,8 @@ namespace engine
 			rank_ = board_index/board_size;
 			file_ = board_index%board_size;
 		}
-		[[nodiscard]] constexpr std::uint8_t diagonal_index() const noexcept { return 7+rank_-file_; }
-		[[nodiscard]] constexpr std::uint8_t antidiagonal_index() const noexcept { return rank_+file_; }
+		[[nodiscard]] constexpr unsigned diagonal_index() const noexcept { return 7+rank_-file_; }
+		[[nodiscard]] constexpr unsigned antidiagonal_index() const noexcept { return rank_+file_; }
 		template <typename T, typename L, typename = std::enable_if_t<std::is_integral<T>::value>, typename = std::enable_if_t<std::is_integral<L>::value>>
 		explicit constexpr Position(T rank, L file) : rank_(static_cast<int>(rank)), file_(static_cast<int>(file)) {}
 

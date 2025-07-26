@@ -42,8 +42,8 @@ TEST_SUITE("Transposition Table")
 		{
 			std::uint64_t hash{594392934};
 			const std::uint64_t	old_hash{hash};
-			zobrist::invert_piece_at(hash, Position{1, 1}, Piece::rook,	Side::black);
-			zobrist::invert_piece_at(hash, Position{1, 1}, Piece::rook,	Side::black);
+			zobrist::invert_piece_at(hash, Position{1, 1}, Piece::rook, Side::black);
+			zobrist::invert_piece_at(hash, Position{1, 1}, Piece::rook, Side::black);
 			CHECK(hash==old_hash);
 		}
 
@@ -60,8 +60,8 @@ TEST_SUITE("Transposition Table")
 		{
 			std::uint64_t hash{546544745754745};
 			const std::uint64_t	old_hash{hash};
-			zobrist::invert_en_passant_square(hash,	Position{2,	2});
-			zobrist::invert_en_passant_square(hash,	Position{2,	2});
+			zobrist::invert_en_passant_square(hash,	Position{2, 2});
+			zobrist::invert_en_passant_square(hash,	Position{2, 2});
 			CHECK(hash==old_hash);
 		}
 
@@ -80,22 +80,26 @@ TEST_SUITE("Transposition Table")
 			const auto hash{zobrist::hash(state)};
 			REQUIRE(hash==zobrist::hash(state));
 
-			state.make(Move{Position{1,	1},	Position{3,	1}});
+			state.make(Move{Position{1, 1}, Position{3, 1}});
 			CHECK(zobrist::hash(state)!=hash);
 		}
 	}
 
 	TEST_CASE("Transposition Table")
 	{
-		SUBCASE("Operator[]")
+		SUBCASE("Operator[] and Insertion")
 		{
-			Transposition_table	tt{100};
-			
-		}
-
-		SUBCASE("insert")
-		{
-
+			Transposition_table tt(100);
+			CHECK(tt[0x234234234]==std::nullopt);
+			const auto some_hash{0x239482342342342};
+			tt.insert(Transposition_data{
+				.eval=1000.0,
+				.zobrist_hash=some_hash,
+			});
+			const auto cache_result{tt[some_hash]};
+			REQUIRE(cache_result.has_value());
+			CHECK(cache_result->eval==1000.0);
+			CHECK(tt[0x234234234]==std::nullopt);
 		}
 	}
 }
