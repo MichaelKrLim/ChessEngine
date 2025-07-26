@@ -8,7 +8,11 @@ include(cmake/CPM.cmake)
 
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
-set(CMAKE_CXX_FLAGS "-Wall -Werror -funroll-loops -pedantic -O3")
+set(CMAKE_CXX_FLAGS "-Wall -funroll-loops -pedantic -O3") # -Werror
+
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	add_compile_options(-Werror) # prevent gcc bug failing compilation
+endif()
 
 # for windows
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
@@ -51,7 +55,8 @@ if(ENGINE_BUILD_TESTS)
 	CPMAddPackage(
 		NAME doctest
 		GIT_REPOSITORY https://github.com/doctest/doctest.git
-		GIT_TAG v2.4.11
+		GIT_TAG v2.4.12
+		SYSTEM ON
 	)
 	file(GLOB test_sources CONFIGURE_DEPENDS src/*.tests.cpp)
 	add_executable(tests
