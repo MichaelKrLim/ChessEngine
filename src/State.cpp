@@ -358,7 +358,7 @@ void State::unmove() noexcept
 		if(history_data.was_en_passant)
 		{
 			const auto direction = was_whites_move? 1:-1;
-			const Position pawn_to_return = Position{previous_move_destination.rank_-direction, previous_move_destination.file_};
+			const Position pawn_to_return{previous_move_destination.rank_-direction, previous_move_destination.file_};
 			current_side_to_move.pieces[Piece::pawn].add_piece(pawn_to_return);
 		}
 		side_to_unmove.pieces[history_data.piece].move_piece(history_data.move.destination_square(), history_data.move.from_square());
