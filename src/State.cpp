@@ -329,7 +329,7 @@ void State::unmove() noexcept
 		--full_move_clock;
 	Side_position& side_to_unmove = sides[last_moved_side];
 	Side_position& current_side_to_move = sides[side_to_move];
-	const Position previous_move_destination = history_data.move.destination_square(), previous_move_origin = history_data.move.from_square();
+	const Position& previous_move_destination = history_data.move.destination_square(), previous_move_origin = history_data.move.from_square();
 	if(history_data.piece == Piece::pawn && previous_move_destination.rank_ == promotion_rank)
 	{
 		side_to_unmove.pieces[history_data.move.promotion_piece()].remove_piece(history_data.move.destination_square());
