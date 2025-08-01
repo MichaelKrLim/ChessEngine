@@ -2,7 +2,6 @@
 
 # ♟️
 
-[![Build](https://img.shields.io/badge/build-passing-brightgreen)]()
 [![C++](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.cppreference.com/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/MichaelKrLim/ChessEngine)
 <!-- [![License](https://img.shields.io/badge/license-MIT-lightgrey)]() -->
