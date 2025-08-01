@@ -15,8 +15,7 @@
 ## 🚀 Features
 
 - ✅ **UCI Protocol Support** – Plug it into any GUI (e.g., Arena, CuteChess, Banksia)
-- ⚡ **Efficient Move Generation** – Magic bitboard optimizations
-- 🔍 **Search Engine** – Alpha-beta pruning, Quiescence search
+- ⚡ **Efficient Move Generation** – Using magic bitboards
 - 🧮 **Evaluation Function** – Material, Piece-square tables
 - 🧪 **Modular & Testable** – Tested with *Doctest*
 - 💻 **Command-Line Interface** – Play directly in the terminal
