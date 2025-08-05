@@ -42,8 +42,8 @@ namespace engine
 		constexpr Bitboard  operator<<(const Integral_type shift) const { return Bitboard{data_ << shift}; }
 
 
-		constexpr bool      operator==(const Bitboard bitboard)   const { return data_ == bitboard.data_; }
-		constexpr bool      operator!=(const Bitboard bitboard)   const { return !(*this == bitboard); }
+		constexpr bool      operator==(const Bitboard& bitboard)   const { return data_ == bitboard.data_; }
+		constexpr bool      operator!=(const Bitboard& bitboard)   const { return !(*this == bitboard); }
 
 		[[nodiscard]] constexpr bool is_occupied(const Position& position) const;
 		[[nodiscard]] std::string pretty_string() const;
