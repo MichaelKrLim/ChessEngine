@@ -20,45 +20,7 @@ namespace
 	using namespace engine;
 	#include "magic_squares.h"
 
-	constexpr std::array<Position, 8> knight_moves_ =
-	{{
-		Position{2, 1}, Position{2, -1}, Position{-2, 1}, Position{-2, -1},
-		Position{1, 2}, Position{1, -2}, Position{-1, 2}, Position{-1, -2}
-	}};
-
-	constexpr std::array<Position, 8> king_moves_ =
-	{{
-		Position{1, 0}, Position{-1, 0}, Position{0,  1}, Position{0,  -1},
-		Position{1, 1}, Position{-1, 1}, Position{1, -1}, Position{-1, -1}
-	}};
-
 	using fixed_vector_t = Fixed_capacity_vector<Move, max_legal_moves>;
-
-	constexpr Bitboard knight_mask(const Position& square)
-	{
-		Bitboard reachable_squares{0ULL};
-		for(const auto& move : knight_moves_)
-		{
-			const auto [del_rank, del_file] = move;
-			const Position destination_square(square.rank_+del_rank, square.file_+del_file);
-			if(is_on_board(destination_square))
-				reachable_squares.add_piece(destination_square);
-		}
-		return reachable_squares;
-	}
-
-	constexpr Bitboard king_mask(const Position& square)
-	{
-		Bitboard reachable_squares{0ULL};
-		for(const auto& move : king_moves_)
-		{
-			const auto [del_rank, del_file] = move;
-			const Position destination_square(square.rank_+del_rank, square.file_+del_file);
-			if(is_on_board(destination_square))
-				reachable_squares.add_piece(destination_square);
-		}
-		return reachable_squares;
-	}
 
 	const Bitboard bishop_legal_moves_bb(const Position& original_square, const Bitboard& occupied_squares)
 	{
@@ -181,7 +143,7 @@ namespace
 	{
 		knight_bb.for_each_piece([&](const auto& origin_square)
 		{
-			Bitboard knight_moves = knight_mask(origin_square) & ~our_occupied_squares;
+			Bitboard knight_moves = knight_mask[to_index(origin_square)] & ~our_occupied_squares;
 			if constexpr (moves_type == Moves_type::noisy)
 				knight_moves &= enemy_occupied_squares;
 			knight_moves.for_each_piece([&](const auto& destination_square)
@@ -328,7 +290,7 @@ namespace engine
 		const Side_position& enemy_side = state.sides[other_side(state.side_to_move)];
 		find_checking_pieces(enemy_side.pieces[Piece::rook] | enemy_side.pieces[Piece::queen], rook_moves_);
 		find_checking_pieces(enemy_side.pieces[Piece::bishop] | enemy_side.pieces[Piece::queen], bishop_moves_);
-		const Bitboard attacking_knights = knight_mask(king_square) & enemy_side.pieces[Piece::knight];
+		const Bitboard attacking_knights = knight_mask[to_index(king_square)] & enemy_side.pieces[Piece::knight];
 		const auto& pieces = our_side.pieces;
 		const Bitboard& our_king_bb = pieces[Piece::king];
 		const Bitboard left_attacking_pawn{state.side_to_move == Side::white? (our_king_bb & ~Bitboard{file_h}) << (board_size+1) : (our_king_bb & ~Bitboard{file_h}) >> (board_size-1)};
@@ -389,10 +351,10 @@ namespace engine
 		occupied_squares.remove_piece(state.sides[other_side(state.side_to_move)].pieces[Piece::king].lsb_square());
 		attack_map |= is_white? ((pawn_bb & ~Bitboard{file_a}) << (board_size-1)) : ((pawn_bb & ~Bitboard{file_a}) >> (board_size+1));
 		attack_map |= is_white? ((pawn_bb & ~Bitboard{file_h}) << (board_size+1)) : ((pawn_bb & ~Bitboard{file_h}) >> (board_size-1));
-		attack_map |= king_mask(pieces[Piece::king].lsb_square());
+		attack_map |= king_mask[to_index(pieces[Piece::king].lsb_square())];
 		pieces[Piece::knight].for_each_piece([&](const Position& position)
 		{
-			attack_map |= knight_mask(position);
+			attack_map |= knight_mask[to_index(position)];
 		});
 		(pieces[Piece::bishop] | pieces[Piece::queen]).for_each_piece([&](const Position& position)
 		{

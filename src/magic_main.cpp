@@ -69,5 +69,23 @@ std::array<engine::Magic_square, 64> rook_magic_squares{};
 			<< static_cast<int>(current_magic_square.shift) << "u};\n";
 		}
 	}
-	magic_header << " return rook_magic_squares; }();\n";
+	magic_header << " return rook_magic_squares; }();\n\n";
+
+	magic_header << "const std::array<Bitboard, 64> king_mask = []() {\n" << "std::array<Bitboard, 64> king_mask{};\n";
+	for(std::size_t board_index{0}; board_index<64; ++board_index)
+	{
+		Position position{board_index};
+		magic_header << std::dec << "king_mask[" << board_index << "]=";
+		magic_header << std::hex << "Bitboard{0x" << static_cast<std::uint64_t>(engine::magic::king_mask(position)) << "ULL};\n";
+	}
+	magic_header << "return king_mask; }();\n\n";
+	
+	magic_header << "const std::array<Bitboard, 64> knight_mask = []() {\n" << "std::array<Bitboard, 64> knight_mask{};\n";
+	for(std::size_t board_index{0}; board_index<64; ++board_index)
+	{
+		Position position{board_index};
+		magic_header << std::dec << "knight_mask[" << board_index << "]=";
+		magic_header << std::hex << "Bitboard{0x" << static_cast<std::uint64_t>(engine::magic::knight_mask(position)) << "ULL};\n";
+	}
+	magic_header << "return knight_mask; }();\n\n";
 }

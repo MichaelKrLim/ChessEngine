@@ -16,7 +16,7 @@ namespace engine
 {
 	namespace magic
 	{
-		constexpr static std::array<std::uint8_t, board_size*board_size> rook_relevant_bits = 
+		static const std::array<std::uint8_t, board_size*board_size> rook_relevant_bits = 
 		{
 			12, 11, 11, 11, 11, 11, 11, 12,
 			11, 10, 10, 10, 10, 10, 10, 11,
@@ -28,7 +28,7 @@ namespace engine
 			12, 11, 11, 11, 11, 11, 11, 12
 		};
 
-		constexpr static std::array<std::uint8_t, board_size*board_size> bishop_relevant_bits = 
+		static const std::array<std::uint8_t, board_size*board_size> bishop_relevant_bits = 
 		{
 			6, 5, 5, 5, 5, 5, 5, 6,
 			5, 5, 5, 5, 5, 5, 5, 5,
@@ -40,7 +40,45 @@ namespace engine
 			6, 5, 5, 5, 5, 5, 5, 6
 		};
 
-		constexpr Bitboard rook_mask(const Position& square)
+		static const std::array<Position, 8> knight_moves_ =
+		{{
+			Position{2, 1}, Position{2, -1}, Position{-2, 1}, Position{-2, -1},
+			Position{1, 2}, Position{1, -2}, Position{-1, 2}, Position{-1, -2}
+		}};
+
+		static const std::array<Position, 8> king_moves_ =
+		{{
+			Position{1, 0}, Position{-1, 0}, Position{0,  1}, Position{0,  -1},
+			Position{1, 1}, Position{-1, 1}, Position{1, -1}, Position{-1, -1}
+		}};
+
+		inline Bitboard knight_mask(const Position& square)
+		{
+			Bitboard reachable_squares{0ULL};
+			for(const auto& move : knight_moves_)
+			{
+				const auto [del_rank, del_file] = move;
+				const Position destination_square(square.rank_+del_rank, square.file_+del_file);
+				if(is_on_board(destination_square))
+					reachable_squares.add_piece(destination_square);
+			}
+			return reachable_squares;
+		}
+
+		inline Bitboard king_mask(const Position& square)
+		{
+			Bitboard reachable_squares{0ULL};
+			for(const auto& move : king_moves_)
+			{
+				const auto [del_rank, del_file] = move;
+				const Position destination_square(square.rank_+del_rank, square.file_+del_file);
+				if(is_on_board(destination_square))
+					reachable_squares.add_piece(destination_square);
+			}
+			return reachable_squares;
+		}
+
+		inline Bitboard rook_mask(const Position& square)
 		{
 			Bitboard result{0ULL};
 			for(int r = square.rank_+1; r <= 6; r++) result |= Bitboard{1ULL} << to_index(Position{r, square.file_});
@@ -50,7 +88,7 @@ namespace engine
 			return result;
 		}
 
-		constexpr Bitboard bishop_mask(const Position& square)
+		inline Bitboard bishop_mask(const Position& square)
 		{
 			Bitboard result{0ULL};
 			for(int r = square.rank_+1, f = square.file_+1; r<=6 && f<=6; r++, f++) result |= Bitboard{1ULL} << to_index(Position{r, f});
@@ -60,7 +98,7 @@ namespace engine
 			return result;
 		}
 
-		constexpr std::vector<Bitboard> generate_blocker_configurations(const Position& square, const Piece& piece_type)
+		inline std::vector<Bitboard> generate_blocker_configurations(const Position& square, const Piece& piece_type)
 		{
 			std::vector<Bitboard> blocker_configurations{};
 			blocker_configurations.push_back(Bitboard{0ULL});
@@ -73,7 +111,7 @@ namespace engine
 			return blocker_configurations;
 		}
 
-		constexpr Bitboard rook_reachable_squares(const Position& rook_square, const Bitboard& occupied_squares)
+		inline Bitboard rook_reachable_squares(const Position& rook_square, const Bitboard& occupied_squares)
 		{
 			Bitboard valid_moves{0ULL};
 			for(const auto& [dr, df] : rook_moves_) 
@@ -88,7 +126,7 @@ namespace engine
 			return valid_moves;
 		}
 
-		constexpr Bitboard bishop_reachable_squares(const Position& bishop_square, const Bitboard& occupied_squares)
+		inline Bitboard bishop_reachable_squares(const Position& bishop_square, const Bitboard& occupied_squares)
 		{
 			Bitboard valid_moves{0ULL};
 			for(const auto& [dr, df] : bishop_moves_) 
@@ -162,7 +200,7 @@ namespace engine
 				std::exit(EXIT_FAILURE);
 			}
 		}
-	}
-}
+	} // namespace magic
+} // namespace engine
 
 #endif // Magic_generation_util_h_INCLUDED
