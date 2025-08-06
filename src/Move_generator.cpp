@@ -269,25 +269,13 @@ namespace engine
 		const Position king_square = our_side.pieces[Piece::king].lsb_square();
 		const bool in_check = state.in_check();
 		Bitboard checking_pieces;
-		auto find_checking_pieces = [&](const auto& pinning_bb, const auto& moves)
+		auto find_checking_pieces = [&](const auto& pinning_bb, const auto legal_moves)
 		{
-			for(const auto& move : moves)
-			{
-				for(Position current_square{king_square+move}; is_on_board(current_square); current_square+=move)
-				{
-					if(pinning_bb.is_occupied(current_square))
-					{
-						checking_pieces.add_piece(current_square);
-						break;
-					}
-					else if(occupied_squares.is_occupied(current_square))
-						break;
-				}
-			}
+			return pinning_bb & legal_moves(king_square, occupied_squares);
 		};
 		const Side_position& enemy_side = state.sides[other_side(state.side_to_move)];
-		find_checking_pieces(enemy_side.pieces[Piece::rook] | enemy_side.pieces[Piece::queen], rook_moves_);
-		find_checking_pieces(enemy_side.pieces[Piece::bishop] | enemy_side.pieces[Piece::queen], bishop_moves_);
+		checking_pieces |= find_checking_pieces(enemy_side.pieces[Piece::rook] | enemy_side.pieces[Piece::queen], rook_legal_moves_bb);
+		checking_pieces |= find_checking_pieces(enemy_side.pieces[Piece::bishop] | enemy_side.pieces[Piece::queen], bishop_legal_moves_bb);
 		const Bitboard attacking_knights = knight_mask[to_index(king_square)] & enemy_side.pieces[Piece::knight];
 		const auto& pieces = our_side.pieces;
 		const Bitboard& our_king_bb = pieces[Piece::king];
