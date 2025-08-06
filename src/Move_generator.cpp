@@ -80,8 +80,6 @@ namespace
 						add_move(origin_square, destination_square, current_move);
 				}
 			}
-			else
-				single_moves.remove_piece(destination_square);
 		});
 		if constexpr (moves_type == Moves_type::legal)
 		{
