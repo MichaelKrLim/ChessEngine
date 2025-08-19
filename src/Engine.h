@@ -17,6 +17,7 @@
 #include <chrono>
 #include <limits>
 #include <print>
+#include <stdexcept>
 
 namespace engine
 {
@@ -28,7 +29,7 @@ namespace engine
 				return true;
 			else
 			{
-				const auto used_time = std::chrono::high_resolution_clock::now()-start_time+std::chrono::milliseconds{100}; // buffer
+				const auto used_time = std::chrono::high_resolution_clock::now()-start_time+std::chrono::milliseconds{50}; // buffer
 				if((search_options.movetime && used_time > search_options.movetime.value()) || (search_options.time[side] && used_time > (search_options.time[side].value()+22*search_options.increment[side])/22))
 					return true;
 			}
@@ -344,25 +345,8 @@ namespace engine
 			std::cout << "\n"; // std::println() soon!
 		};
 
-/*
-		Move best_move; = [&state]()
-		{
-			struct Move_data { Move move; double eval; };
-			const auto scores = generate_moves<Moves_type::legal>(state) | std::views::transform([&state](const Move& move)
-			{
-				state.make(move);
-				const auto eval = evaluate(state);
-				state.unmove();
-				return Move_data{move, eval};
-			});
-			const auto it=std::ranges::max_element(scores, {}, &Move_data::eval);
-			return (*it).move;
-		}();
-*/
-		
 		for(unsigned current_depth{1}; !stop_searching(current_depth); ++current_depth)
 		{
-			principal_variation.clear();
 			try
 			{
 				unsigned extended_depth{0},
@@ -374,6 +358,20 @@ namespace engine
 			}
 			catch(const timeout&) { break; }
 		}
+
+		if(principal_variation.front()==Move{Position{0,0}, Position{0, 0}})
+		{
+			struct Move_data { Move move; double eval; };
+			const auto scores = generate_moves<Moves_type::legal>(state) | std::views::transform([&state](const Move& move)
+			{
+				state.make(move);
+				state.unmove();
+				return Move_data{move, state.evaluation};
+			});
+			const auto it=std::ranges::max_element(scores, {}, &Move_data::eval);
+			return (*it).move;
+		}
+		
 		return principal_variation.front();
 	}
 }
