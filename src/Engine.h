@@ -365,8 +365,9 @@ namespace engine
 			const auto scores = generate_moves<Moves_type::legal>(state) | std::views::transform([&state](const Move& move)
 			{
 				state.make(move);
+				const auto score = state.evaluation;
 				state.unmove();
-				return Move_data{move, state.evaluation};
+				return Move_data{move, score};
 			});
 			const auto it=std::ranges::max_element(scores, {}, &Move_data::eval);
 			return (*it).move;
