@@ -137,7 +137,10 @@ namespace
 
 	void uci_handler() noexcept
 	{
-		std::println("id: {}\n\nauthor: {}\n\noption name Hash type spin default 16 min 1 max 33554432\nuciok", engine::name, engine::author);
+		std::println("id: {}\n", engine::name);
+		std::println("author: {}\n", engine::author);
+		std::println("option name Hash type spin default 16 min 1 max 33554432");
+		std::println("uciok");
 	}
 
 	template <auto>
