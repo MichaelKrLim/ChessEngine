@@ -16,7 +16,7 @@ jobs:
     steps:
     - name: Setup Clang 18
       run: |
-        wget -qO- https://apt.llvm.org/llvm.sh | bash -s -- 18
+        wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 18
         sudo apt update
         sudo apt install -y clang-18
     - name: Clone Engine
