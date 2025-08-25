@@ -173,7 +173,6 @@ void State::move_and_hash(const Position& from_square, const Position& destinati
 
 void State::make(const Move& move) noexcept
 {
-	const auto& history_size = history.size();
 	Side_position& side = sides[side_to_move];
 	auto& opposite_side = sides[other_side(side_to_move)];
 	const auto destination_square = move.destination_square();
@@ -313,7 +312,6 @@ void State::make(const Move& move) noexcept
 	zobrist::invert_side_to_move(zobrist_hash);
 	side_to_move = other_side(side_to_move);
 	repetition_history.push_back(zobrist_hash);
-	assert(history.size() > history_size);
 }
 
 void State::unmove() noexcept
