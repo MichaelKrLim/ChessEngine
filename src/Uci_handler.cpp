@@ -94,8 +94,10 @@ namespace
 				search_options.increment[engine::Side::black] = read_time(is);
 			else if(option == "movestogo")
 				is>>search_options.movestogo;
-			else if(option == "hash")
+			else if(option == "Hash")
 				is>>search_options.hash;
+			else if(option == "Threads")
+				continue;
 			else
 				throw std::invalid_argument{"Command not found"};
 		}
@@ -140,6 +142,7 @@ namespace
 		std::println("id: {}\n", engine::name);
 		std::println("author: {}\n", engine::author);
 		std::println("option name Hash type spin default 16 min 1 max 33554432");
+		std::println("option name Threads type spin default 1 min 1 max 1");
 		std::println("uciok");
 	}
 

@@ -17,7 +17,6 @@
 #include <chrono>
 #include <limits>
 #include <print>
-#include <stdexcept>
 
 namespace engine
 {
