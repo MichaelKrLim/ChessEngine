@@ -24,15 +24,15 @@ void State::validate_fen(const std::array<std::string, 6>& partitioned_fen) cons
 		const std::uint8_t number_of_squares = std::ranges::fold_left(rank, 0, [](int current_count, const char& letter){ return isdigit(letter)? current_count+letter-'0' : current_count+1; });
 		if(invalid_letters || number_of_squares != 8 || double_empty_squares)
 			throw std::invalid_argument("invalid piece data");
-		if(!std::regex_match(fen_active_color, std::regex{"^(w|b)$"}))
+		if(fen_active_color != "w" && fen_active_color != "b")
 			throw std::invalid_argument("invalid active color");
 		if(!std::regex_match(fen_castling_availiability, std::regex{"^-$|^(KQ?k?q?|Qk?q?|kq?|q)$"}))
 			throw std::invalid_argument("invalid castling rights");
 		if(!std::regex_match(fen_en_passant_target_square, std::regex{"^(-|[a-h][36])$"}))
 			throw std::invalid_argument("invalid en passant square");
-		if(!std::regex_match(fen_halfmove_clock, std::regex{"^([0-9]|[1-9][0-9])$"}))
+		if(!std::ranges::all_of(fen_halfmove_clock, ::isdigit))
 			throw std::invalid_argument("invalid halfmove clock");
-		if(!std::regex_match(fen_fullmove_clock, std::regex{"^([1-9][0-9]{0,1})$"}))
+		if(!std::ranges::all_of(fen_fullmove_clock, ::isdigit))
 			throw std::invalid_argument("invalid halfmove clock");
 	}
 }

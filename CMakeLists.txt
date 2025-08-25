@@ -30,6 +30,7 @@ set(common_sources
 	src/State.cpp src/State.h
 	src/Move_generator.h src/Move_generator.cpp
 	src/Transposition_table.h
+	src/bench.h
 )
 
 add_executable(generate_magics src/magic_main.cpp

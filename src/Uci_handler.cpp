@@ -133,8 +133,8 @@ namespace
 
 	void go_handler(const Search_options& search_options) noexcept
 	{
-		const auto best_move = engine::generate_best_move(state, search_options);
-		std::cout << "bestmove " << best_move << "\n";
+		const auto search_results = engine::generate_best_move(state, search_options);
+		std::cout << "bestmove " << search_results.pv.front() << "\n";
 	}
 
 	void uci_handler() noexcept

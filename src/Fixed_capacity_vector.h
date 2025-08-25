@@ -18,8 +18,10 @@ class Fixed_capacity_vector
 	}
 
 	constexpr T& front() noexcept { return data_[0]; }
+	constexpr const T& front() const noexcept { return data_[0]; }
 
 	constexpr T& back() noexcept { return data_[used_capacity_-1]; }
+	constexpr const T& back() const noexcept { return data_[used_capacity_-1]; }
 
 	constexpr std::size_t size() const noexcept { return used_capacity_; };
 

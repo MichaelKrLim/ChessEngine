@@ -20,7 +20,15 @@
 
 namespace engine
 {
-	inline Move generate_best_move(State state, const uci::Search_options& search_options)
+	struct Search_results
+	{
+		unsigned nodes{0};
+		double score{0};
+		unsigned seldepth{0};
+		Fixed_capacity_vector<Move, 256> pv;
+	};
+
+	inline Search_results generate_best_move(State state, const uci::Search_options& search_options)
 	{
 		const auto stop_searching = [&search_options, start_time=std::chrono::high_resolution_clock::now(), side=state.side_to_move](const std::optional<unsigned> current_depth = std::nullopt)
 		{
@@ -344,35 +352,31 @@ namespace engine
 			std::cout << "\n"; // std::println() soon!
 		};
 
-		for(unsigned current_depth{1}; !stop_searching(current_depth); ++current_depth)
+		Fixed_capacity_vector<Move, 256> current_pv;
+		unsigned extended_depth{0},
+		nodes{0},
+		current_depth{1};
+		double score{0};
+		for(; !stop_searching(current_depth); ++current_depth)
 		{
+			extended_depth=nodes=score=0;
+			current_pv.clear();
 			try
 			{
-				unsigned extended_depth{0},
-				nodes{0};
-				Fixed_capacity_vector<Move, 256> current_pv;
-				const double eval = nega_max(current_depth, extended_depth, 0, 0, nodes, current_depth, current_pv)*(state.side_to_move==Side::black?-1:1);
+				const double score = nega_max(current_depth, extended_depth, 0, 0, nodes, current_depth, current_pv)*(state.side_to_move==Side::black?-1:1);
 				principal_variation = current_pv;
-				output_info(eval, nodes, current_depth, extended_depth, principal_variation);
+				output_info(score, nodes, current_depth, extended_depth, principal_variation);
 			}
-			catch(const timeout&) { break; }
+			catch(const timeout&) {}
 		}
 
-		if(principal_variation.front()==Move{Position{0,0}, Position{0, 0}})
-		{
-			struct Move_data { Move move; double eval; };
-			const auto scores = generate_moves<Moves_type::legal>(state) | std::views::transform([&state](const Move& move)
-			{
-				state.make(move);
-				const auto score = state.evaluation;
-				state.unmove();
-				return Move_data{move, score};
-			});
-			const auto it=std::ranges::max_element(scores, {}, &Move_data::eval);
-			return (*it).move;
-		}
-		
-		return principal_variation.front();
+		return Search_results {
+			.nodes=nodes,
+			.score=score,
+			.seldepth=current_depth+extended_depth,
+			.pv=current_pv,
+		};
+
 	}
 }
 
