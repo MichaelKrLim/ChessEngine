@@ -10,14 +10,17 @@ set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "-Wall -funroll-loops -pedantic -O3") # -Werror
+add_compile_options(-Wall
+					-funroll-loops
+					-pedantic
+					-O3) # -Werror
 
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	add_compile_options(-Werror) # prevent gcc bug failing compilation
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+	add_compile_options(-stdlib=libc++)
 endif()
 
 # for windows
