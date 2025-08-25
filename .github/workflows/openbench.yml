@@ -30,7 +30,7 @@ jobs:
           -D${{ matrix.cpu_flags }}=1
 
     - name: Build Engine ${{ matrix.nnue_flags }}-${{ matrix.cpu_flags }}
-      run: make -C build -j$(nproc)
+      run: make engine -C build -j$(nproc)
 
     - name: Archive ${{ matrix.nnue_flags }}-${{ matrix.cpu_flags }}
       uses: actions/upload-artifact@v4

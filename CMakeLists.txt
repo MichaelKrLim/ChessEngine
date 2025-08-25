@@ -13,11 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_options(-Wall
 					-funroll-loops
 					-pedantic
-					-O3) # -Werror
-
-if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	add_compile_options(-Werror) # prevent gcc bug failing compilation
-endif()
+					-O3) # -Werror causes bug in gcc
 
 # for windows
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
