@@ -19,10 +19,6 @@ if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	add_compile_options(-Werror) # prevent gcc bug failing compilation
 endif()
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-	add_compile_options(-stdlib=libc++)
-endif()
-
 # for windows
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")

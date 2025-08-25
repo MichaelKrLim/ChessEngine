@@ -1,29 +1,40 @@
-name: OpenBench Build
+name: OpenBench	Build
 on:
   push:
   workflow_dispatch:
 
 jobs:
   build_and_archive:
-    name: Build and Archive
-    runs-on: ubuntu-latest # No longer need matrix.os
+	name: Build	and	Archive
+	strategy:
+	  matrix:
+		nnue_flags:	[avx2, avx512]
+		cpu_flags: [popcnt,	pext]
 
-    steps:
-    - name: Setup Clang 18 and Libc++
-      run: |
-        wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 18
-        sudo apt update
-        # Install both the compiler and the required standard library headers
-        sudo apt install -y clang-18 libc++-18-dev
-    - name: Clone Engine
-      uses: actions/checkout@v4
-    - name: Configure CMake with Clang
-      run: |
-        CC=clang-18 CXX=clang++-18 cmake -B build -DCMAKE_BUILD_TYPE=Release
-    - name: Build Engine
-      run: make -C build
-    - name: Archive Build
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ github.sha }}-linux-engine
-        path: build/engine
+	runs-on: ubuntu-latest
+	container: archlinux:latest
+
+	steps:
+	- name:	Install	Dependencies
+	  run: |
+		sudo pacman	-Syu --noconfirm
+		sudo pacman	-S --noconfirm base-devel clang	cmake git
+
+	- name:	Clone Engine
+	  uses:	actions/checkout@v4
+
+	- name:	Configure CMake	with Clang and Matrix Flags
+	  run: |
+		CC=clang CXX=clang++ cmake -B build	\
+		  -DCMAKE_BUILD_TYPE=Release \
+		  -D${{	matrix.nnue_flags }}=1 \
+		  -D${{	matrix.cpu_flags }}=1
+
+	- name:	Build Engine ${{ matrix.nnue_flags }}-${{ matrix.cpu_flags }}
+	  run: make	-C build
+
+	- name:	Archive	${{	matrix.nnue_flags }}-${{ matrix.cpu_flags }}
+	  uses:	actions/upload-artifact@v4
+	  with:
+		name: ${{ github.sha }}-linux-${{ matrix.nnue_flags	}}-${{ matrix.cpu_flags	}}
+		path: build/engine
