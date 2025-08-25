@@ -8,10 +8,16 @@ include(cmake/CPM.cmake)
 
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "-Wall -funroll-loops -pedantic -O3") # -Werror
 
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	add_compile_options(-Werror) # prevent gcc bug failing compilation
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif()
 
 # for windows
@@ -42,7 +48,6 @@ add_executable(generate_magics src/magic_main.cpp
 	src/Magic_generation_util.h
 )
 
-set_property(TARGET generate_magics PROPERTY CXX_STANDARD 23)
 set_property(TARGET generate_magics PROPERTY CXX_EXTENSIONS OFF)
 
 add_custom_command(
@@ -74,9 +79,7 @@ if(ENGINE_BUILD_TESTS)
 	if(MSVC)
 		target_compile_options(tests PRIVATE /W4)
 	endif()
-	set_property(TARGET tests PROPERTY CXX_STANDARD 23)
 	set_property(TARGET tests PROPERTY CXX_EXTENSIONS OFF)
-	set_property(TARGET perft PROPERTY CXX_STANDARD 23)
 	set_property(TARGET perft PROPERTY CXX_EXTENSIONS OFF)
 	if(NOT EXISTS "${CMAKE_SOURCE_DIR}/src/magic_squares.h")
 		add_dependencies(tests perft generate_magics)
@@ -89,7 +92,6 @@ add_executable(${PROJECT_NAME} src/main.cpp
 	src/Uci_handler.cpp src/Uci_handler.h
 )
 
-set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_EXTENSIONS OFF)
 
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/src/magic_squares.h")
