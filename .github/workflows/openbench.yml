@@ -14,17 +14,23 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Setup Clang 18
+    - name: Setup Clang 18 and Libc++
       run: |
         wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 18
         sudo apt update
-        sudo apt install -y clang-18
+        sudo apt install -y clang-18 libc++-18-dev
+
     - name: Clone Engine
       uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: cmake -B build
+
     - name: Build Engine ${{ matrix.nnue_flags }}-${{ matrix.cpu_flags }}
-      run: make EVALFILE=none CC=clang-18 static=1 ${{ matrix.nnue_flags }}=1 ${{ matrix.cpu_flags }}=1
+      run: make -C build
+
     - name: Archive ${{ matrix.nnue_flags }}-${{ matrix.cpu_flags }}
       uses: actions/upload-artifact@v4
       with:
         name: ${{ github.sha }}-linux-${{ matrix.nnue_flags }}-${{ matrix.cpu_flags }}
-        path: engine
+        path: build/engine
