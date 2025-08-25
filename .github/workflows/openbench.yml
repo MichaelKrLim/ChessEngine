@@ -20,11 +20,11 @@ jobs:
         sudo apt update
         sudo apt install -y clang-18
     - name: Clone Engine
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Build Engine ${{ matrix.nnue_flags }}-${{ matrix.cpu_flags }}
       run: make EVALFILE=none CC=clang-18 static=1 ${{ matrix.nnue_flags }}=1 ${{ matrix.cpu_flags }}=1
     - name: Archive ${{ matrix.nnue_flags }}-${{ matrix.cpu_flags }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ github.sha }}-linux-${{ matrix.nnue_flags }}-${{ matrix.cpu_flags }}
         path: engine
