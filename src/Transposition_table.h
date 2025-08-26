@@ -23,7 +23,7 @@ namespace zobrist
 	} zobrist_randoms = []()
 	{
 		Zobrist_randoms zobrist_randoms;
-		std::mt19937_64 rng(std::random_device{}());
+		std::mt19937_64 rng(49293);
 		std::uniform_int_distribution<uint64_t> dist;
 		for (auto &side_container : zobrist_randoms.pieces)
 			for (auto &position_container : side_container)
