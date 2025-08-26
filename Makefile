@@ -1,4 +1,4 @@
-ENGINE := engine
+ENGINE := ChessEngine
 BUILD_DIR := build
 
 all: $(ENGINE)

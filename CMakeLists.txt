@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
-project(engine VERSION 0.0.1)
-option(ENGINE_BUILD_TESTS "Build tests" ON)
+project(ChessEngine VERSION 0.0.1)
+option(ENGINE_BUILD_TESTS "Build tests" OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # for CPM
