@@ -88,7 +88,3 @@ add_executable(${PROJECT_NAME} src/main.cpp
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_EXTENSIONS OFF)
-
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/src/magic_squares.h")
-	add_dependencies(engine generate_magics)
-endif()
