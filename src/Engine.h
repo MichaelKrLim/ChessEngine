@@ -32,16 +32,18 @@ namespace engine
 	{
 		const auto stop_searching = [&search_options, start_time=std::chrono::high_resolution_clock::now(), side=state.side_to_move](const unsigned current_depth)
 		{
-			if(search_options.depth && current_depth > search_options.depth.value())
+			if(search_options.depth && current_depth>search_options.depth.value())
 				return true;
 			else if(current_depth>1)
 			{
-				const auto used_time = std::chrono::high_resolution_clock::now()-start_time+std::chrono::milliseconds{2}; // buffer
-				if((search_options.movetime && used_time > search_options.movetime.value()) || (search_options.time[side] && used_time > ((search_options.time[side].value()+22*search_options.increment[side])/22.0)))
+				const auto used_time = std::chrono::high_resolution_clock::now()-start_time+std::chrono::milliseconds{50}; // buffer
+				const bool almost_flagging{search_options.time[side] < std::chrono::seconds{1} && used_time > search_options.increment[side]};
+				if((search_options.movetime && used_time>search_options.movetime.value()) || ((search_options.time[side] && used_time>(search_options.time[side].value()+22*search_options.increment[side])/22.0) || almost_flagging))
 					return true;
 			}
 			return false;
 		};
+
 
 		Transposition_table transposition_table(search_options.hash);
 
@@ -363,7 +365,7 @@ namespace engine
 			current_pv.clear();
 			try
 			{
-				const double score = nega_max(current_depth, extended_depth, 0, 0, nodes, current_depth, current_pv)*(state.side_to_move==Side::black?-1:1);
+				const double score = nega_max(current_depth, extended_depth, 0, 0, nodes, current_depth, current_pv);
 				principal_variation = current_pv;
 				output_info(score, nodes, current_depth, extended_depth, principal_variation);
 			}
