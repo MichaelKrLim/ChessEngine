@@ -30,14 +30,14 @@ namespace engine
 
 	inline Search_results generate_best_move(State state, const uci::Search_options& search_options)
 	{
-		const auto stop_searching = [&search_options, start_time=std::chrono::high_resolution_clock::now(), side=state.side_to_move](const std::optional<unsigned> current_depth = std::nullopt)
+		const auto stop_searching = [&search_options, start_time=std::chrono::high_resolution_clock::now(), side=state.side_to_move](const unsigned current_depth)
 		{
-			if(search_options.depth && current_depth && current_depth.value() > search_options.depth.value())
+			if(search_options.depth && current_depth > search_options.depth.value())
 				return true;
 			else
 			{
-				const auto used_time = std::chrono::high_resolution_clock::now()-start_time+std::chrono::milliseconds{50}; // buffer
-				if((search_options.movetime && used_time > search_options.movetime.value()) || (search_options.time[side] && used_time > (search_options.time[side].value()+22*search_options.increment[side])/22))
+				const auto used_time = std::chrono::high_resolution_clock::now()-start_time+std::chrono::milliseconds{2}; // buffer
+				if((search_options.movetime && used_time > search_options.movetime.value()) || (current_depth > 1 && search_options.time[side] && used_time > (search_options.time[side].value()/18.5+search_options.increment[side]/2.1)))
 					return true;
 			}
 			return false;
@@ -59,12 +59,12 @@ namespace engine
 
 		enum class timeout {};
 
-		const auto quiescence_search = [&](this auto&& rec, double alpha, double beta, unsigned& extended_depth, const unsigned& current_extended_depth, unsigned& nodes) -> double
+		const auto quiescence_search = [&](this auto&& rec, double alpha, double beta, unsigned& extended_depth, const unsigned& current_extended_depth, unsigned& nodes, const unsigned depth) -> double
 		{
 			++nodes;
 			extended_depth = std::max(extended_depth, current_extended_depth);
 
-			if(stop_searching())
+			if(stop_searching(depth))
 				throw timeout{};
 
 			const double& stand_pat=state.evaluation*(state.side_to_move==Side::white? 1:-1);
@@ -79,7 +79,7 @@ namespace engine
 				if(std::optional<Piece> piece_to_capture=state.piece_at(move.destination_square(), other_side(state.side_to_move)); piece_to_capture && stand_pat+chess_data::piece_values[Side::white][piece_to_capture.value()]<=alpha)
 					continue;
 				state.make(move);
-				const double score=-rec(-beta, -alpha, extended_depth, current_extended_depth+1, nodes);
+				const double score=-rec(-beta, -alpha, extended_depth, current_extended_depth+1, nodes, depth);
 				state.unmove();
 				if(score>=beta)
 					return score;
@@ -123,8 +123,8 @@ namespace engine
 			if(is_threefold_repetition())
 				return 0.0;
 			else if(remaining_depth<=0 && !all_legal_moves.empty())
-				return quiescence_search(alpha, beta, extended_depth, current_extended_depth, nodes);
-			else if(stop_searching())
+				return quiescence_search(alpha, beta, extended_depth, current_extended_depth, nodes, depth);
+			else if(stop_searching(depth))
 				throw timeout{};
 
 			const double original_alpha{alpha}, original_beta{beta};
@@ -239,7 +239,7 @@ namespace engine
 			{
 				const auto& move = all_legal_moves[move_index];
 
-				if(stop_searching())
+				if(stop_searching(depth))
 					throw timeout{};
 
 				unsigned reduction{1};
