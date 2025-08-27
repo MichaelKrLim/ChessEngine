@@ -38,7 +38,7 @@ namespace engine
 			{
 				const auto used_time = std::chrono::high_resolution_clock::now()-start_time+std::chrono::milliseconds{50}; // buffer
 				const bool almost_flagging{search_options.time[side] < std::chrono::seconds{1} && used_time > search_options.increment[side]};
-				if((search_options.movetime && used_time>search_options.movetime.value()) || ((search_options.time[side] && used_time>(search_options.time[side].value()+22*search_options.increment[side])/22.0) || almost_flagging))
+				if((search_options.movetime && used_time>search_options.movetime.value()) || (search_options.time[side] && (used_time>(search_options.time[side].value()+22*search_options.increment[side])/22.0 || almost_flagging)))
 					return true;
 			}
 			return false;
