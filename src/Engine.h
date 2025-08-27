@@ -37,7 +37,7 @@ namespace engine
 			else if(current_depth>1)
 			{
 				const auto used_time = std::chrono::high_resolution_clock::now()-start_time+std::chrono::milliseconds{2}; // buffer
-				if((search_options.movetime && used_time > search_options.movetime.value()) || (search_options.time[side] && used_time > (search_options.time[side].value()/18.5+search_options.increment[side]/2.1)))
+				if((search_options.movetime && used_time > search_options.movetime.value()) || (search_options.time[side] && used_time > ((search_options.time[side].value()+22*search_options.increment[side])/22.0)))
 					return true;
 			}
 			return false;
