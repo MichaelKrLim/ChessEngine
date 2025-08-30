@@ -34,16 +34,20 @@ namespace engine
 		{
 			if(search_options.depth && current_depth>search_options.depth.value())
 				return true;
-			else if(current_depth>1)
+			const auto used_time = std::chrono::high_resolution_clock::now()-start_time;
+			if(search_options.movetime)
+				return used_time>search_options.movetime.value();
+			if(search_options.time[side])
 			{
-				const auto used_time = std::chrono::high_resolution_clock::now()-start_time+std::chrono::milliseconds{50}; // buffer
-				const bool almost_flagging{search_options.time[side] < std::chrono::seconds{1} && used_time > search_options.increment[side]};
-				if((search_options.movetime && used_time>search_options.movetime.value()) || (search_options.time[side] && (used_time>(search_options.time[side].value()+22*search_options.increment[side])/22.0 || almost_flagging)))
-					return true;
+				const auto time_remaining{search_options.time[side].value()};
+				const auto increment{search_options.increment[side]};
+				constexpr static std::chrono::milliseconds overhead{5};
+				constexpr static int moves_to_go{30};
+				const auto time_left{time_remaining+moves_to_go*(increment-overhead)};
+				return used_time>std::max(increment, time_left/moves_to_go);
 			}
 			return false;
 		};
-
 
 		Transposition_table transposition_table(search_options.hash);
 
