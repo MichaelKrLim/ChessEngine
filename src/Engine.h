@@ -304,7 +304,7 @@ namespace engine
 			const auto& child_pv{child_pvs.best_child_pv()};
 			pv.insert(pv.end(), child_pv.begin(), child_pv.end());
 
-			if(raised_alpha) // std::abs(alpha-beta)>1
+			if(std::abs(alpha-beta)>1)
 			{
 				transposition_table.insert(Transposition_data
 				{
