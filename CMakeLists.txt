@@ -32,6 +32,7 @@ set(common_sources
 	src/Move_generator.h src/Move_generator.cpp
 	src/Transposition_table.h
 	src/bench.h
+	src/Time_manager.cpp src/Time_manager.h
 )
 
 add_executable(generate_magics src/magic_main.cpp

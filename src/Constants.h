@@ -4,6 +4,7 @@
 #include "Enum_map.h"
 
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <ostream>
 #include <string_view>
@@ -32,7 +33,7 @@ namespace engine
 		return os;
 	}
 
-	constexpr std::uint8_t board_size = 8,
+	constexpr std::uint_fast8_t board_size = 8,
 	number_of_pieces = 6,
 	white_en_passant_target_rank = 3,
 	black_en_passant_target_rank = 6,
@@ -50,6 +51,12 @@ namespace engine
 	{
 		'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'
 	};
-}
+} // namespace engine
+
+namespace uci
+{
+	constexpr unsigned max_table_size{33554432};
+	constexpr std::chrono::milliseconds max_move_overhead{5000};
+} // namespace uci
 
 #endif // Constants_h_INCLUDED

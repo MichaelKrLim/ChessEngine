@@ -122,7 +122,13 @@ namespace engine
 			data[index] = t_data;
 		}
 
-		explicit Transposition_table(unsigned table_size_mb) : data((table_size_mb*1024*1024)/sizeof(Transposition_data)) {};
+		void clear() noexcept
+		{
+			for(auto& entry : data)
+				entry.zobrist_hash=0;
+		}
+
+		explicit Transposition_table(int table_size_mb) : data((table_size_mb*1024*1024)/sizeof(Transposition_data)) {};
 
 		private:
 

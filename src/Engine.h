@@ -9,12 +9,12 @@
 #include "Move_generator.h"
 #include "Pieces.h"
 #include "State.h"
+#include "Time_manager.h"
 #include "Transposition_table.h"
 #include "Uci_handler.h"
 
 #include <algorithm>
 #include <array>
-#include <chrono>
 #include <limits>
 #include <print>
 
@@ -28,28 +28,9 @@ namespace engine
 		Fixed_capacity_vector<Move, 256> pv;
 	};
 
-	inline Search_results generate_best_move(State state, const uci::Search_options& search_options)
+	inline Search_results generate_best_move(State state, const uci::Search_options& search_options, const uci::Engine_options& engine_options, Transposition_table& transposition_table)
 	{
-		const auto stop_searching = [&search_options, start_time=std::chrono::high_resolution_clock::now(), side=state.side_to_move](const unsigned current_depth)
-		{
-			if(search_options.depth && current_depth>search_options.depth.value())
-				return true;
-			const auto used_time = std::chrono::high_resolution_clock::now()-start_time;
-			if(search_options.movetime)
-				return used_time>search_options.movetime.value();
-			if(search_options.time[side])
-			{
-				const auto time_remaining{search_options.time[side].value()};
-				const auto increment{search_options.increment[side]};
-				constexpr static std::chrono::milliseconds overhead{5};
-				constexpr static int moves_to_go{30};
-				const auto time_left{time_remaining+moves_to_go*(increment-overhead)};
-				return used_time>std::max(increment, time_left/moves_to_go);
-			}
-			return false;
-		};
-
-		Transposition_table transposition_table(search_options.hash);
+		Time_manager time_manager(search_options.time[state.side_to_move], search_options.movetime, search_options.increment[state.side_to_move], engine_options.move_overhead, search_options.movestogo, state.half_move_clock);
 
 		const static auto compute_type=[](const double alpha, const double beta, const double score)
 		{
@@ -70,7 +51,7 @@ namespace engine
 			++nodes;
 			extended_depth = std::max(extended_depth, current_extended_depth);
 
-			if(stop_searching(depth))
+			if(time_manager.used_time()>time_manager.maximum())
 				throw timeout{};
 
 			const double& stand_pat=state.evaluation*(state.side_to_move==Side::white? 1:-1);
@@ -130,7 +111,7 @@ namespace engine
 				return 0.0;
 			else if(remaining_depth<=0 && !all_legal_moves.empty())
 				return quiescence_search(alpha, beta, extended_depth, current_extended_depth, nodes, depth);
-			else if(stop_searching(depth))
+			else if(time_manager.used_time()>time_manager.maximum())
 				throw timeout{};
 
 			const double original_alpha{alpha}, original_beta{beta};
@@ -245,7 +226,7 @@ namespace engine
 			{
 				const auto& move = all_legal_moves[move_index];
 
-				if(stop_searching(depth))
+				if(time_manager.used_time()>time_manager.maximum())
 					throw timeout{};
 
 				unsigned reduction{1};
@@ -323,7 +304,7 @@ namespace engine
 			const auto& child_pv{child_pvs.best_child_pv()};
 			pv.insert(pv.end(), child_pv.begin(), child_pv.end());
 
-			if(raised_alpha)
+			if(raised_alpha) // std::abs(alpha-beta)>1
 			{
 				transposition_table.insert(Transposition_data
 				{
@@ -363,7 +344,7 @@ namespace engine
 		nodes{0},
 		current_depth{1};
 		double score{0};
-		for(; !stop_searching(current_depth); ++current_depth)
+		for(; search_options.depth? current_depth <= *search_options.depth : time_manager.used_time()<time_manager.optimum(); ++current_depth)
 		{
 			extended_depth=nodes=score=0;
 			current_pv.clear();
