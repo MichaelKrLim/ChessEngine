@@ -20,7 +20,7 @@ add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 
 set(common_sources
-	src/Engine.h
+	src/Engine.h src/Engine.cpp
 	src/Position.h
 	src/Constants.h
 	src/Move.h

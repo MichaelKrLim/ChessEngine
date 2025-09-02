@@ -128,6 +128,11 @@ namespace engine
 				entry.zobrist_hash=0;
 		}
 
+		void resize(const auto& size_mb) noexcept
+		{
+			data.resize((size_mb*1024*1024)/sizeof(Transposition_data));
+		}
+
 		explicit Transposition_table(int table_size_mb) : data((table_size_mb*1024*1024)/sizeof(Transposition_data)) {};
 
 		private:

@@ -71,11 +71,11 @@ namespace engine
 		Enum_map<Side, Side_position, 2> sides{};
 		unsigned half_move_clock{}, full_move_clock{};
 		Side side_to_move{Side::white};
-		Bitboard enemy_attack_map;
+		Bitboard enemy_attack_map{0ULL};
 		std::optional<Position> en_passant_target_square{std::nullopt};
 		std::uint64_t zobrist_hash;
-		std::vector<std::uint64_t> repetition_history;
-		double evaluation;
+		std::vector<std::uint64_t> repetition_history{};
+		double evaluation{0};
 
 		void make(const Move& move) noexcept;
 		void unmove() noexcept;
@@ -94,17 +94,17 @@ namespace engine
 
 		struct State_delta
 		{
-			const Move move;
-			const Piece piece;
-			const std::optional<Piece> captured_piece;
-			const Bitboard enemy_attack_map;
-			const std::optional<Position> en_passant_target_square;
-			const bool was_en_passant;
-			const Castling_rights_map<bool> white_castling_rights;
-			const Castling_rights_map<bool> black_castling_rights;
-			const std::uint64_t previous_zobrist_hash;
-			const unsigned half_move_clock;
-			const double evaluation;
+			Move move;
+			Piece piece;
+			std::optional<Piece> captured_piece;
+			Bitboard enemy_attack_map;
+			std::optional<Position> en_passant_target_square;
+			bool was_en_passant;
+			Castling_rights_map<bool> white_castling_rights;
+			Castling_rights_map<bool> black_castling_rights;
+			std::uint64_t previous_zobrist_hash;
+			unsigned half_move_clock;
+			double evaluation;
 
 			constexpr bool operator==(const State_delta& state_delta) const = default;
 		};

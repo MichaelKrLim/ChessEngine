@@ -4,10 +4,10 @@
 #include "Constants.h"
 #include "Engine.h"
 #include "Transposition_table.h"
-#include "Uci_handler.h"
 
-#include <vector>
+#include <print>
 #include <string_view>
+#include <vector>
 
 inline unsigned benchmark()
 {
@@ -64,21 +64,23 @@ inline unsigned benchmark()
 		"7k/7P/6K1/8/3B4/8/8/8 b - - 0 1"
 	};
 	unsigned total_nodes{0};
-	const uci::Search_options options {
+	const engine::Search_options options {
 		.depth=10,
 		.movestogo={},
 		.time={},
 		.increment={},
 		.movetime=std::nullopt,
 	};
-	const uci::Engine_options engine_options{};
+	engine::Engine engine;
 	for(std::size_t i{0}; i<positions.size(); ++i)
 	{
 		std::println("test {}/{}", i+1, positions.size());
 		const auto fen{positions[i]};
 		engine::State current_state{fen};
-		engine::Transposition_table tt{engine_options.hash};
-		const auto search_result{engine::generate_best_move(current_state, options, engine_options, tt)};
+		engine::Transposition_table tt{engine::default_table_size};
+		engine.clear_tt();
+		engine.set_state(current_state);
+		const auto search_result{engine.generate_best_move({}, options).value()};
 		total_nodes+=search_result.nodes;
 	}
 	return total_nodes;

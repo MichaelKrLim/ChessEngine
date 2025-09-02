@@ -24,5 +24,8 @@ int main(int argc, const char* argv[])
 		}
 	}
 	else
-		uci::start_listening();
+	{
+		uci::Uci_handler uci_handler;
+		uci_handler.start_listening();
+	}
 }

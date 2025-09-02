@@ -3,11 +3,13 @@
 
 #include "Enum_map.h"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdint>
 #include <ostream>
 #include <string_view>
+#include <thread>
 
 namespace engine 
 {
@@ -51,6 +53,8 @@ namespace engine
 	{
 		'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'
 	};
+
+	inline unsigned number_of_threads{std::max(unsigned{4}, std::thread::hardware_concurrency())};
 } // namespace engine
 
 namespace uci
