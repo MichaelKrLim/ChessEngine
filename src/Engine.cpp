@@ -286,7 +286,7 @@ std::expected<Search_results, Engine::search_stopped> Engine::generate_best_move
 		const auto& child_pv{child_pvs.best_child_pv()};
 		pv.insert(pv.end(), child_pv.begin(), child_pv.end());
 
-		if(std::abs(alpha-beta)>1)
+		if(raised_alpha)
 		{
 			transposition_table_.insert(Transposition_data
 			{
