@@ -85,7 +85,7 @@ endif()
 
 add_executable(${PROJECT_NAME} src/main.cpp
 	${common_sources}
-	src/Uci_handler.cpp src/Uci_handler.h
+	src/Uci_handler.h
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_EXTENSIONS OFF)

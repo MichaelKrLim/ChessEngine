@@ -11,7 +11,6 @@
 #include <chrono>
 #include <expected>
 #include <optional>
-#include <stop_token>
 
 namespace engine
 {
@@ -66,7 +65,7 @@ namespace engine
 		enum class timeout {};
 		enum class search_stopped {};
 		
-		[[nodiscard]] std::expected<Search_results, search_stopped> generate_best_move(std::stop_token stop_token, const Search_options& search_options) noexcept;
+		[[nodiscard]] std::expected<Search_results, search_stopped> generate_best_move(const std::atomic<bool>& should_stop_searching, const Search_options& search_options) noexcept;
 
 		private:
 

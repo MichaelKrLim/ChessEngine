@@ -1,4 +1,5 @@
 #include "bench.h"
+#include "Stdio.h"
 #include "Uci_handler.h"
 
 #include <print>
@@ -25,7 +26,7 @@ int main(int argc, const char* argv[])
 	}
 	else
 	{
-		uci::Uci_handler uci_handler;
+		uci::Uci_handler<Stdio> uci_handler;
 		uci_handler.start_listening();
 	}
 }

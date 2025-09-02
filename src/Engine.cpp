@@ -10,7 +10,7 @@
 
 using namespace engine;
 
-std::expected<Search_results, Engine::search_stopped> Engine::generate_best_move(std::stop_token stop_token, const Search_options& search_options) noexcept
+std::expected<Search_results, Engine::search_stopped> Engine::generate_best_move(const std::atomic<bool>& should_stop_searching, const Search_options& search_options) noexcept
 {
 	Time_manager time_manager(search_options.time[state_.side_to_move], search_options.movetime, search_options.increment[state_.side_to_move], options_.move_overhead, search_options.movestogo, state_.half_move_clock);
 
@@ -31,9 +31,9 @@ std::expected<Search_results, Engine::search_stopped> Engine::generate_best_move
 		++nodes;
 		extended_depth = std::max(extended_depth, current_extended_depth);
 
-		if(stop_token.stop_requested())
+		if(should_stop_searching)
 			throw search_stopped{};
-		if(time_manager.used_time()>time_manager.maximum())
+		if(!search_options.depth && time_manager.used_time()>time_manager.maximum())
 			throw timeout{};
 
 		const double& stand_pat=state_.evaluation*(state_.side_to_move==Side::white? 1:-1);
@@ -93,7 +93,7 @@ std::expected<Search_results, Engine::search_stopped> Engine::generate_best_move
 			return 0.0;
 		else if(remaining_depth<=0 && !all_legal_moves.empty())
 			return quiescence_search(alpha, beta, extended_depth, current_extended_depth, nodes, depth);
-		else if(time_manager.used_time()>time_manager.maximum())
+		else if(!search_options.depth && time_manager.used_time()>time_manager.maximum())
 			throw timeout{};
 
 		const double original_alpha{alpha}, original_beta{beta};
@@ -208,7 +208,7 @@ std::expected<Search_results, Engine::search_stopped> Engine::generate_best_move
 		{
 			const auto& move = all_legal_moves[move_index];
 
-			if(time_manager.used_time()>time_manager.maximum())
+			if(!search_options.depth && time_manager.used_time()>time_manager.maximum())
 				throw timeout{};
 
 			unsigned reduction{1};
