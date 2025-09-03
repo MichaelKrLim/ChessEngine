@@ -60,7 +60,7 @@ namespace uci
 	template <typename Io>
 	void Uci_handler<Io>::position_handler(const Input_state& input_state) noexcept
 	{
-		push_task([&, input_state](const std::atomic<bool>&)
+		push_task([&, input_state](std::atomic<bool>&)
 		{
 			engine.clear_tt();
 			engine::State state = engine::State{input_state.fen};
@@ -73,10 +73,10 @@ namespace uci
 	template <typename Io>
 	void Uci_handler<Io>::go_handler(const engine::Search_options& search_options) noexcept
 	{
-		push_task([&, search_options](const std::atomic<bool>& stop_token)
+		push_task([&, search_options](std::atomic<bool>& stop_token)
 		{
 			const auto search_results=engine.generate_best_move(stop_token, search_options);
-			if(!(search_results.error()==engine::Engine::search_stopped{}))
+			if(!(search_results.error()==engine::search_stopped{}))
 				io.output("bestmove ", search_results->pv.front());
 		});
 	}
@@ -87,7 +87,7 @@ namespace uci
 		io.output(std::format("id: {}", engine::name));
 		io.output(std::format("author: {}\n", engine::author));
 		io.output("option name Hash type spin default 16 min 1 max 33554432");
-		io.output("option name Threads type spin default 1 min 1 max 1");
+		io.output(std::format("option name Threads type spin default {} min 1 max 1024", engine::optimal_number_of_threads));
 		io.output("option name Move Overhead type spin default 10 min 0 max 5000");
 		io.output("uciok");
 	}

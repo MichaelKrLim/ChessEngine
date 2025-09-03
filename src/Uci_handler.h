@@ -49,9 +49,9 @@ namespace uci
 		void setoption_handler(const engine::Engine_options& new_engine_options) noexcept;
 		void stop_handler() noexcept;
 
-		engine::Engine engine;
+		engine::Engine<Io> engine;
 		std::jthread worker_thread;
-		std::queue<std::move_only_function<void(const std::atomic<bool>&) const>> task_queue;
+		std::queue<std::move_only_function<void(std::atomic<bool>&) const>> task_queue;
 		std::mutex queue_mtx;
 		std::condition_variable condition_variable;
 		std::atomic<bool> should_stop_work;

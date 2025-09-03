@@ -8,8 +8,10 @@
 
 #include <array>
 #include <cstdint>
+#include <mutex>
 #include <optional>
 #include <random>
+#include <shared_mutex>
 #include <vector>
 
 namespace zobrist
@@ -108,6 +110,8 @@ namespace engine
 
 		[[nodiscard]] std::optional<Transposition_data> operator[](const std::uint64_t& zobrist_hash)
 		{
+			std::shared_lock shared_lock(mtx);
+
 			const auto index = zobrist_hash % data.size();
 			const Transposition_data entry = data[index];
 			if(entry.zobrist_hash == zobrist_hash)
@@ -118,18 +122,24 @@ namespace engine
 
 		void insert(const Transposition_data& t_data)
 		{
-			const auto index = t_data.zobrist_hash % data.size();
+			std::lock_guard lock(mtx);
+
+			const auto index = t_data.zobrist_hash%data.size();
 			data[index] = t_data;
 		}
 
 		void clear() noexcept
 		{
+			std::lock_guard lock(mtx);
+
 			for(auto& entry : data)
 				entry.zobrist_hash=0;
 		}
 
 		void resize(const auto& size_mb) noexcept
 		{
+			std::shared_lock shared_lock(mtx);
+
 			data.resize((size_mb*1024*1024)/sizeof(Transposition_data));
 		}
 
@@ -138,6 +148,7 @@ namespace engine
 		private:
 
 		std::vector<Transposition_data> data;
+		std::shared_mutex mtx;
 	};
 }
 

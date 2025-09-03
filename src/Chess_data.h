@@ -1,3 +1,6 @@
+#ifndef Chess_data_h_INCLUDED
+#define Chess_data_h_INCLUDED
+
 #include "Constants.h"
 #include "Pieces.h"
 #include "Position.h"
@@ -111,3 +114,5 @@ namespace engine
 		}();
 	}
 }
+
+#endif
