@@ -98,7 +98,7 @@ namespace engine
 	struct Transposition_data
 	{
 		unsigned remaining_depth;
-		double eval;
+		int eval;
 		std::uint64_t zobrist_hash;
 		Search_result_type search_result_type;
 		engine::Move best_move;
@@ -110,11 +110,12 @@ namespace engine
 
 		[[nodiscard]] std::optional<Transposition_data> operator[](const std::uint64_t& zobrist_hash)
 		{
-			std::shared_lock shared_lock(mtx);
+			const auto index{zobrist_hash%data.size()};
+			std::shared_lock resizing_lock(tt_mtx);
+			std::shared_lock group_lock(locks[index%num_lock_groups]);
 
-			const auto index = zobrist_hash % data.size();
-			const Transposition_data entry = data[index];
-			if(entry.zobrist_hash == zobrist_hash)
+			const Transposition_data entry{data[index]};
+			if(entry.zobrist_hash==zobrist_hash)
 				return entry;
 			else
 				return std::nullopt;
@@ -122,34 +123,51 @@ namespace engine
 
 		void insert(const Transposition_data& t_data)
 		{
-			std::lock_guard lock(mtx);
-
 			const auto index = t_data.zobrist_hash%data.size();
+			std::shared_lock resizing_lock(tt_mtx);
+			std::lock_guard group_lock(locks[index%num_lock_groups]);
+
 			data[index] = t_data;
+		}
+
+		void resize(int size_mb) noexcept
+		{
+			std::lock_guard lock(tt_mtx);
+
+			data.resize((size_mb*mb_to_bytes)/sizeof(Transposition_data));
+			num_lock_groups=compute_num_lock_groups();
+			std::vector<std::shared_mutex> new_locks(num_lock_groups);
+			locks.swap(new_locks);
 		}
 
 		void clear() noexcept
 		{
-			std::lock_guard lock(mtx);
+			std::lock_guard lock(tt_mtx);
 
 			for(auto& entry : data)
 				entry.zobrist_hash=0;
 		}
 
-		void resize(const auto& size_mb) noexcept
-		{
-			std::shared_lock shared_lock(mtx);
-
-			data.resize((size_mb*1024*1024)/sizeof(Transposition_data));
-		}
-
-		explicit Transposition_table(int table_size_mb) : data((table_size_mb*1024*1024)/sizeof(Transposition_data)) {};
+		explicit Transposition_table(int table_size_mb)
+			: data((table_size_mb*mb_to_bytes)/sizeof(Transposition_data))
+			, num_lock_groups(compute_num_lock_groups())
+			, locks(num_lock_groups)
+		{};
 
 		private:
 
+		[[nodiscard]] inline int compute_num_lock_groups()
+		{
+			return std::clamp(static_cast<int>(data.size())/1000, 10, 10000);
+		}
+
 		std::vector<Transposition_data> data;
-		std::shared_mutex mtx;
+		int num_lock_groups{-1};
+		std::vector<std::shared_mutex> locks;
+		std::shared_mutex tt_mtx;
+
+		constexpr static int mb_to_bytes{1024*1024};
 	};
-}
+} // namespace engine
 
 #endif

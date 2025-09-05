@@ -6,6 +6,7 @@
 #include "Move.h"
 #include "Transposition_table.h"
 
+#include <atomic>
 #include <expected>
 #include <optional>
 
@@ -14,7 +15,7 @@ namespace engine
 	struct Search_results
 	{
 		unsigned nodes{0};
-		double score{0};
+		int score{0};
 		unsigned seldepth{0};
 		Fixed_capacity_vector<Move, 256> pv;
 	};
@@ -30,8 +31,8 @@ namespace engine
 
 	struct Engine_options
 	{
-		int hash{engine::default_table_size};
-		unsigned threads{optimal_number_of_threads};
+		int hash{default_table_size};
+		unsigned threads{default_threads};
 		std::chrono::milliseconds move_overhead{10};
 	};
 

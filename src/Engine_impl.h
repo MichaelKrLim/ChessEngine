@@ -8,6 +8,7 @@
 #include <future>
 #include <limits>
 #include <memory>
+#include <thread>
 
 namespace engine
 {
@@ -22,14 +23,12 @@ namespace engine
 		const auto task=[&](const std::optional<Io>& io=std::nullopt)
 		{
 			const auto return_value{nega_max<Io>(should_stop_searching, search_options, options_, state_, transposition_table_, io)};
-			if(return_value.has_value() && !found_result.exchange(true))
-			{
+			if(!found_result.exchange(true))
 				shared_promise.set_value(return_value);
-				should_stop_searching=true;
-			}
+			should_stop_searching=true;
 		};
 
-		for(std::size_t i{0}; i<options_.threads-2; ++i) // - uci_thread & main control
+		for(int i{0}, extra_threads=options_.threads-1; i<extra_threads; ++i)
 			threads.emplace_back(task);
 		task(io_);
 		return future_return_value.get();

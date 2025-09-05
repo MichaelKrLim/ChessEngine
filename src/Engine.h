@@ -1,17 +1,12 @@
 #ifndef Engine_h_INCLUDED
 #define Engine_h_INCLUDED
 
-#include "Chess_data.h"
 #include "Constants.h"
-#include "Fixed_capacity_vector.h"
-#include "Move.h"
 #include "search.h"
 #include "State.h"
 #include "Transposition_table.h"
 
-#include <chrono>
 #include <expected>
-#include <optional>
 
 namespace engine
 {

@@ -87,7 +87,7 @@ namespace uci
 		io.output(std::format("id: {}", engine::name));
 		io.output(std::format("author: {}\n", engine::author));
 		io.output("option name Hash type spin default 16 min 1 max 33554432");
-		io.output(std::format("option name Threads type spin default {} min 1 max 1024", engine::optimal_number_of_threads));
+		io.output(std::format("option name Threads type spin default {} min 1 max 1024", engine::default_threads));
 		io.output("option name Move Overhead type spin default 10 min 0 max 5000");
 		io.output("uciok");
 	}

@@ -63,6 +63,8 @@ namespace uci
 			is>>option>>option;
 			for(std::string word; word!="value"; is>>word)
 			{
+				if(is.eof())
+					throw std::invalid_argument{"Option not found"};
 				if(!word.empty())
 					option+=' ';
 				option+=word;
@@ -70,8 +72,8 @@ namespace uci
 			if(unsigned value; option == "Hash" && is>>value && value>0 && value<max_table_size)
 				is>>engine_options.hash;
 			else if(option == "Threads")
-				return is;
-			else if(const std::chrono::milliseconds overhead{Uci_handler::read_time(is)}; option == "Move Overhead" && overhead>=std::chrono::milliseconds{0} && overhead<=max_move_overhead)
+				is>>engine_options.threads;
+			else if(const std::chrono::milliseconds overhead{Uci_handler::read_time(is)}; option=="Move Overhead" && overhead>=std::chrono::milliseconds{0} && overhead<=max_move_overhead)
 				engine_options.move_overhead=overhead;
 			else
 				throw std::invalid_argument{"Option not found"};
@@ -82,7 +84,7 @@ namespace uci
 		{
 			std::string command;
 			is>>command;
-			if(command == "startpos")
+			if(command=="startpos")
 				input_state.fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 			else if(std::string current_data; command == "fen")
 			{
@@ -121,23 +123,23 @@ namespace uci
 			std::string option;
 			while(is>>option)
 			{
-				if(option == "depth")
+				if(option=="depth")
 				{
 					unsigned depth;
 					is>>depth;
 					search_options.depth = depth;
 				}
-				else if(option == "wtime")
+				else if(option=="wtime")
 					search_options.time[engine::Side::white]=Uci_handler::read_time(is);
-				else if(option == "movetime")
+				else if(option=="movetime")
 					search_options.movetime=Uci_handler::read_time(is);
-				else if(option == "winc")
+				else if(option=="winc")
 					search_options.increment[engine::Side::white]=Uci_handler::read_time(is);
-				else if(option == "btime")
+				else if(option=="btime")
 					search_options.time[engine::Side::black]=Uci_handler::read_time(is);
-				else if(option == "binc")
+				else if(option=="binc")
 					search_options.increment[engine::Side::black]=Uci_handler::read_time(is);
-				else if(option == "movestogo")
+				else if(option=="movestogo")
 					is>>search_options.movestogo;
 				else
 					throw std::invalid_argument{"Command not found"};
