@@ -4,6 +4,7 @@
 #include "Constants.h"
 #include "Engine.h"
 
+#include <chrono>
 #include <condition_variable>
 #include <functional>
 #include <queue>
@@ -18,8 +19,29 @@ namespace uci
 		std::vector<engine::Move> continuation;
 	};
 
-	inline std::istream& operator>>(std::istream& is, engine::Engine_options& engine_options);
-	inline std::istream& operator>>(std::istream& is, engine::Search_options& engine_options);
+	struct Go_options
+	{
+		std::optional<unsigned> depth{std::nullopt};
+		unsigned movestogo{0};
+		engine::Side_map<std::optional<std::chrono::milliseconds>> time{std::nullopt, std::nullopt};
+		engine::Side_map<std::chrono::milliseconds> increment{std::chrono::milliseconds{0}, std::chrono::milliseconds{0}};
+		std::optional<std::chrono::milliseconds> movetime{std::nullopt};
+	};
+
+	struct Uci_options
+	{
+		int threads{engine::default_threads};
+		std::chrono::milliseconds move_overhead{engine::default_move_overhead};
+	};
+
+	struct Uci_option
+	{
+		std::string name;
+		std::string value;
+	};
+
+	inline std::istream& operator>>(std::istream& is, Uci_option& engine_options);
+	inline std::istream& operator>>(std::istream& is, Go_options& engine_options);
 	inline std::istream& operator>>(std::istream& is, Input_state& input_state);
 
 	template <typename Io>
@@ -33,6 +55,8 @@ namespace uci
 
 		private:
 
+		using Task=std::move_only_function<void(std::atomic<bool>&) const>;
+
 		template <typename Task>
 		inline void push_task(Task&& task) noexcept
 		{
@@ -41,45 +65,52 @@ namespace uci
 			condition_variable.notify_one();
 		}
 
+		inline std::optional<Task> pop_task(std::stop_token stop_token) noexcept
+		{
+			std::unique_lock queue_lock(queue_mtx);
+
+			condition_variable.wait(queue_lock, [&](){ return stop_token.stop_requested() || !task_queue.empty(); });
+
+			if(stop_token.stop_requested())
+				return std::nullopt;
+
+			auto task{std::move(task_queue.front())};
+			task_queue.pop();
+			return task;
+		};
+
 		void isready_handler() noexcept;
 		void ucinewgame_handler() noexcept;
 		void position_handler(const Input_state& input_state) noexcept;
-		void go_handler(const engine::Search_options& search_options) noexcept;
+		void go_handler(const Go_options& search_options) noexcept;
 		void uci_handler() noexcept;
-		void setoption_handler(const engine::Engine_options& new_engine_options) noexcept;
+		void setoption_handler(const Uci_option& uci_option) noexcept;
 		void stop_handler() noexcept;
 
 		engine::Engine<Io> engine;
 		std::jthread worker_thread;
-		std::queue<std::move_only_function<void(std::atomic<bool>&) const>> task_queue;
+		std::queue<Task> task_queue;
 		std::mutex queue_mtx;
 		std::condition_variable condition_variable;
 		std::atomic<bool> should_stop_work;
+		Uci_options options{};
 		Io io;
 
-		friend inline std::istream& operator>>(std::istream& is, engine::Engine_options& engine_options)
+		friend inline std::istream& operator>>(std::istream& is, Uci_option& engine_options)
 		{
-			std::string option;
-			is>>option>>option;
-			for(std::string word; word!="value"; is>>word)
+			std::string ignore;
+			is>>ignore;
+			for(std::string word; is>>word && word!="value";)
 			{
-				if(is.eof())
-					throw std::invalid_argument{"Option not found"};
-				if(!word.empty())
-					option+=' ';
-				option+=word;
+				if(!engine_options.name.empty())
+					engine_options.name+=' ';
+				engine_options.name+=word;
 			}
-			if(unsigned value; option == "Hash" && is>>value && value>0 && value<max_table_size)
-				is>>engine_options.hash;
-			else if(option == "Threads")
-				is>>engine_options.threads;
-			else if(const std::chrono::milliseconds overhead{Uci_handler::read_time(is)}; option=="Move Overhead" && overhead>=std::chrono::milliseconds{0} && overhead<=max_move_overhead)
-				engine_options.move_overhead=overhead;
-			else
+			if(!is)
 				throw std::invalid_argument{"Option not found"};
-			return is;
+			return is>>engine_options.value;
 		}
-		
+
 		friend inline std::istream& operator>>(std::istream& is, Input_state& input_state)
 		{
 			std::string command;
@@ -118,7 +149,7 @@ namespace uci
 			return is;
 		}
 
-		friend inline std::istream& operator>>(std::istream& is, engine::Search_options& search_options)
+		friend inline std::istream& operator>>(std::istream& is, Go_options& go_options)
 		{
 			std::string option;
 			while(is>>option)
@@ -127,20 +158,20 @@ namespace uci
 				{
 					unsigned depth;
 					is>>depth;
-					search_options.depth = depth;
+					go_options.depth = depth;
 				}
 				else if(option=="wtime")
-					search_options.time[engine::Side::white]=Uci_handler::read_time(is);
+					go_options.time[engine::Side::white]=Uci_handler::read_time(is);
 				else if(option=="movetime")
-					search_options.movetime=Uci_handler::read_time(is);
+					go_options.movetime=Uci_handler::read_time(is);
 				else if(option=="winc")
-					search_options.increment[engine::Side::white]=Uci_handler::read_time(is);
+					go_options.increment[engine::Side::white]=Uci_handler::read_time(is);
 				else if(option=="btime")
-					search_options.time[engine::Side::black]=Uci_handler::read_time(is);
+					go_options.time[engine::Side::black]=Uci_handler::read_time(is);
 				else if(option=="binc")
-					search_options.increment[engine::Side::black]=Uci_handler::read_time(is);
+					go_options.increment[engine::Side::black]=Uci_handler::read_time(is);
 				else if(option=="movestogo")
-					is>>search_options.movestogo;
+					is>>go_options.movestogo;
 				else
 					throw std::invalid_argument{"Command not found"};
 			}
@@ -177,7 +208,7 @@ namespace uci
 			{"stop",       call_handler_v<&Uci_handler::stop_handler>      },
 			{"ucinewgame", call_handler_v<&Uci_handler::ucinewgame_handler>},
 			{"isready",    call_handler_v<&Uci_handler::isready_handler>   },
-			{"setoption",  call_handler_v<&Uci_handler::setoption_handler >}
+			{"setoption",  call_handler_v<&Uci_handler::setoption_handler>}
 		};
 	};
 } // namespace uci

@@ -7,6 +7,7 @@
 #include "Transposition_table.h"
 
 #include <atomic>
+#include <chrono>
 #include <expected>
 #include <optional>
 
@@ -27,13 +28,8 @@ namespace engine
 		engine::Side_map<std::optional<std::chrono::milliseconds>> time{std::nullopt, std::nullopt};
 		engine::Side_map<std::chrono::milliseconds> increment{std::chrono::milliseconds{0}, std::chrono::milliseconds{0}};
 		std::optional<std::chrono::milliseconds> movetime{std::nullopt};
-	};
-
-	struct Engine_options
-	{
-		int hash{default_table_size};
-		unsigned threads{default_threads};
-		std::chrono::milliseconds move_overhead{10};
+		std::chrono::milliseconds move_overhead{default_move_overhead};
+		int threads{default_threads};
 	};
 
 	enum class timeout {};
@@ -44,7 +40,6 @@ namespace engine
 	std::expected<Search_results, search_stopped>
 	nega_max(const std::atomic<bool>& should_stop_searching
 		   , const Search_options& search_options
-		   , const Engine_options& engine_options
 		   , State state
 		   , Transposition_table& transposition_table
 		   , const std::optional<Io> io=std::nullopt) noexcept;

@@ -33,13 +33,14 @@ namespace engine
 		return os;
 	}
 
-	constexpr std::uint_fast8_t board_size = 8,
-	number_of_pieces = 6,
-	white_en_passant_target_rank = 3,
-	black_en_passant_target_rank = 6,
-	max_legal_moves = 218,
-	max_depth = 64,
-	king_max_adjacent_squares = 6;
+	constexpr std::uint_fast8_t board_size{8},
+	number_of_pieces{6},
+	white_en_passant_target_rank{3},
+	black_en_passant_target_rank{6},
+	max_legal_moves{218},
+	max_depth{64},
+	king_max_adjacent_squares{6},
+	default_threads{1 /*std::max(unsigned{4}, std::thread::hardware_concurrency())*/};
 
 	constexpr unsigned default_table_size{64};
 
@@ -52,7 +53,7 @@ namespace engine
 		'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'
 	};
 
-	inline unsigned default_threads{1 /*std::max(unsigned{4}, std::thread::hardware_concurrency())*/};
+	inline constexpr std::chrono::milliseconds default_move_overhead{10};
 } // namespace engine
 
 namespace uci

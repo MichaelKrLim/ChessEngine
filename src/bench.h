@@ -65,13 +65,8 @@ inline unsigned benchmark()
 		"7k/7P/6K1/8/3B4/8/8/8 b - - 0 1"
 	};
 	unsigned total_nodes{0};
-	const engine::Search_options options {
-		.depth=10,
-		.movestogo={},
-		.time={},
-		.increment={},
-		.movetime=std::nullopt,
-	};
+	engine::Search_options options;
+	options.depth=10;
 	engine::Engine<Stdio> engine;
 	for(std::size_t i{0}; i<positions.size(); ++i)
 	{

@@ -15,12 +15,11 @@ namespace engine
 	std::expected<Search_results, search_stopped>
 	nega_max(const std::atomic<bool>& should_stop_searching
 		   , const Search_options& search_options
-		   , const Engine_options& engine_options
 		   , State state
 		   , Transposition_table& transposition_table
 		   , const std::optional<Io> io) noexcept
 	{
-		Time_manager time_manager(search_options.time[state.side_to_move], search_options.movetime, search_options.increment[state.side_to_move], engine_options.move_overhead, search_options.movestogo, state.half_move_clock);
+		Time_manager time_manager(search_options.time[state.side_to_move], search_options.movetime, search_options.increment[state.side_to_move], search_options.move_overhead, search_options.movestogo, state.half_move_clock);
 
 		const static auto compute_type=[](const int alpha, const int beta, const int score)
 		{

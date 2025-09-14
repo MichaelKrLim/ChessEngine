@@ -4,6 +4,7 @@
 #include "Constants.h"
 #include "Move.h"
 #include "State.h"
+#include "search.h"
 
 #include <chrono>
 #include <condition_variable>
@@ -19,19 +20,12 @@ namespace uci
 	{
 		worker_thread = std::jthread{[this](std::stop_token stop_token)
 		{
-			std::unique_lock queue_lock(queue_mtx);
 			for(; !stop_token.stop_requested();)
 			{
-				condition_variable.wait(queue_lock, [&](){ return stop_token.stop_requested() || !task_queue.empty(); });
-
-				if(stop_token.stop_requested())
+				const auto task{pop_task(stop_token)};
+				if(!task)
 					break;
-
-				const auto task{std::move(task_queue.front())};
-				task_queue.pop();
-				queue_lock.unlock();
-				task(should_stop_work);
-				queue_lock.lock();
+				(*task)(should_stop_work);
 				should_stop_work=false;
 			}
 		}};
@@ -60,7 +54,7 @@ namespace uci
 	template <typename Io>
 	void Uci_handler<Io>::position_handler(const Input_state& input_state) noexcept
 	{
-		push_task([&, input_state](std::atomic<bool>&)
+		push_task([this, input_state](std::atomic<bool>&)
 		{
 			engine.clear_tt();
 			engine::State state = engine::State{input_state.fen};
@@ -71,10 +65,19 @@ namespace uci
 	}
 
 	template <typename Io>
-	void Uci_handler<Io>::go_handler(const engine::Search_options& search_options) noexcept
+	void Uci_handler<Io>::go_handler(const Go_options& go_options) noexcept
 	{
-		push_task([&, search_options](std::atomic<bool>& stop_token)
+		push_task([this, go_options](std::atomic<bool>& stop_token)
 		{
+			engine::Search_options search_options {
+				.depth=go_options.depth,
+				.movestogo=go_options.movestogo,
+				.time=go_options.time,
+				.increment=go_options.increment,
+				.movetime=go_options.movetime,
+				.move_overhead=options.move_overhead,
+				.threads=options.threads
+			};
 			const auto search_results=engine.generate_best_move(stop_token, search_options);
 			if(!(search_results.error()==engine::search_stopped{}))
 				io.output("bestmove ", search_results->pv.front());
@@ -93,9 +96,32 @@ namespace uci
 	}
 
 	template <typename Io>
-	void Uci_handler<Io>::setoption_handler(const engine::Engine_options& new_engine_options) noexcept
+	void Uci_handler<Io>::setoption_handler(const Uci_option& uci_option) noexcept
 	{
-		engine.set_options(new_engine_options);
+		if(uci_option.name=="Hash")
+		{
+			if(int value=std::stoi(uci_option.value); value>0 && value<max_table_size)
+				engine.resize_tt(value);
+			else
+				io.output("In setoption name 'Hash': value out of range");
+		}
+		else if(uci_option.name=="Threads")
+		{
+			if(int threads{std::stoi(uci_option.value)}; threads > 0 && threads < 1025)
+				options.threads=std::stoi(uci_option.value);
+			else
+				io.output("In setoption name 'Threads': value out of range");
+		}
+		else if(uci_option.name=="Move Overhead")
+		{
+			std::istringstream value_stream{uci_option.name};
+			if(const std::chrono::milliseconds overhead{Uci_handler::read_time(value_stream)}; overhead>=std::chrono::milliseconds{0} && overhead<=max_move_overhead)
+				options.move_overhead=overhead;
+			else
+				io.output("In setoption name 'Move Overhead': value out of range");
+		}
+		else
+			io.output("Option not found");
 	}
 
 	template <typename Io>
