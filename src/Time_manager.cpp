@@ -1,4 +1,5 @@
 #include "Time_manager.h"
+#include "Constants.h"
 
 #include <chrono>
 
@@ -21,6 +22,6 @@ Time_manager::Time_manager(const std::optional<chrono::milliseconds>& time_on_cl
 	int moves_to_go{movestogo==0? 30:movestogo};
 	chrono::milliseconds projected_time_left{std::max(chrono::milliseconds{1}, *time_on_clock+(increment-move_overhead)*moves_to_go)};
 	constexpr static chrono::milliseconds ms_to_reach_depth_one{4};
-	maximum_time=projected_time_left-(moves_to_go*ms_to_reach_depth_one);
-	optimum_time=projected_time_left/moves_to_go;
+	maximum_time=std::clamp(projected_time_left-(moves_to_go*ms_to_reach_depth_one), ms_to_reach_depth_one, *time_on_clock-move_overhead);
+	optimum_time=std::clamp(projected_time_left/moves_to_go, ms_to_reach_depth_one, maximum_time);
 }

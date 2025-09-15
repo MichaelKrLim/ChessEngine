@@ -2,6 +2,8 @@
 #include "Constants.h"
 #include "Move_generator.h"
 #include "Pieces.h"
+#include "search.h"
+#include "Stdio.h"
 #include "Time_manager.h"
 
 #include <algorithm>
@@ -11,14 +13,15 @@
 
 namespace engine
 {
-	template <typename Io>
 	std::expected<Search_results, search_stopped>
 	nega_max(const std::atomic<bool>& should_stop_searching
 		   , const Search_options& search_options
 		   , State state
 		   , Transposition_table& transposition_table
-		   , const std::optional<Io> io) noexcept
+		   , const int thread_id) noexcept
 	{
+		static Stdio io;
+
 		Time_manager time_manager(search_options.time[state.side_to_move], search_options.movetime, search_options.increment[state.side_to_move], search_options.move_overhead, search_options.movestogo, state.half_move_clock);
 
 		const static auto compute_type=[](const int alpha, const int beta, const int score)
@@ -332,12 +335,12 @@ namespace engine
 					first=false;
 					pv<<move;
 				}
-				(*io).output(info, pv.str());
+				io.output(info, pv.str());
 			};
 			if(std::abs(eval)!=std::numeric_limits<int>::max())
-				output(std::format("info score cp {} nodes {} depth {} seldepth {} pv ", eval, nodes, current_depth, current_depth+extended_depth));
+				output(std::format("info [Thread {}] score cp {} nodes {} depth {} seldepth {} pv ", thread_id, eval, nodes, current_depth, current_depth+extended_depth));
 			else
-				output(std::format("info nodes {} depth {} seldepth {} mate ", nodes, current_depth, current_depth+extended_depth));
+				output(std::format("info [Thread {}] nodes {} depth {} seldepth {} mate ", thread_id, nodes, current_depth, current_depth+extended_depth));
 		};
 
 		Fixed_capacity_vector<Move, 256> current_pv;
@@ -345,7 +348,7 @@ namespace engine
 		unsigned nodes{0},
 		current_depth{1};
 		int score{0};
-		for(; search_options.depth? current_depth <= *search_options.depth : time_manager.used_time()<time_manager.optimum(); ++current_depth)
+		for(; search_options.depth? current_depth <= *search_options.depth : current_depth<=max_depth && time_manager.used_time()<time_manager.optimum(); ++current_depth)
 		{
 			extended_depth=nodes=score=0;
 			current_pv.clear();
@@ -353,8 +356,7 @@ namespace engine
 			{
 				const int score = nega_max(current_depth, extended_depth, 0, 0, nodes, current_depth, current_pv);
 				principal_variation = current_pv;
-				if(io)
-					output_info(score, nodes, current_depth, extended_depth, principal_variation);
+				output_info(score, nodes, current_depth, extended_depth, principal_variation);
 			}
 			catch(const timeout&)
 			{}

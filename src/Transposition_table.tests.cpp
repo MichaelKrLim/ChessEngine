@@ -93,7 +93,7 @@ TEST_SUITE("Transposition Table")
 			CHECK(tt[0x234234234]==std::nullopt);
 			const auto some_hash{0x239482342342342};
 			tt.insert(Transposition_data{
-				.eval=1000.0,
+				.eval=1000,
 				.zobrist_hash=some_hash,
 			});
 			const auto cache_result{tt[some_hash]};

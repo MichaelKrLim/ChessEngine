@@ -35,16 +35,13 @@ namespace engine
 	enum class timeout {};
 	enum class search_stopped {};
 
-	template <typename Io>
 	[[nodiscard]]
 	std::expected<Search_results, search_stopped>
 	nega_max(const std::atomic<bool>& should_stop_searching
 		   , const Search_options& search_options
 		   , State state
 		   , Transposition_table& transposition_table
-		   , const std::optional<Io> io=std::nullopt) noexcept;
+		   , const int thread_id) noexcept;
 } // namespace engine
-
-#include "search_impl.h"
 
 #endif // search_h_INCLUDED

@@ -1,5 +1,5 @@
-#ifndef Thread_safe_io_h_INCLUDED
-#define Thread_safe_io_h_INCLUDED
+#ifndef Stdio_h_INCLUDED
+#define Stdio_h_INCLUDED
 
 #include <iostream>
 #include <mutex>
@@ -32,4 +32,4 @@ class Stdio
 	inline static std::mutex input_mtx, output_mtx;
 };
 
-#endif // Thread_safe_io_h_INCLUDED
+#endif // Stdio_h_INCLUDED

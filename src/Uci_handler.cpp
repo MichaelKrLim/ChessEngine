@@ -2,9 +2,9 @@
 #define Uci_handler_impl_h_INCLUDED
 
 #include "Constants.h"
-#include "Move.h"
-#include "State.h"
 #include "search.h"
+#include "State.h"
+#include "Uci_handler.h"
 
 #include <chrono>
 #include <condition_variable>
@@ -15,8 +15,7 @@
 
 namespace uci
 {
-	template <typename Io>
-	Uci_handler<Io>::Uci_handler()
+	Uci_handler::Uci_handler()
 	{
 		worker_thread = std::jthread{[this](std::stop_token stop_token)
 		{
@@ -31,28 +30,24 @@ namespace uci
 		}};
 	}
 
-	template <typename Io>
-	std::chrono::milliseconds Uci_handler<Io>::read_time(std::istream& is) noexcept
+	std::chrono::milliseconds Uci_handler::read_time(std::istream& is) noexcept
 	{
 		unsigned count;
 		is>>count;
 		return std::chrono::milliseconds{count};
 	}
 
-	template <typename Io>
-	void Uci_handler<Io>::isready_handler() noexcept
+	void Uci_handler::isready_handler() noexcept
 	{
 		io.output("readyok");
 	}
 
-	template <typename Io>
-	void Uci_handler<Io>::ucinewgame_handler() noexcept
+	void Uci_handler::ucinewgame_handler() noexcept
 	{
 		return;
 	}
 
-	template <typename Io>
-	void Uci_handler<Io>::position_handler(const Input_state& input_state) noexcept
+	void Uci_handler::position_handler(const Input_state& input_state) noexcept
 	{
 		push_task([this, input_state](std::atomic<bool>&)
 		{
@@ -64,8 +59,7 @@ namespace uci
 		});
 	}
 
-	template <typename Io>
-	void Uci_handler<Io>::go_handler(const Go_options& go_options) noexcept
+	void Uci_handler::go_handler(const Go_options& go_options) noexcept
 	{
 		push_task([this, go_options](std::atomic<bool>& stop_token)
 		{
@@ -84,8 +78,7 @@ namespace uci
 		});
 	}
 
-	template <typename Io>
-	void Uci_handler<Io>::uci_handler() noexcept
+	void Uci_handler::uci_handler() noexcept
 	{
 		io.output(std::format("id: {}", engine::name));
 		io.output(std::format("author: {}\n", engine::author));
@@ -95,8 +88,7 @@ namespace uci
 		io.output("uciok");
 	}
 
-	template <typename Io>
-	void Uci_handler<Io>::setoption_handler(const Uci_option& uci_option) noexcept
+	void Uci_handler::setoption_handler(const Uci_option& uci_option) noexcept
 	{
 		if(uci_option.name=="Hash")
 		{
@@ -114,9 +106,9 @@ namespace uci
 		}
 		else if(uci_option.name=="Move Overhead")
 		{
-			std::istringstream value_stream{uci_option.name};
+			std::istringstream value_stream{uci_option.value};
 			if(const std::chrono::milliseconds overhead{Uci_handler::read_time(value_stream)}; overhead>=std::chrono::milliseconds{0} && overhead<=max_move_overhead)
-				options.move_overhead=overhead;
+				options.move_overhead=overhead, io.output(overhead);
 			else
 				io.output("In setoption name 'Move Overhead': value out of range");
 		}
@@ -124,14 +116,12 @@ namespace uci
 			io.output("Option not found");
 	}
 
-	template <typename Io>
-	void Uci_handler<Io>::stop_handler() noexcept
+	void Uci_handler::stop_handler() noexcept
 	{
 		should_stop_work=true;
 	}
 
-	template <typename Io>
-	void Uci_handler<Io>::start_listening() noexcept
+	void Uci_handler::start_listening() noexcept
 	{
 		std::string line=io.input();
 		for(std::string command; line != "quit"; line=io.input())

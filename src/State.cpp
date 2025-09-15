@@ -173,61 +173,56 @@ void State::move_and_hash(const Position& from_square, const Position& destinati
 
 void State::make(const Move& move) noexcept
 {
-	Side_position& side = sides[side_to_move];
-	auto& opposite_side = sides[other_side(side_to_move)];
-	const auto destination_square = move.destination_square();
-	const auto from_square = move.from_square();
-	const auto pawn_direction = side_to_move == Side::white? 1 : -1;
-	const auto back_rank = side_to_move == Side::white? 0 : 7;
-	const auto white_old_castling_rights = sides[Side::white].castling_rights;
-	const auto black_old_castling_rights = sides[Side::black].castling_rights;
-	const auto old_zobrist_hash = zobrist_hash;
-	const auto old_evaluation = evaluation;
-	const Piece piece_type = [&]()
-	{
-		const auto opt = piece_at(from_square, side_to_move);
-		assert(opt && "tried to move nonexistent piece");
-		return opt.value();
-	}();
-	const std::optional<Piece> piece_to_capture = piece_at(destination_square, other_side(side_to_move));
+	Side_position& side{sides[side_to_move]};
+	auto& opposite_side{sides[other_side(side_to_move)]};
+	const auto destination_square{move.destination_square()};
+	const auto from_square{move.from_square()};
+	const auto pawn_direction{side_to_move == Side::white? 1 : -1};
+	const auto back_rank{side_to_move == Side::white? 0 : 7};
+	const auto white_old_castling_rights{sides[Side::white].castling_rights};
+	const auto black_old_castling_rights{sides[Side::black].castling_rights};
+	const auto old_zobrist_hash{zobrist_hash};
+	const auto old_evaluation{evaluation};
+	const Piece piece_type{*piece_at(from_square, side_to_move)};
+	const std::optional<Piece> piece_to_capture{piece_at(destination_square, other_side(side_to_move))};
 	const auto handle_capture = [this, &opposite_side, &piece_to_capture, &destination_square, enemy_back_rank=side_to_move == Side::white? 7 : 0]()
 	{
 		opposite_side.pieces[piece_to_capture.value()].remove_piece(destination_square);
 		evaluation-=chess_data::piece_values[other_side(side_to_move)][piece_to_capture.value()]+chess_data::weightmaps[other_side(side_to_move)][piece_to_capture.value()][to_index(destination_square)];
 		zobrist::invert_piece_at(zobrist_hash, destination_square, piece_to_capture.value(), other_side(side_to_move));
-		if(piece_to_capture == Piece::rook)
+		if(piece_to_capture==Piece::rook)
 		{
-			if(destination_square == Position{enemy_back_rank, 0} && opposite_side.castling_rights[Castling_rights::queenside])
+			if(destination_square==Position{enemy_back_rank, 0} && opposite_side.castling_rights[Castling_rights::queenside])
 			{
-				opposite_side.castling_rights[Castling_rights::queenside] = false;
+				opposite_side.castling_rights[Castling_rights::queenside]=false;
 				zobrist::invert_castling_right(zobrist_hash, other_side(side_to_move), Castling_rights::queenside);
 			}
 			else if(destination_square == Position{enemy_back_rank, 7} && opposite_side.castling_rights[Castling_rights::kingside])
 			{
-				opposite_side.castling_rights[Castling_rights::kingside] = false;
+				opposite_side.castling_rights[Castling_rights::kingside]=false;
 				zobrist::invert_castling_right(zobrist_hash, other_side(side_to_move), Castling_rights::kingside);
 			}
 		}
 	};
 	const auto handle_castling = [this, &destination_square, &back_rank, &side, &from_square]()
 	{
-		bool castled_kingside = destination_square.file_ == 6;
+		bool castled_kingside=destination_square.file_==6;
 		Position rook_destination_square, rook_origin_square;
 		if(castled_kingside)
 		{
-			rook_origin_square = Position{back_rank, 7};
-			rook_destination_square = Position{back_rank, destination_square.file_-1};
+			rook_origin_square=Position{back_rank, 7};
+			rook_destination_square=Position{back_rank, destination_square.file_-1};
 		}
 		else
 		{
-			rook_origin_square = Position{back_rank, 0};
-			rook_destination_square = Position{back_rank, destination_square.file_+1};
+			rook_origin_square=Position{back_rank, 0};
+			rook_destination_square=Position{back_rank, destination_square.file_+1};
 		}
 		for(const auto& castling_right : all_castling_rights)
 		{
 			if(side.castling_rights[castling_right])
 			{
-				side.castling_rights[castling_right] = false;
+				side.castling_rights[castling_right]=false;
 				zobrist::invert_castling_right(zobrist_hash, side_to_move, castling_right);
 			}
 		}
@@ -275,7 +270,7 @@ void State::make(const Move& move) noexcept
 		}
 		move_and_hash(from_square, destination_square, piece_type);
 	}
-	history.push(State_delta
+	history.emplace(State_delta
 	{
 		move,
 		piece_type,

@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
 	const auto perft = [](this auto&& rec, int depth, State& state, const bool&& is_root) -> unsigned long long
 	{
 		unsigned long long current_count{0}, nodes{0};
-		const auto moves = generate_moves<Moves_type::legal>(state);
+		const auto moves{generate_moves<Moves_type::legal>(state)};
 		for(const auto& move : moves)
 		{
 			if(is_root && depth <= 1)
@@ -31,15 +31,15 @@ int main(int argc, char* argv[])
 			else
 			{
 				state.make(move);
-				current_count = depth == 2? generate_moves<Moves_type::legal>(state).size() : rec(depth-1, state, false);
-				nodes += current_count;
+				current_count=depth == 2? generate_moves<Moves_type::legal>(state).size() : rec(depth-1, state, false);
+				nodes+=current_count;
 				state.unmove();
 			}
 			if(is_root)
-				std::cout << move << ' ' << current_count << "\n";
+				std::cout<<move<<' '<<current_count<<std::endl;
 		}
 		return nodes;
 	};
 	const auto total_nodes = perft(depth, base_position, true);
-	std::cout << "\n" << total_nodes;
+	std::cout<<"\n"<<total_nodes;
 }

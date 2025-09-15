@@ -10,7 +10,6 @@
 
 namespace engine
 {
-	template <typename Io>
 	class Engine
 	{
 		public:
@@ -34,14 +33,9 @@ namespace engine
 
 		private:
 
-		Io io_;
 		State state_{starting_fen};
 		Transposition_table transposition_table_{default_table_size};
-		int threads;
-		std::chrono::milliseconds move_overhead{default_move_overhead};
 	};
 }
-
-#include "Engine_impl.h"
 
 #endif //Engine_h_INCLUDED

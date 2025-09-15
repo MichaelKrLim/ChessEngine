@@ -3,7 +3,6 @@
 
 #include "Constants.h"
 #include "Engine.h"
-#include "Stdio.h"
 #include "Transposition_table.h"
 
 #include <print>
@@ -67,7 +66,7 @@ inline unsigned benchmark()
 	unsigned total_nodes{0};
 	engine::Search_options options;
 	options.depth=10;
-	engine::Engine<Stdio> engine;
+	engine::Engine engine;
 	for(std::size_t i{0}; i<positions.size(); ++i)
 	{
 		std::println("test {}/{}", i+1, positions.size());

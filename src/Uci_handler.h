@@ -3,6 +3,7 @@
 
 #include "Constants.h"
 #include "Engine.h"
+#include "Stdio.h"
 
 #include <chrono>
 #include <condition_variable>
@@ -44,7 +45,6 @@ namespace uci
 	inline std::istream& operator>>(std::istream& is, Go_options& engine_options);
 	inline std::istream& operator>>(std::istream& is, Input_state& input_state);
 
-	template <typename Io>
 	class Uci_handler
 	{
 		public:
@@ -87,14 +87,14 @@ namespace uci
 		void setoption_handler(const Uci_option& uci_option) noexcept;
 		void stop_handler() noexcept;
 
-		engine::Engine<Io> engine;
+		engine::Engine engine;
 		std::jthread worker_thread;
 		std::queue<Task> task_queue;
 		std::mutex queue_mtx;
 		std::condition_variable condition_variable;
 		std::atomic<bool> should_stop_work;
 		Uci_options options{};
-		Io io;
+		Stdio io;
 
 		friend inline std::istream& operator>>(std::istream& is, Uci_option& engine_options)
 		{
@@ -212,7 +212,5 @@ namespace uci
 		};
 	};
 } // namespace uci
-
-#include "Uci_handler_impl.h"
 
 #endif // Uci_handler_h_INCLUDED

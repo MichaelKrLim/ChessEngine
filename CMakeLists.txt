@@ -20,7 +20,7 @@ add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 
 set(common_sources
-	src/Engine.h
+	src/Engine.h src/Engine.cpp
 	src/Position.h
 	src/Constants.h
 	src/Move.h
@@ -32,7 +32,7 @@ set(common_sources
 	src/Move_generator.h src/Move_generator.cpp
 	src/Transposition_table.h
 	src/bench.h
-	src/search.h
+	src/search.h src/search.cpp
 	src/Time_manager.cpp src/Time_manager.h
 )
 
@@ -55,6 +55,7 @@ add_custom_command(
 )
 
 if(ENGINE_BUILD_TESTS)
+	add_compile_options(-fno-omit-frame-pointer -g)
 	CPMAddPackage(
 		NAME doctest
 		GIT_REPOSITORY https://github.com/doctest/doctest.git
@@ -86,7 +87,7 @@ endif()
 
 add_executable(${PROJECT_NAME} src/main.cpp
 	${common_sources}
-	src/Uci_handler.h
+	src/Uci_handler.h src/Uci_handler.cpp
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_EXTENSIONS OFF)
