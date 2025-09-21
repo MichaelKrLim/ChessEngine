@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.7)
 project(ChessEngine VERSION 0.0.1)
-option(ENGINE_BUILD_TESTS "Build tests" OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # for CPM
@@ -36,58 +35,47 @@ set(common_sources
 	src/Time_manager.cpp src/Time_manager.h
 )
 
-add_executable(generate_magics src/magic_main.cpp
-	src/Bitboard.h
-	src/Magic_util.h
-	src/Constants.h
-	src/Pieces.h
-	src/Position.h
+
+add_executable(perft
+	${common_sources}
+	utils/perft_main.cpp
+)
+
+add_executable(nnue_parser
+	${common_sources}
+	utils/nnue_parser.cpp
+)
+
+CPMAddPackage(
+	NAME doctest
+	GIT_REPOSITORY https://github.com/doctest/doctest.git
+	GIT_TAG v2.4.12
+	SYSTEM ON
+)
+
+file(GLOB test_sources CONFIGURE_DEPENDS src/*.tests.cpp)
+add_executable(tests
+	${test_sources}
+	${common_sources}
 	src/Magic_generation_util.h
+	src/test_main.cpp
 )
 
-set_property(TARGET generate_magics PROPERTY CXX_EXTENSIONS OFF)
-
-add_custom_command(
-	TARGET generate_magics POST_BUILD
-	COMMAND ${CMAKE_BINARY_DIR}/generate_magics
-	COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/magic_squares.h ${CMAKE_SOURCE_DIR}/src
-	COMMENT "Generating magics..."
-)
-
-if(ENGINE_BUILD_TESTS)
-	add_compile_options(-fno-omit-frame-pointer -g)
-	CPMAddPackage(
-		NAME doctest
-		GIT_REPOSITORY https://github.com/doctest/doctest.git
-		GIT_TAG v2.4.12
-		SYSTEM ON
-	)
-	file(GLOB test_sources CONFIGURE_DEPENDS src/*.tests.cpp)
-	add_executable(tests
-		${test_sources}
-		${common_sources}
-		src/Magic_generation_util.h
-		src/test_main.cpp
-	)
-	add_executable(perft
-		${common_sources}
-		src/perft_main.cpp
-	)
-	target_compile_definitions(tests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
-	if(MSVC)
-		target_compile_options(tests PRIVATE /W4)
-	endif()
-	set_property(TARGET tests PROPERTY CXX_EXTENSIONS OFF)
-	set_property(TARGET perft PROPERTY CXX_EXTENSIONS OFF)
-	if(NOT EXISTS "${CMAKE_SOURCE_DIR}/src/magic_squares.h")
-		add_dependencies(tests perft generate_magics)
-	endif()
-	target_link_libraries(tests PRIVATE doctest)
+target_compile_definitions(tests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
+if(MSVC)
+	target_compile_options(tests PRIVATE /W4)
 endif()
+target_link_libraries(tests PRIVATE doctest)
 
 add_executable(${PROJECT_NAME} src/main.cpp
 	${common_sources}
 	src/Uci_handler.h src/Uci_handler.cpp
 )
 
+include(generate_magics.cmake)
+
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_EXTENSIONS OFF)
+set_property(TARGET tests PROPERTY CXX_EXTENSIONS OFF)
+set_property(TARGET nnue_parser PROPERTY CXX_EXTENSIONS OFF)
+set_property(TARGET perft PROPERTY CXX_EXTENSIONS OFF)
+set_property(TARGET generate_magics PROPERTY CXX_EXTENSIONS OFF)
