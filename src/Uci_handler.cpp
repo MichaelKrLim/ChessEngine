@@ -52,7 +52,7 @@ namespace uci
 		push_task([this, input_state](std::atomic<bool>&)
 		{
 			engine.clear_tt();
-			engine::State state = engine::State{input_state.fen};
+			engine::State state{input_state.fen};
 			for(const auto& move : input_state.continuation)
 				state.make(move);
 			engine.set_state(state);

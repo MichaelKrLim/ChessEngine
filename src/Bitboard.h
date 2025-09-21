@@ -49,13 +49,16 @@ namespace engine
 		[[nodiscard]] std::string pretty_string() const;
 		[[nodiscard]] constexpr Position lsb_square() const;
 		[[nodiscard]] constexpr std::uint8_t popcount() const { return std::popcount(data_); }
-		[[nodiscard]] constexpr static Bitboard onebit(const Position& position) { return Bitboard{1ULL} << to_index(position); }
 		[[nodiscard]] constexpr bool is_empty() const { return data_ == 0; }
 		constexpr void add_piece(const Position& index);
 		constexpr void remove_piece(const Position& square);
 		constexpr void move_piece(const Position& origin_square, const Position& destination_square);
 		template <typename Function_type>
 		constexpr void for_each_piece(Function_type&& f) const;
+
+		[[nodiscard]] constexpr static Bitboard onebit(const Position& position) { return Bitboard{1ULL}<<to_index(position); }
+		[[nodiscard]] constexpr static Bitboard rank(const int rank_index) { return Bitboard{rank_one}<<(rank_index*board_size); }
+		[[nodiscard]] constexpr static Bitboard file(const int file_index) { return Bitboard{file_a}<<file_index; }
 
 		private:
 
@@ -67,11 +70,6 @@ namespace engine
 	constexpr bool is_free(const Position& square, const Bitboard& occupied_squares)
 	{
 		return (occupied_squares & Bitboard::onebit(square)).is_empty();
-	}
-
-	constexpr Bitboard rank_bb(int rank) 
-	{
-		return Bitboard{0xFFULL << to_index(Position{rank, 0})};
 	}
 
 	constexpr void Bitboard::add_piece(const Position& square)
