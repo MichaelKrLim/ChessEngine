@@ -92,7 +92,7 @@ namespace uci
 	{
 		if(uci_option.name=="Hash")
 		{
-			if(int value=std::stoi(uci_option.value); value>0 && value<max_table_size)
+			if(int value=std::stoi(uci_option.value); value>0 && static_cast<unsigned>(value)<max_table_size)
 				engine.resize_tt(value);
 			else
 				io.output("In setoption name 'Hash': value out of range");

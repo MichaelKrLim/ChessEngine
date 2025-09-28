@@ -33,6 +33,11 @@ set(common_sources
 	src/bench.h
 	src/search.h src/search.cpp
 	src/Time_manager.cpp src/Time_manager.h
+	src/nnue/NNUE_header.cpp src/nnue/NNUE_header.h
+	src/nnue/Neural_network.cpp src/nnue/Neural_network.h
+	src/nnue/common.h
+	src/nnue/layers/Dense_linear_layer.h
+	src/nnue/layers/Feature_transformer.cpp src/nnue/layers/Feature_transformer.h
 )
 
 
@@ -41,10 +46,7 @@ add_executable(perft
 	utils/perft_main.cpp
 )
 
-add_executable(nnue_parser
-	${common_sources}
-	utils/nnue_parser.cpp
-)
+target_include_directories(perft PRIVATE src)
 
 CPMAddPackage(
 	NAME doctest
@@ -76,6 +78,5 @@ include(generate_magics.cmake)
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_EXTENSIONS OFF)
 set_property(TARGET tests PROPERTY CXX_EXTENSIONS OFF)
-set_property(TARGET nnue_parser PROPERTY CXX_EXTENSIONS OFF)
 set_property(TARGET perft PROPERTY CXX_EXTENSIONS OFF)
 set_property(TARGET generate_magics PROPERTY CXX_EXTENSIONS OFF)

@@ -393,3 +393,15 @@ std::vector<State::Piece_and_data> State::get_board_data() const noexcept
 	}
 	return board_data;
 }
+
+std::vector<std::int16_t> State::to_halfKP_features(const State& state, Side side) const noexcept
+{
+	const auto feature_index{0};
+	for(const auto& piece : engine::all_pieces)
+	{
+		state.sides[side].pieces[piece].for_each_piece([](const Position& origin_square)
+		{
+			
+		});
+	}
+}

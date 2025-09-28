@@ -7,10 +7,17 @@ add_executable(generate_magics utils/magic_main.cpp
 	src/Magic_generation_util.h
 )
 
+target_include_directories(generate_magics PRIVATE src)
+
+add_custom_command(
+	TARGET generate_magics POST_BUILD
+	COMMAND ${CMAKE_BINARY_DIR}/generate_magics
+	COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/magic_squares.h ${CMAKE_SOURCE_DIR}/src
+	COMMENT "Generating magics..."
+)
+
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/src/magic_squares.h")
-	execute_process(
-		COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target generate_magics
-		COMMAND ${CMAKE_BINARY_DIR}/generate_magics
-		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/magic_squares.h ${CMAKE_SOURCE_DIR}/src
-	)
+	add_dependencies(tests           generate_magics)
+	add_dependencies(${PROJECT_NAME} generate_magics)
+	add_dependencies(perft           generate_magics)
 endif()
