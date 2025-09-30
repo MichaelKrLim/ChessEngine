@@ -9,7 +9,6 @@
 template <Dimensions layer_dimensions>
 class Dense_linear_layer
 {
-
 	using bias_type=std::int32_t;
 	using weight_type=std::int8_t;
 

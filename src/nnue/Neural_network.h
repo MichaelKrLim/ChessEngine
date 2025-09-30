@@ -4,13 +4,15 @@
 #include "common.h"
 #include "layers/Dense_linear_layer.h"
 #include "layers/Feature_transformer.h"
+#include "NNUE_header.h"
 
 class Neural_network
 {
 	public:
 
 	Neural_network(std::ifstream& net_file)
-		: feature_transformer(net_file)
+		: header(net_file)
+		, feature_transformer(net_file)
 		, dense_layers_hash(read_little_endian<decltype(dense_layers_hash)>(net_file))
 		, dense_one(net_file)
 		, dense_two(net_file)
@@ -22,12 +24,12 @@ class Neural_network
 	private:
 
 	template <numeric numeric_type>
-	inline std::vector<std::int8_t> clipped_ReLU(const std::vector<numeric_type>& input) const noexcept
+	inline std::vector<std::int8_t> clipped_ReLU(const std::vector<numeric_type>& input, const int scaling_shift=0) const noexcept
 	{
 		std::vector<std::int8_t> result(input.size());
 		for(auto&& [new_value, value] : std::views::zip(result, input))
 		{
-			new_value=std::clamp(value, numeric_type{0}, numeric_type{1});
+			new_value=std::clamp(static_cast<numeric_type>(value>>scaling_shift), numeric_type{0}, numeric_type{127});
 		}
 		return result;
 	}
@@ -36,6 +38,7 @@ class Neural_network
 								dense_two_dimensions{32,32},
 								dense_three_dimensions{32,1};
 
+	NNUE_header header;
 	Feature_transformer feature_transformer;
 	std::uint32_t dense_layers_hash;
 	Dense_linear_layer<dense_one_dimensions> dense_one;
