@@ -5,6 +5,7 @@
 #include "Transposition_table.h"
 
 #include <algorithm>
+#include <bit>
 #include <ranges>
 #include <regex>
 #include <sstream>
@@ -394,24 +395,36 @@ std::vector<State::Piece_and_data> State::get_board_data() const noexcept
 	return board_data;
 }
 
-std::vector<std::int16_t> State::to_halfKP_features(Side side) const noexcept
+std::vector<std::int16_t> State::to_halfKP_features(const Side side) const noexcept
 {
-	std::vector<std::int16_t> active_feature_indexes;
-	for(const auto& piece : engine::all_pieces)
+	const auto feature_index=[&side](const Piece piece, const Position& position, const Position& king_square)
 	{
-		if(piece==Piece::king)
-			continue;
+		const auto piece_index{2*(std::to_underlying(piece)-1) + std::to_underlying(side)};
+		return 1 + to_index(king_square) + to_index(position) + (piece_index+10*to_index(king_square))*64;
+	};
 
-		auto king_index{to_index(sides[side].pieces[Piece::king].lsb_square())};
-		if(side==Side::black)
-			king_index^=63;
-		sides[side].pieces[piece].for_each_piece([&](const Position& piece_square)
+	std::vector<std::int16_t> active_feature_indexes;
+	Position king_square;
+	for(const auto& piece : all_pieces)
+	{
+		const Bitboard pieces_bb=[&]()
 		{
-			auto piece_index{to_index(piece_square)};
+			if(side==Side::white)
+				return sides[side].pieces[piece];
 			if(side==Side::black)
-				piece_index^=63;
-			const std::int16_t feature_index=piece_index+(((std::to_underlying(piece)-1)*2+std::to_underlying(side))+king_index*10)*64;
-			active_feature_indexes.push_back(feature_index);
+				return Bitboard{std::byteswap(static_cast<std::uint64_t>(sides[side].pieces[piece]))};
+			std::unreachable();
+		}();
+
+		if(piece==Piece::king)
+		{
+			king_square=pieces_bb.lsb_square();
+			continue;
+		}
+
+		pieces_bb.for_each_piece([&](const Position& piece_square)
+		{
+			active_feature_indexes.push_back(feature_index(piece, piece_square, king_square));
 		});
 	}
 	return active_feature_indexes;

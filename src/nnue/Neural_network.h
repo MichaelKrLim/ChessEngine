@@ -19,17 +19,17 @@ class Neural_network
 		, dense_three(net_file)
 	{};
 
-	[[nodiscard]] std::int32_t evaluate(const std::vector<std::int16_t>& white_active_feature_indexes, const std::vector<std::int16_t>& black_active_feature_indexes) const noexcept;
+	[[nodiscard]] double evaluate(const std::vector<std::int16_t>& white_active_feature_indexes, const std::vector<std::int16_t>& black_active_feature_indexes) const noexcept;
 
 	private:
 
 	template <numeric numeric_type>
-	inline std::vector<std::int8_t> clipped_ReLU(const std::vector<numeric_type>& input, const int scaling_shift=0) const noexcept
+	inline std::vector<std::int8_t> clipped_ReLU(const std::vector<numeric_type>& input, const int multiple_of_one_value=1) const noexcept
 	{
 		std::vector<std::int8_t> result(input.size());
 		for(auto&& [new_value, value] : std::views::zip(result, input))
 		{
-			new_value=std::clamp(static_cast<numeric_type>(value>>scaling_shift), numeric_type{0}, numeric_type{127});
+			new_value=std::clamp(value/multiple_of_one_value, 0, 127);
 		}
 		return result;
 	}

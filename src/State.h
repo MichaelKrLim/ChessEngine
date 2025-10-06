@@ -85,7 +85,7 @@ namespace engine
 		[[nodiscard]] std::vector<Piece_and_data> get_board_data() const noexcept;
 		[[nodiscard]] bool is_stalemate() const noexcept;
 		[[nodiscard]] std::optional<Piece> piece_at(const Position& position, const Side& side) const noexcept;
-		[[nodiscard]] std::vector<std::int16_t> to_halfKP_features(Side side) const noexcept;
+		[[nodiscard]] std::vector<std::int16_t> to_halfKP_features(const Side side) const noexcept;
 
 		friend std::ostream& operator<<(std::ostream& os, const State& state);
 

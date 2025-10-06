@@ -30,7 +30,7 @@ int main(int argc, const char* argv[])
 	}
 	else
 	{
-		engine::State state{"rnbqkbnr/pppppppp/8/8/2P5/8/PP1PPPPP/RNBQKBNR b KQkq - 0 1"};
+		engine::State state{"2b1kb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
 		std::ifstream stream{"../src/nnue/nn-c3ca321c51c9.nnue"};
 		Neural_network nn{stream};
 		[[maybe_unused]]
