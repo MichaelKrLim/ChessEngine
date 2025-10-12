@@ -15,9 +15,7 @@ class Feature_transformer
 
 	Feature_transformer(std::ifstream& net_file) noexcept;
 
-	[[nodiscard]] std::vector<bias_type> transform(const std::vector<std::int16_t>& active_feature_indexes) const noexcept;
-
-	private:
+	[[nodiscard]] std::vector<bias_type> transform(const std::vector<std::uint16_t>& active_feature_indexes) const noexcept;
 
 	constexpr static Dimensions dimensions{41024,256};
 

@@ -10,15 +10,14 @@ Feature_transformer::Feature_transformer(std::ifstream& net_file) noexcept
 	for(auto& bias : biases)
 		bias=read_little_endian<bias_type>(net_file);
 
-	for(auto& row : weights)
+	for(std::size_t feature_index{0}; feature_index<dimensions.features; ++feature_index)
 	{
-		for(auto& weight : row)
-			weight=read_little_endian<weight_type>(net_file);
+		for(std::size_t neuron{0}; neuron<dimensions.neurons; ++neuron)
+			weights[neuron][feature_index]=read_little_endian<weight_type>(net_file);
 	}
 }
 
-
-std::vector<Feature_transformer::bias_type> Feature_transformer::transform(const std::vector<std::int16_t>& active_feature_indexes) const noexcept
+std::vector<Feature_transformer::bias_type> Feature_transformer::transform(const std::vector<std::uint16_t>& active_feature_indexes) const noexcept
 {
 	std::vector<bias_type> transformed(dimensions.neurons);
 	for(std::size_t neuron_index{0}; neuron_index<dimensions.neurons; ++neuron_index)

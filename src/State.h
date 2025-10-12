@@ -5,6 +5,7 @@
 #include "Constants.h"
 #include "Enum_map.h"
 #include "Move.h"
+#include "nnue/Neural_network.h"
 #include "Position.h"
 
 #include <algorithm>
@@ -85,7 +86,8 @@ namespace engine
 		[[nodiscard]] std::vector<Piece_and_data> get_board_data() const noexcept;
 		[[nodiscard]] bool is_stalemate() const noexcept;
 		[[nodiscard]] std::optional<Piece> piece_at(const Position& position, const Side& side) const noexcept;
-		[[nodiscard]] std::vector<std::int16_t> to_halfKP_features(const Side side) const noexcept;
+		[[nodiscard]] std::vector<std::uint16_t> to_halfKP_features(const Side perspective) const noexcept;
+		[[nodiscard]] double evaluate() const noexcept;
 
 		friend std::ostream& operator<<(std::ostream& os, const State& state);
 
@@ -106,16 +108,17 @@ namespace engine
 			std::uint64_t previous_zobrist_hash;
 			unsigned half_move_clock;
 			int evaluation;
+			Side_map<std::vector<std::int16_t>> accumulator;
 
 			constexpr bool operator==(const State_delta& state_delta) const = default;
 		};
 
 		std::stack<State_delta> history{};
+		Neural_network neural_network;
 
 		void validate_fen(const std::array<std::string, 6>& partitioned_fen) const;
 		void parse_fen(const std::string_view fen) noexcept;
 		void update_castling_rights(const Side& side) noexcept;
-		void move_and_hash(const Position& from_square, const Position& destination_square, const Piece& piece_type_to_move) noexcept;
 	};
 
 	inline std::ostream& operator<<(std::ostream& os, const State& state)

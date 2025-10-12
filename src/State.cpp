@@ -1,11 +1,11 @@
 #include "Chess_data.h"
-#include "Move.h"
 #include "Move_generator.h"
+#include "Move.h"
+#include "nnue/Neural_network.h"
 #include "State.h"
 #include "Transposition_table.h"
 
 #include <algorithm>
-#include <bit>
 #include <ranges>
 #include <regex>
 #include <sstream>
@@ -146,6 +146,8 @@ State::State(const std::string_view fen)
 	side_to_move = other_side(side_to_move);
 	zobrist_hash = zobrist::hash(*this);
 	repetition_history.push_back(zobrist_hash);
+	for(const auto side : all_sides)
+		neural_network.refresh_accumulator(to_halfKP_features(side), side);
 }
 
 std::optional<Piece> State::piece_at(const Position& position, const Side& side) const noexcept
@@ -162,20 +164,11 @@ std::optional<Piece> State::piece_at(const Position& position, const Side& side)
 	return found_piece;
 }
 
-void State::move_and_hash(const Position& from_square, const Position& destination_square, const Piece& piece_type_to_move) noexcept
-{
-	sides[side_to_move].pieces[piece_type_to_move].move_piece(from_square, destination_square);
-	zobrist::invert_piece_at(zobrist_hash, from_square, piece_type_to_move, side_to_move);
-	zobrist::invert_piece_at(zobrist_hash, destination_square, piece_type_to_move, side_to_move);
-	const auto& weightmap=chess_data::weightmaps[side_to_move][piece_type_to_move];
-	const auto delta_positional_value{weightmap[to_index(destination_square)]-weightmap[to_index(from_square)]};
-	evaluation+=delta_positional_value;
-}
-
 void State::make(const Move& move) noexcept
 {
 	Side_position& side{sides[side_to_move]};
-	auto& opposite_side{sides[other_side(side_to_move)]};
+	const Side enemy_side{other_side(side_to_move)};
+	auto& opposite_side{sides[enemy_side]};
 	const auto destination_square{move.destination_square()};
 	const auto from_square{move.from_square()};
 	const auto pawn_direction{side_to_move == Side::white? 1 : -1};
@@ -185,11 +178,23 @@ void State::make(const Move& move) noexcept
 	const auto old_zobrist_hash{zobrist_hash};
 	const auto old_evaluation{evaluation};
 	const Piece piece_type{*piece_at(from_square, side_to_move)};
-	const std::optional<Piece> piece_to_capture{piece_at(destination_square, other_side(side_to_move))};
-	const auto handle_capture = [this, &opposite_side, &piece_to_capture, &destination_square, enemy_back_rank=side_to_move == Side::white? 7 : 0]()
+	const std::optional<Piece> piece_to_capture{piece_at(destination_square, enemy_side)};
+	const Side_map<Position> king_squares=[&]()
+	{
+		Side_map<Position> king_squares;
+		for(const auto side : all_sides)
+			king_squares[side]=sides[side].pieces[Piece::king].lsb_square();
+		return king_squares;
+	}();
+	static Side_map<std::vector<std::uint16_t>> added_features;
+	static Side_map<std::vector<std::uint16_t>> removed_features;
+
+	const auto handle_capture = [this, &opposite_side, &piece_to_capture, &destination_square, &king_squares, enemy_back_rank=side_to_move == Side::white? 7 : 0, enemy_side]()
 	{
 		opposite_side.pieces[piece_to_capture.value()].remove_piece(destination_square);
-		evaluation-=chess_data::piece_values[other_side(side_to_move)][piece_to_capture.value()]+chess_data::weightmaps[other_side(side_to_move)][piece_to_capture.value()][to_index(destination_square)];
+		for(const auto side : all_sides)
+			removed_features[side].push_back(Neural_network::compute_feature_index(piece_to_capture.value(), destination_square, king_squares[side], enemy_side, side));
+		evaluation-=chess_data::piece_values[other_side(side_to_move)][piece_to_capture.value()]+chess_data::weightmaps[enemy_side][piece_to_capture.value()][to_index(destination_square)];
 		zobrist::invert_piece_at(zobrist_hash, destination_square, piece_to_capture.value(), other_side(side_to_move));
 		if(piece_to_capture==Piece::rook)
 		{
@@ -205,7 +210,23 @@ void State::make(const Move& move) noexcept
 			}
 		}
 	};
-	const auto handle_castling = [this, &destination_square, &back_rank, &side, &from_square]()
+
+	const auto move_and_hash = [this, &king_squares](const Position& from_square, const Position& destination_square, const Piece& piece_type_to_move)
+	{
+		sides[side_to_move].pieces[piece_type_to_move].move_piece(from_square, destination_square);
+		for(const auto side : all_sides)
+		{
+			removed_features[side].push_back(Neural_network::compute_feature_index(piece_type_to_move, from_square, king_squares[side], side_to_move, side));
+			added_features[side].push_back(Neural_network::compute_feature_index(piece_type_to_move, destination_square, king_squares[side], side_to_move, side));
+		}
+		zobrist::invert_piece_at(zobrist_hash, from_square, piece_type_to_move, side_to_move);
+		zobrist::invert_piece_at(zobrist_hash, destination_square, piece_type_to_move, side_to_move);
+		const auto& weightmap=chess_data::weightmaps[side_to_move][piece_type_to_move];
+		const auto delta_positional_value{weightmap[to_index(destination_square)]-weightmap[to_index(from_square)]};
+		evaluation+=delta_positional_value;
+	};
+
+	const auto handle_castling = [this, &destination_square, &back_rank, &side, &from_square, &move_and_hash]()
 	{
 		bool castled_kingside=destination_square.file_==6;
 		Position rook_destination_square, rook_origin_square;
@@ -230,9 +251,10 @@ void State::make(const Move& move) noexcept
 		move_and_hash(from_square, destination_square, Piece::king);
 		move_and_hash(rook_origin_square, rook_destination_square, Piece::rook);
 	};
+
 	if(piece_to_capture)
 		handle_capture();
-	const bool is_castling = piece_type == Piece::king && std::abs(destination_square.file_ - from_square.file_) > 1,
+	const bool is_castling = piece_type == Piece::king && std::abs(destination_square.file_-from_square.file_) > 1,
 			   is_en_passant = en_passant_target_square && piece_type == Piece::pawn && destination_square == en_passant_target_square.value();
 	const auto old_en_passant_target_square = en_passant_target_square;
 	if(en_passant_target_square)
@@ -251,6 +273,11 @@ void State::make(const Move& move) noexcept
 		side.pieces[promotion_piece].add_piece(destination_square);
 		evaluation+=side_piece_values[promotion_piece]+weightmap[promotion_piece][to_index(destination_square)];
 		zobrist::invert_piece_at(zobrist_hash, destination_square, promotion_piece, side_to_move);
+		for(const auto side : all_sides)
+		{
+			added_features[side].push_back(Neural_network::compute_feature_index(promotion_piece, destination_square, king_squares[side], side_to_move, side));
+			removed_features[side].push_back(Neural_network::compute_feature_index(Piece::pawn, from_square, king_squares[side], side_to_move, side));
+		}
 	}
 	else if(is_castling)
 		handle_castling();
@@ -266,11 +293,14 @@ void State::make(const Move& move) noexcept
 		{
 			const Position capture_square{destination_square.rank_-pawn_direction, destination_square.file_};
 			opposite_side.pieces[Piece::pawn].remove_piece(capture_square);
-			evaluation-=chess_data::piece_values[other_side(side_to_move)][Piece::pawn]+chess_data::weightmaps[other_side(side_to_move)][Piece::pawn][to_index(capture_square)];
+			for(const auto side : all_sides)
+				removed_features[side].push_back(Neural_network::compute_feature_index(Piece::pawn, capture_square, king_squares[side], enemy_side, side));
+			evaluation-=chess_data::piece_values[other_side(side_to_move)][Piece::pawn]+chess_data::weightmaps[enemy_side][Piece::pawn][to_index(capture_square)];
 			zobrist::invert_piece_at(zobrist_hash, capture_square, Piece::pawn, other_side(side_to_move));
 		}
 		move_and_hash(from_square, destination_square, piece_type);
 	}
+
 	history.emplace(State_delta
 	{
 		move,
@@ -283,8 +313,17 @@ void State::make(const Move& move) noexcept
 		black_old_castling_rights,
 		old_zobrist_hash, 
 		half_move_clock,
-		old_evaluation
+		old_evaluation,
+		neural_network.accumulator
 	});
+
+	if(!(removed_features[enemy_side].empty() && added_features[enemy_side].empty()))
+		neural_network.update_accumulator(removed_features[enemy_side], added_features[enemy_side], enemy_side);
+	if(piece_type==Piece::king)
+		neural_network.refresh_accumulator(to_halfKP_features(side_to_move), side_to_move);
+	else if(!(removed_features[side_to_move].empty() && added_features[side_to_move].empty()))
+		neural_network.update_accumulator(removed_features[side_to_move], added_features[side_to_move], side_to_move);
+
 	if(piece_type == Piece::rook || piece_type == Piece::king)
 	{
 		if((from_square.file_ == 0 || piece_type == Piece::king) && side.castling_rights[Castling_rights::queenside])
@@ -298,6 +337,7 @@ void State::make(const Move& move) noexcept
 			zobrist::invert_castling_right(zobrist_hash, side_to_move, Castling_rights::kingside);
 		}
 	}
+
 	if(piece_type == Piece::pawn || piece_to_capture)
 		half_move_clock = 0;
 	else
@@ -306,8 +346,14 @@ void State::make(const Move& move) noexcept
 		++full_move_clock;
 	enemy_attack_map = generate_attack_map(*this);
 	zobrist::invert_side_to_move(zobrist_hash);
-	side_to_move = other_side(side_to_move);
+	side_to_move = enemy_side;
 	repetition_history.push_back(zobrist_hash);
+
+	for(auto& changed_features : std::array{added_features, removed_features})
+	{
+		for(auto side : all_sides)
+			changed_features[side].clear();
+	}
 }
 
 void State::unmove() noexcept
@@ -367,6 +413,7 @@ void State::unmove() noexcept
 	repetition_history.pop_back();
 	zobrist_hash = history_data.previous_zobrist_hash;
 	evaluation = history_data.evaluation;
+	neural_network.accumulator=history_data.accumulator;
 }
 
 Bitboard State::occupied_squares() const noexcept
@@ -395,37 +442,27 @@ std::vector<State::Piece_and_data> State::get_board_data() const noexcept
 	return board_data;
 }
 
-std::vector<std::int16_t> State::to_halfKP_features(const Side side) const noexcept
+std::vector<std::uint16_t> State::to_halfKP_features(const Side perspective) const noexcept
 {
-	const auto feature_index=[&side](const Piece piece, const Position& position, const Position& king_square)
+	std::vector<std::uint16_t> active_feature_indexes;
+	Position king_square{sides[perspective].pieces[Piece::king].lsb_square()};
+	for(const auto current_side : all_sides)
 	{
-		const auto piece_index{2*(std::to_underlying(piece)-1) + std::to_underlying(side)};
-		return 1 + to_index(king_square) + to_index(position) + (piece_index+10*to_index(king_square))*64;
-	};
-
-	std::vector<std::int16_t> active_feature_indexes;
-	Position king_square;
-	for(const auto& piece : all_pieces)
-	{
-		const Bitboard pieces_bb=[&]()
+		for(const auto& piece : all_pieces)
 		{
-			if(side==Side::white)
-				return sides[side].pieces[piece];
-			if(side==Side::black)
-				return Bitboard{std::byteswap(static_cast<std::uint64_t>(sides[side].pieces[piece]))};
-			std::unreachable();
-		}();
+			if(piece==Piece::king)
+				continue;
 
-		if(piece==Piece::king)
-		{
-			king_square=pieces_bb.lsb_square();
-			continue;
+			sides[current_side].pieces[piece].for_each_piece([&](const Position& piece_square)
+			{
+				active_feature_indexes.push_back(Neural_network::compute_feature_index(piece, piece_square, king_square, current_side, perspective));
+			});
 		}
-
-		pieces_bb.for_each_piece([&](const Position& piece_square)
-		{
-			active_feature_indexes.push_back(feature_index(piece, piece_square, king_square));
-		});
 	}
 	return active_feature_indexes;
+}
+
+double State::evaluate() const noexcept
+{
+	return neural_network.evaluate(side_to_move);
 }

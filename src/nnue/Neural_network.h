@@ -1,25 +1,51 @@
+#ifndef Neural_network_h_INCLUDED
+#define Neural_network_h_INCLUDED
+
 #include <fstream>
 #include <ranges>
 
 #include "common.h"
+#include "../Constants.h"
 #include "layers/Dense_linear_layer.h"
 #include "layers/Feature_transformer.h"
 #include "NNUE_header.h"
+#include "../Pieces.h"
+#include "../Position.h"
 
 class Neural_network
 {
 	public:
 
-	Neural_network(std::ifstream& net_file)
-		: header(net_file)
-		, feature_transformer(net_file)
-		, dense_layers_hash(read_little_endian<decltype(dense_layers_hash)>(net_file))
-		, dense_one(net_file)
-		, dense_two(net_file)
-		, dense_three(net_file)
-	{};
+	Neural_network()
+	{
+		for(const auto side : engine::all_sides)
+			accumulator[side].resize(feature_transformer.dimensions.neurons);
+	};
 
-	[[nodiscard]] double evaluate(const std::vector<std::int16_t>& white_active_feature_indexes, const std::vector<std::int16_t>& black_active_feature_indexes) const noexcept;
+	[[nodiscard]] double evaluate(const engine::Side side_to_move) const noexcept;
+	void refresh_accumulator(const std::vector<std::uint16_t>& features, const engine::Side side) noexcept;
+	void update_accumulator(const std::vector<std::uint16_t>& removed_features, const std::vector<uint16_t>& added_features, const engine::Side perspective) noexcept;
+	[[nodiscard]] inline static std::uint16_t compute_feature_index(const engine::Piece piece
+											 , const engine::Position& position
+											 , const engine::Position& king_square
+											 , const engine::Side current_side
+											 , const engine::Side perspective) noexcept
+	{
+		const auto feature_index=[&](const auto& index_strategy, const engine::Side current_side)
+		{
+			const auto piece_index_no_king{std::to_underlying(piece)-1};
+			const auto piece_feature_index{2*piece_index_no_king + std::to_underlying(current_side)};
+			return 1 + index_strategy(position) + index_strategy(king_square) + (piece_feature_index+10*index_strategy(king_square))*64;
+		};
+
+		if(perspective==engine::Side::white)
+			return feature_index(engine::to_index, current_side);
+		if(perspective==engine::Side::black)
+			return feature_index([](const engine::Position& position){ return 63-to_index(position); }, other_side(current_side));
+		std::unreachable();
+	};
+
+	engine::Side_map<std::vector<std::int16_t>> accumulator;
 
 	private:
 
@@ -29,7 +55,7 @@ class Neural_network
 		std::vector<std::int8_t> result(input.size());
 		for(auto&& [new_value, value] : std::views::zip(result, input))
 		{
-			new_value=std::clamp(value/multiple_of_one_value, 0, 127);
+			new_value=std::clamp(value/multiple_of_one_value,0,127);
 		}
 		return result;
 	}
@@ -38,10 +64,13 @@ class Neural_network
 								dense_two_dimensions{32,32},
 								dense_three_dimensions{32,1};
 
-	NNUE_header header;
-	Feature_transformer feature_transformer;
-	std::uint32_t dense_layers_hash;
-	Dense_linear_layer<dense_one_dimensions> dense_one;
-	Dense_linear_layer<dense_two_dimensions> dense_two;
-	Dense_linear_layer<dense_three_dimensions> dense_three;
+	inline static std::ifstream net_file{"/home/michael/coding/projects/ChessEngine/src/nnue/nn-c3ca321c51c9.nnue"};
+	inline static NNUE_header header=NNUE_header(net_file);
+	inline static Feature_transformer feature_transformer=Feature_transformer(net_file);
+	inline static std::uint32_t dense_layers_hash=read_little_endian<decltype(dense_layers_hash)>(net_file);
+	inline static Dense_linear_layer<dense_one_dimensions> dense_one=Dense_linear_layer<dense_one_dimensions>(net_file);
+	inline static Dense_linear_layer<dense_two_dimensions> dense_two=Dense_linear_layer<dense_two_dimensions>(net_file);
+	inline static Dense_linear_layer<dense_three_dimensions> dense_three=Dense_linear_layer<dense_three_dimensions>(net_file);
 };
+
+#endif

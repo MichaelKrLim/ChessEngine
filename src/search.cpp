@@ -46,7 +46,7 @@ namespace engine
 			if(!search_options.depth && time_manager.used_time()>time_manager.maximum())
 				throw timeout{};
 
-			const int& stand_pat=state.evaluation*(state.side_to_move==Side::white? 1:-1);
+			const int& stand_pat=state.evaluate();
 			int best_score=stand_pat;
 			if(stand_pat>=beta || extended_depth > 19)
 				return stand_pat;

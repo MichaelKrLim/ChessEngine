@@ -1,12 +1,7 @@
 #include "bench.h"
-#include "State.h"
 #include "Uci_handler.h"
 
 #include <print>
-
-#include "nnue/Neural_network.h"
-#include <fstream>
-#include "Constants.h"
 
 int main(int argc, const char* argv[])
 {
@@ -30,12 +25,6 @@ int main(int argc, const char* argv[])
 	}
 	else
 	{
-		engine::State state{"2b1kb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
-		std::ifstream stream{"../src/nnue/nn-c3ca321c51c9.nnue"};
-		Neural_network nn{stream};
-		[[maybe_unused]]
-		const auto eval=nn.evaluate(state.to_halfKP_features(engine::Side::white), state.to_halfKP_features(engine::Side::black));
-		std::cout<<eval<<"\n";
 		uci::Uci_handler uci_handler;
 		uci_handler.start_listening();
 	}

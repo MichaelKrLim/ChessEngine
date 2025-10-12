@@ -19,7 +19,7 @@ namespace engine
 	template <typename Mapped_type>
 	using Side_map = Enum_map_from_size<Side, Mapped_type>;
 
-	constexpr auto all_sides = {Side::white, Side::black};
+	constexpr auto all_sides={Side::white, Side::black};
 
 	inline Side other_side(const Side& side) noexcept
 	{
