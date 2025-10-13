@@ -7,6 +7,7 @@
 #include "Move.h"
 #include "nnue/Neural_network.h"
 #include "Position.h"
+#include "nnue/layers/Feature_transformer.h"
 
 #include <algorithm>
 #include <array>
@@ -91,8 +92,6 @@ namespace engine
 
 		friend std::ostream& operator<<(std::ostream& os, const State& state);
 
-		constexpr bool operator==(const State& state) const = default;
-
 		private:
 
 		struct State_delta
@@ -108,7 +107,7 @@ namespace engine
 			std::uint64_t previous_zobrist_hash;
 			unsigned half_move_clock;
 			int evaluation;
-			Side_map<std::vector<std::int16_t>> accumulator;
+			Side_map<std::array<std::int16_t, Feature_transformer::dimensions.neurons>> accumulator;
 
 			constexpr bool operator==(const State_delta& state_delta) const = default;
 		};

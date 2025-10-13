@@ -15,9 +15,9 @@ Dense_linear_layer<layer_dimensions>::Dense_linear_layer(std::ifstream& net_file
 }
 
 template <Dimensions layer_dimensions>
-std::vector<typename Dense_linear_layer<layer_dimensions>::bias_type> Dense_linear_layer<layer_dimensions>::transform(const std::vector<std::int8_t>& column_vector) const noexcept
+std::array<typename Dense_linear_layer<layer_dimensions>::bias_type, layer_dimensions.neurons> Dense_linear_layer<layer_dimensions>::transform(const std::array<std::int8_t, layer_dimensions.features>& column_vector) const noexcept
 {
-	std::vector<bias_type> result(layer_dimensions.neurons);
+	std::array<bias_type, layer_dimensions.neurons> result{};
 	for(std::size_t neuron_index{0}; neuron_index<layer_dimensions.neurons; ++neuron_index)
 	{
 		const auto& neuron{weights[neuron_index]};

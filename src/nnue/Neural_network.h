@@ -16,15 +16,9 @@ class Neural_network
 {
 	public:
 
-	Neural_network()
-	{
-		for(const auto side : engine::all_sides)
-			accumulator[side].resize(feature_transformer.dimensions.neurons);
-	};
-
 	[[nodiscard]] double evaluate(const engine::Side side_to_move) const noexcept;
 	void refresh_accumulator(const std::vector<std::uint16_t>& features, const engine::Side side) noexcept;
-	void update_accumulator(const std::vector<std::uint16_t>& removed_features, const std::vector<uint16_t>& added_features, const engine::Side perspective) noexcept;
+	void update_accumulator(std::span<const std::uint16_t> removed_features, std::span<const std::uint16_t> added_features, const engine::Side perspective) noexcept;
 	[[nodiscard]] inline static std::uint16_t compute_feature_index(const engine::Piece piece
 											 , const engine::Position& position
 											 , const engine::Position& king_square
@@ -45,26 +39,24 @@ class Neural_network
 		std::unreachable();
 	};
 
-	engine::Side_map<std::vector<std::int16_t>> accumulator;
+	engine::Side_map<std::array<std::int16_t, Feature_transformer::dimensions.neurons>> accumulator{};
 
 	private:
 
-	template <numeric numeric_type>
-	inline std::vector<std::int8_t> clipped_ReLU(const std::vector<numeric_type>& input, const int multiple_of_one_value=1) const noexcept
+	template <numeric numeric_type, std::size_t size>
+	inline std::array<std::int8_t, size> clipped_ReLU(const std::array<numeric_type, size>& input, const int multiple_of_one_value=1) const noexcept
 	{
-		std::vector<std::int8_t> result(input.size());
-		for(auto&& [new_value, value] : std::views::zip(result, input))
-		{
+		std::array<std::int8_t, size> output;
+		for(auto&& [new_value, value] : std::views::zip(output, input))
 			new_value=std::clamp(value/multiple_of_one_value,0,127);
-		}
-		return result;
+		return output;
 	}
 
 	constexpr static Dimensions dense_one_dimensions{512,32},
 								dense_two_dimensions{32,32},
 								dense_three_dimensions{32,1};
 
-	inline static std::ifstream net_file{"/home/michael/coding/projects/ChessEngine/src/nnue/nn-c3ca321c51c9.nnue"};
+	inline static std::ifstream net_file{"/home/michael/coding/projects/ChessEngine/src/nnue/nn-97f742aaefcd.nnue"};
 	inline static NNUE_header header=NNUE_header(net_file);
 	inline static Feature_transformer feature_transformer=Feature_transformer(net_file);
 	inline static std::uint32_t dense_layers_hash=read_little_endian<decltype(dense_layers_hash)>(net_file);

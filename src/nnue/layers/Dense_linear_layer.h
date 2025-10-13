@@ -16,7 +16,7 @@ class Dense_linear_layer
 
 	Dense_linear_layer(std::ifstream& net_file) noexcept;
 
-	[[nodiscard]] std::vector<bias_type> transform(const std::vector<std::int8_t>& column_vector) const noexcept;
+	[[nodiscard]] std::array<bias_type, layer_dimensions.neurons> transform(const std::array<std::int8_t, layer_dimensions.features>& column_vector) const noexcept;
 
 	private:
 
