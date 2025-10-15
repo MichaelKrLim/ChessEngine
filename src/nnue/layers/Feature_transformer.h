@@ -1,6 +1,7 @@
 #ifndef Feature_transformer_h_INCLUDED
 #define Feature_transformer_h_INCLUDED
 
+#include <cstdint>
 #include <fstream>
 #include <vector>
 
@@ -17,8 +18,8 @@ class Feature_transformer
 	Feature_transformer(std::ifstream& net_file) noexcept;
 
 	constexpr static Dimensions dimensions{41024,256};
-	void transform(const std::vector<std::uint16_t>& active_feature_indexes
-												 , std::span<bias_type, dimensions.neurons> transformed) const noexcept;
+	void transform(std::span<const std::uint16_t> active_feature_indexes
+				 , std::span<bias_type, dimensions.neurons> transformed) const noexcept;
 	auto weights_view() const noexcept
 	{
 		return const_weights_container{data.data()};

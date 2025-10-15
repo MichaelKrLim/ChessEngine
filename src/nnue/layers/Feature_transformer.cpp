@@ -17,7 +17,7 @@ Feature_transformer::Feature_transformer(std::ifstream& net_file) noexcept
 	}
 }
 
-void Feature_transformer::transform(const std::vector<std::uint16_t>& active_feature_indexes
+void Feature_transformer::transform(std::span<const std::uint16_t> active_feature_indexes
 								  , std::span<bias_type, Feature_transformer::dimensions.neurons> transformed) const noexcept
 {
 	const_weights_container weights{weights_view()};

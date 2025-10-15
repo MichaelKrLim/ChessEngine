@@ -1,4 +1,6 @@
 #include "Chess_data.h"
+#include "Constants.h"
+#include "Fixed_capacity_vector.h"
 #include "Move_generator.h"
 #include "Move.h"
 #include "nnue/Neural_network.h"
@@ -6,6 +8,7 @@
 #include "Transposition_table.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <ranges>
 #include <regex>
 #include <sstream>
@@ -164,7 +167,7 @@ std::optional<Piece> State::piece_at(const Position& position, const Side& side)
 	return found_piece;
 }
 
-void State::update_accumulator(const auto& removed_features, const auto& added_features, const Side moved_side, const Piece moved_piece) noexcept
+void State::change_accumulator(const auto& removed_features, const auto& added_features, const Side moved_side, const Piece moved_piece) noexcept
 {
 	const Side enemy_side{other_side(moved_side)};
 	neural_network.update_accumulator(removed_features[enemy_side], added_features[enemy_side], enemy_side);
@@ -329,7 +332,7 @@ void State::make(const Move& move) noexcept
 		old_evaluation,
 	});
 
-	update_accumulator(removed_features, added_features, side_to_move, piece_type);
+	change_accumulator(removed_features, added_features, side_to_move, piece_type);
 
 	if(piece_type == Piece::rook || piece_type == Piece::king)
 	{
@@ -439,7 +442,7 @@ void State::unmove() noexcept
 			added_features[side].push_back(Neural_network::compute_feature_index(*history_data.captured_piece, previous_move_destination, king_squares[side], side_to_move, side));
 	}
 
-	update_accumulator(removed_features, added_features, last_moved_side, history_data.piece);
+	change_accumulator(removed_features, added_features, last_moved_side, history_data.piece);
 
 	sides[Side::white].castling_rights=history_data.white_castling_rights;
 	sides[Side::black].castling_rights=history_data.black_castling_rights;
@@ -480,9 +483,9 @@ std::vector<State::Piece_and_data> State::get_board_data() const noexcept
 	return board_data;
 }
 
-std::vector<std::uint16_t> State::to_halfKP_features(const Side perspective) const noexcept
+Fixed_capacity_vector<std::uint16_t, board_size*board_size> State::to_halfKP_features(const Side perspective) const noexcept
 {
-	std::vector<std::uint16_t> active_feature_indexes;
+	Fixed_capacity_vector<std::uint16_t,board_size*board_size> active_feature_indexes;
 	Position king_square{sides[perspective].pieces[Piece::king].lsb_square()};
 	for(const auto current_side : all_sides)
 	{

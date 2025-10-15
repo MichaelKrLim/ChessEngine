@@ -15,7 +15,7 @@ double Neural_network::evaluate(const engine::Side side_to_move) const noexcept
 	return d3_transformed.front()/16.0;
 }
 
-void Neural_network::refresh_accumulator(const std::vector<std::uint16_t>& features, const engine::Side side) noexcept
+void Neural_network::refresh_accumulator(std::span<const std::uint16_t> features, const engine::Side side) noexcept
 {
 	accumulator[side].fill(0);
 	feature_transformer.transform(features, accumulator[side]);

@@ -7,7 +7,7 @@
 #include "Move.h"
 #include "nnue/Neural_network.h"
 #include "Position.h"
-#include "nnue/layers/Feature_transformer.h"
+#include "Fixed_capacity_vector.h"
 
 #include <algorithm>
 #include <array>
@@ -87,7 +87,7 @@ namespace engine
 		[[nodiscard]] std::vector<Piece_and_data> get_board_data() const noexcept;
 		[[nodiscard]] bool is_stalemate() const noexcept;
 		[[nodiscard]] std::optional<Piece> piece_at(const Position& position, const Side& side) const noexcept;
-		[[nodiscard]] std::vector<std::uint16_t> to_halfKP_features(const Side perspective) const noexcept;
+		[[nodiscard]] Fixed_capacity_vector<std::uint16_t,board_size*board_size> to_halfKP_features(const Side perspective) const noexcept;
 		[[nodiscard]] double evaluate() const noexcept;
 
 		friend std::ostream& operator<<(std::ostream& os, const State& state);
@@ -117,7 +117,7 @@ namespace engine
 		void validate_fen(const std::array<std::string, 6>& partitioned_fen) const;
 		void parse_fen(const std::string_view fen) noexcept;
 		void update_castling_rights(const Side& side) noexcept;
-		void update_accumulator(const auto& removed_features, const auto& added_features, const Side moved_side, const Piece moved_piece) noexcept;
+		void change_accumulator(const auto& removed_features, const auto& added_features, const Side moved_side, const Piece moved_piece) noexcept;
 	};
 
 	inline std::ostream& operator<<(std::ostream& os, const State& state)

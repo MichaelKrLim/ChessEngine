@@ -17,7 +17,7 @@ class Neural_network
 	public:
 
 	[[nodiscard]] double evaluate(const engine::Side side_to_move) const noexcept;
-	void refresh_accumulator(const std::vector<std::uint16_t>& features, const engine::Side side) noexcept;
+	void refresh_accumulator(std::span<const std::uint16_t> features, const engine::Side side) noexcept;
 	void update_accumulator(std::span<const std::uint16_t> removed_features, std::span<const std::uint16_t> added_features, const engine::Side perspective) noexcept;
 	[[nodiscard]] inline static std::uint16_t compute_feature_index(const engine::Piece piece
 											 , const engine::Position& position
