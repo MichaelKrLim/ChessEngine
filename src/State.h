@@ -107,7 +107,6 @@ namespace engine
 			std::uint64_t previous_zobrist_hash;
 			unsigned half_move_clock;
 			int evaluation;
-			Side_map<std::array<std::int16_t, Feature_transformer::dimensions.neurons>> accumulator;
 
 			constexpr bool operator==(const State_delta& state_delta) const = default;
 		};
@@ -118,6 +117,7 @@ namespace engine
 		void validate_fen(const std::array<std::string, 6>& partitioned_fen) const;
 		void parse_fen(const std::string_view fen) noexcept;
 		void update_castling_rights(const Side& side) noexcept;
+		void update_accumulator(const auto& removed_features, const auto& added_features, const Side moved_side, const Piece moved_piece) noexcept;
 	};
 
 	inline std::ostream& operator<<(std::ostream& os, const State& state)
