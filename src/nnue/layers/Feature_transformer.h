@@ -2,6 +2,7 @@
 #define Feature_transformer_h_INCLUDED
 
 #include <cstdint>
+#include <experimental/bits/simd.h>
 #include <fstream>
 #include <vector>
 
