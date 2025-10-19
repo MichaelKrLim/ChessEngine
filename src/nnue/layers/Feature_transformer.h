@@ -7,28 +7,37 @@
 #include <vector>
 
 #include "../common.h"
-#include "../../mdspan.h"
+#include "mdspan.h"
 
 class Feature_transformer
 {
+	public:
+
 	using bias_type=std::int16_t;
 	using weight_type=std::int16_t;
 
-	public:
 
 	Feature_transformer(std::ifstream& net_file) noexcept;
 
 	constexpr static Dimensions dimensions{41024,256};
 	void transform(std::span<const std::uint16_t> active_feature_indexes
 				 , std::span<bias_type, dimensions.neurons> transformed) const noexcept;
-	auto weights_view() const noexcept
+	void adjust(std::span<const std::uint16_t> feature_indexes
+			  , const auto& reduction
+			  , std::span<bias_type, dimensions.neurons> adjusted)
 	{
-		return const_weights_container{data.data()};
+		// Even with column major, it is faster to loop over the features first
+		const_weights_container weights{weights_data.data()};
+		for(const auto& feature : feature_indexes)
+		{
+			for(std::size_t i{0}; i<dimensions.neurons; ++i)
+				adjusted[i]=reduction(adjusted[i], weights[i,feature]);
+		}
 	}
 
 	std::uint32_t hash;
 	std::vector<bias_type> biases;
-	std::vector<weight_type> data;
+	std::vector<weight_type> weights_data;
 
 	private:
 
