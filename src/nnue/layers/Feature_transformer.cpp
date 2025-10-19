@@ -1,8 +1,5 @@
 #include "Feature_transformer.h"
 
-#include <algorithm>
-#include <execution>
-#include <experimental/bits/simd.h>
 #include <experimental/simd>
 #include <numeric>
 
@@ -27,13 +24,7 @@ void Feature_transformer::transform(std::span<const std::uint16_t> active_featur
 								  , std::span<bias_type, Feature_transformer::dimensions.neurons> transformed) const noexcept
 {
 	const_weights_container weights{weights_view()};
-	constexpr static std::array<std::size_t, dimensions.neurons> neuron_indices=[]()
-	{
-		std::array<std::size_t, dimensions.neurons> neuron_indices;
-		std::ranges::iota(neuron_indices, 0u);
-		return neuron_indices;
-	}();
-	std::for_each(std::execution::par, neuron_indices.begin(), neuron_indices.end(), [&](const std::size_t neuron_index)
+	for(std::size_t neuron_index{0}; neuron_index<dimensions.neurons; ++neuron_index)
 	{
 		const auto neuron{std::submdspan(weights, neuron_index, std::full_extent)};
 		std::experimental::native_simd<weight_type> chunk;
@@ -46,9 +37,13 @@ void Feature_transformer::transform(std::span<const std::uint16_t> active_featur
 		}
 
 		if(const auto processed_values{number_of_chunks*chunk.size()}; processed_values<active_feature_indexes.size())
-			transformed[neuron_index]+=std::accumulate(active_feature_indexes.begin()+processed_values, active_feature_indexes.end(), 0
-												     , [&](const auto acc, const auto feature_index){ return acc+neuron[feature_index]; });
+		{
+			transformed[neuron_index]+=std::accumulate(active_feature_indexes.begin()+processed_values, active_feature_indexes.end(), 0, [&](const auto acc, const auto feature_index)
+			{
+				return acc+neuron[feature_index];
+			});
+		}
 		
 		transformed[neuron_index]+=biases[neuron_index];
-	});
+	}
 }

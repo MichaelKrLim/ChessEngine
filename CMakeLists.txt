@@ -12,7 +12,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_options(-Wall
 					-funroll-loops
 					-pedantic
-					-O3) # -Werror causes bug in gcc
+					-O3
+					-march=native) # -Werror causes bug in gcc
 
 # for windows
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
@@ -56,12 +57,6 @@ CPMAddPackage(
 	SYSTEM ON
 )
 
-CPMAddPackage(
-	NAME TBB
-	GIT_REPOSITORY https://github.com/uxlfoundation/oneTBB
-	GIT_TAG v2022.2.0
-)
-
 file(GLOB test_sources CONFIGURE_DEPENDS src/*.tests.cpp)
 add_executable(tests
 	${test_sources}
@@ -80,7 +75,6 @@ add_executable(${PROJECT_NAME} src/main.cpp
 	${common_sources}
 	src/Uci_handler.h src/Uci_handler.cpp
 )
-target_link_libraries(${PROJECT_NAME} PRIVATE TBB::tbb)
 
 include(generate_magics.cmake)
 

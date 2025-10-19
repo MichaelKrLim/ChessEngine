@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-inline unsigned benchmark()
+inline unsigned benchmark(std::optional<std::size_t> number_of_positions_to_test=std::nullopt)
 {
 
 	// https://github.com/official-stockfish/Stockfish/blob/master/src/benchmark.cpp
@@ -67,9 +67,10 @@ inline unsigned benchmark()
 	engine::Search_options options;
 	options.depth=10;
 	engine::Engine engine;
-	for(std::size_t i{0}; i<positions.size(); ++i)
+	std::size_t clamped_positions_to_test{std::min(positions.size(),number_of_positions_to_test.value_or(positions.size()))};
+	for(std::size_t i{0}; i<clamped_positions_to_test; ++i)
 	{
-		std::println("test {}/{}", i+1, positions.size());
+		std::println("test {}/{}", i+1, clamped_positions_to_test);
 		const auto fen{positions[i]};
 		engine::State current_state{fen};
 		engine::Transposition_table tt{engine::default_table_size};
