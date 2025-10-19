@@ -39,7 +39,7 @@ set(common_sources
 	src/nnue/common.h
 	src/nnue/layers/Dense_linear_layer.h
 	src/nnue/layers/Feature_transformer.cpp src/nnue/layers/Feature_transformer.h
-	src/mdspan.h
+	src/nnue/layers/mdspan.h
 )
 
 
