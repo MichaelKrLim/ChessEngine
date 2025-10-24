@@ -74,7 +74,6 @@ void State::parse_fen(const std::string_view fen) noexcept
 				const Piece piece_type{to_piece(std::tolower(fen_section[i]))};
 				const Bitboard mask{Bitboard{1ULL} << to_shift(board_index)};
 				sides[side].pieces[piece_type] |= mask;
-				evaluation+=chess_data::piece_values[side][piece_type]+chess_data::weightmaps[side][piece_type][board_index];
 			};
 			if(fen_section[i] == '/')
 				continue;
@@ -189,7 +188,6 @@ void State::make(const Move& move) noexcept
 	const auto white_old_castling_rights{sides[Side::white].castling_rights};
 	const auto black_old_castling_rights{sides[Side::black].castling_rights};
 	const auto old_zobrist_hash{zobrist_hash};
-	const auto old_evaluation{evaluation};
 	const Piece piece_type{*piece_at(from_square, side_to_move)};
 	const std::optional<Piece> piece_to_capture{piece_at(destination_square, enemy_side)};
 	const Side_map<Position> king_squares=[&]()
@@ -207,7 +205,6 @@ void State::make(const Move& move) noexcept
 		opposite_side.pieces[piece_to_capture.value()].remove_piece(destination_square);
 		for(const auto side : all_sides)
 			removed_features[side].push_back(Neural_network::compute_feature_index(piece_to_capture.value(), destination_square, king_squares[side], enemy_side, side));
-		evaluation-=chess_data::piece_values[other_side(side_to_move)][piece_to_capture.value()]+chess_data::weightmaps[enemy_side][piece_to_capture.value()][to_index(destination_square)];
 		zobrist::invert_piece_at(zobrist_hash, destination_square, piece_to_capture.value(), other_side(side_to_move));
 		if(piece_to_capture==Piece::rook)
 		{
@@ -237,9 +234,6 @@ void State::make(const Move& move) noexcept
 		}
 		zobrist::invert_piece_at(zobrist_hash, from_square, piece_type_to_move, side_to_move);
 		zobrist::invert_piece_at(zobrist_hash, destination_square, piece_type_to_move, side_to_move);
-		const auto& weightmap=chess_data::weightmaps[side_to_move][piece_type_to_move];
-		const auto delta_positional_value{weightmap[to_index(destination_square)]-weightmap[to_index(from_square)]};
-		evaluation+=delta_positional_value;
 	};
 
 	const auto handle_castling = [this, &destination_square, &back_rank, &side, &from_square, &move_and_hash]()
@@ -282,12 +276,8 @@ void State::make(const Move& move) noexcept
 	{
 		const auto promotion_piece = move.promotion_piece();
 		side.pieces[Piece::pawn].remove_piece(from_square);
-		const auto& weightmap=chess_data::weightmaps[side_to_move];
-		const auto& side_piece_values=chess_data::piece_values[side_to_move];
-		evaluation-=side_piece_values[Piece::pawn]+weightmap[Piece::pawn][to_index(from_square)];
 		zobrist::invert_piece_at(zobrist_hash, from_square, Piece::pawn, side_to_move);
 		side.pieces[promotion_piece].add_piece(destination_square);
-		evaluation+=side_piece_values[promotion_piece]+weightmap[promotion_piece][to_index(destination_square)];
 		zobrist::invert_piece_at(zobrist_hash, destination_square, promotion_piece, side_to_move);
 		for(const auto side : all_sides)
 		{
@@ -311,7 +301,6 @@ void State::make(const Move& move) noexcept
 			opposite_side.pieces[Piece::pawn].remove_piece(capture_square);
 			for(const auto side : all_sides)
 				removed_features[side].push_back(Neural_network::compute_feature_index(Piece::pawn, capture_square, king_squares[side], enemy_side, side));
-			evaluation-=chess_data::piece_values[other_side(side_to_move)][Piece::pawn]+chess_data::weightmaps[enemy_side][Piece::pawn][to_index(capture_square)];
 			zobrist::invert_piece_at(zobrist_hash, capture_square, Piece::pawn, other_side(side_to_move));
 		}
 		move_and_hash(from_square, destination_square, piece_type);
@@ -329,7 +318,6 @@ void State::make(const Move& move) noexcept
 		black_old_castling_rights,
 		old_zobrist_hash, 
 		half_move_clock,
-		old_evaluation,
 	});
 
 	change_accumulator(removed_features, added_features, side_to_move, piece_type);
@@ -454,7 +442,6 @@ void State::unmove() noexcept
 
 	repetition_history.pop_back();
 	zobrist_hash = history_data.previous_zobrist_hash;
-	evaluation = history_data.evaluation;
 }
 
 Bitboard State::occupied_squares() const noexcept

@@ -55,7 +55,7 @@ namespace engine
 
 			for(const auto& move : generate_moves<Moves_type::noisy>(state))
 			{
-				if(std::optional<Piece> piece_to_capture=state.piece_at(move.destination_square(), other_side(state.side_to_move)); piece_to_capture && stand_pat+chess_data::piece_values[Side::white][piece_to_capture.value()]<=alpha)
+				if(std::optional<Piece> piece_to_capture=state.piece_at(move.destination_square(), other_side(state.side_to_move)); piece_to_capture && stand_pat+chess_data::piece_values[piece_to_capture.value()]<=alpha)
 					continue;
 				state.make(move);
 				const int score=-rec(-beta, -alpha, extended_depth, current_extended_depth+1, nodes, depth);

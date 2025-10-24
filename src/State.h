@@ -77,7 +77,6 @@ namespace engine
 		std::optional<Position> en_passant_target_square{std::nullopt};
 		std::uint64_t zobrist_hash;
 		std::vector<std::uint64_t> repetition_history{};
-		int evaluation{0};
 
 		void make(const Move& move) noexcept;
 		void unmove() noexcept;
@@ -106,7 +105,6 @@ namespace engine
 			Castling_rights_map<bool> black_castling_rights;
 			std::uint64_t previous_zobrist_hash;
 			unsigned half_move_clock;
-			int evaluation;
 
 			constexpr bool operator==(const State_delta& state_delta) const = default;
 		};
