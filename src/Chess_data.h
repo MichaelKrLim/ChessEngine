@@ -10,11 +10,12 @@ namespace engine
 		constexpr static Piece_map<int> piece_values = []() constexpr
 		{
 			Piece_map<int> piece_values{};
-			piece_values[Piece::pawn]   = 100;
-			piece_values[Piece::knight] = 288;
-			piece_values[Piece::bishop] = 345;
-			piece_values[Piece::rook]   = 480;
-			piece_values[Piece::queen]  = 1077;
+			constexpr int nnue_quantization_multiple{16};
+			piece_values[Piece::pawn]   = 100*nnue_quantization_multiple;
+			piece_values[Piece::knight] = 288*nnue_quantization_multiple;
+			piece_values[Piece::bishop] = 345*nnue_quantization_multiple;
+			piece_values[Piece::rook]   = 480*nnue_quantization_multiple;
+			piece_values[Piece::queen]  = 1077*nnue_quantization_multiple;
 			return piece_values;
 		}();
 	}

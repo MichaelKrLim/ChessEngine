@@ -55,7 +55,8 @@ namespace engine
 
 			for(const auto& move : generate_moves<Moves_type::noisy>(state))
 			{
-				if(std::optional<Piece> piece_to_capture=state.piece_at(move.destination_square(), other_side(state.side_to_move)); piece_to_capture && stand_pat+chess_data::piece_values[piece_to_capture.value()]<=alpha)
+				constexpr int safety_margin{chess_data::piece_values[Piece::pawn]*2};
+				if(std::optional<Piece> piece_to_capture=state.piece_at(move.destination_square(), other_side(state.side_to_move)); piece_to_capture && stand_pat+chess_data::piece_values[piece_to_capture.value()]+safety_margin<=alpha)
 					continue;
 				state.make(move);
 				const int score=-rec(-beta, -alpha, extended_depth, current_extended_depth+1, nodes, depth);
@@ -323,7 +324,7 @@ namespace engine
 			return best_score;
 		};
 
-		const auto output_info = [&](const auto& eval, const auto& nodes, const auto& current_depth, const auto& extended_depth, const auto& principal_variation)
+		const auto output_info = [&](const int& eval, const auto& nodes, const auto& current_depth, const auto& extended_depth, const auto& principal_variation)
 		{
 			const auto output = [&](std::string_view info)
 			{
@@ -338,7 +339,7 @@ namespace engine
 				io.output(info, pv.str());
 			};
 			if(std::abs(eval)!=std::numeric_limits<int>::max())
-				output(std::format("info [Thread {}] score cp {} nodes {} depth {} seldepth {} pv ", thread_id, eval, nodes, current_depth, current_depth+extended_depth));
+				output(std::format("info [Thread {}] score cp {} nodes {} depth {} seldepth {} pv ", thread_id, eval/16, nodes, current_depth, current_depth+extended_depth));
 			else
 				output(std::format("info [Thread {}] nodes {} depth {} seldepth {} mate ", thread_id, nodes, current_depth, current_depth+extended_depth));
 		};
