@@ -87,7 +87,7 @@ namespace engine
 		[[nodiscard]] bool is_stalemate() const noexcept;
 		[[nodiscard]] std::optional<Piece> piece_at(const Position& position, const Side& side) const noexcept;
 		[[nodiscard]] Fixed_capacity_vector<std::uint16_t,board_size*board_size> to_halfKP_features(const Side perspective) const noexcept;
-		[[nodiscard]] double evaluate() const noexcept;
+		[[nodiscard]] int evaluate() const noexcept;
 
 		friend std::ostream& operator<<(std::ostream& os, const State& state);
 

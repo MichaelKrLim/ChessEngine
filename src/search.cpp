@@ -13,12 +13,11 @@
 
 namespace engine
 {
-	std::expected<Search_results, search_stopped>
-	nega_max(const std::atomic<bool>& should_stop_searching
-		   , const Search_options& search_options
-		   , State state
-		   , Transposition_table& transposition_table
-		   , const int thread_id) noexcept
+	std::expected<Search_results, search_stopped> nega_max(const std::atomic<bool>& should_stop_searching
+														 , const Search_options& search_options
+														 , State state
+														 , Transposition_table& transposition_table
+														 , const int thread_id) noexcept
 	{
 		static Stdio io;
 
@@ -101,14 +100,15 @@ namespace engine
 								, unsigned number_of_checks_in_current_line
 								, unsigned& nodes
 								, const unsigned& depth
-								, Fixed_capacity_vector<Move
-								, 256>& pv
+								, Fixed_capacity_vector<Move, 256>& pv
 								, int alpha = -std::numeric_limits<int>::max()
 								, int beta = std::numeric_limits<int>::max())
 		{
 			killer_moves.resize(std::max<std::size_t>(killer_moves.size(), remaining_depth+1));
+
 			++nodes;
 			pv.clear();
+
 			auto all_legal_moves = generate_moves<Moves_type::legal>(state);
 			if(is_threefold_repetition())
 				return 0;
@@ -196,7 +196,8 @@ namespace engine
 				return false;
 			});
 
-			Move best_move{};
+			// If all legal moves lead to checkmate for side to move, this would leave best_move uninitialised
+			Move best_move{all_legal_moves.front()};
 			int best_score{-std::numeric_limits<int>::max()};
 			class
 			{
@@ -280,12 +281,14 @@ namespace engine
 					child_pvs.invert_best_pv_index();
 				}
 
+				// if score==alpha, don't replace becuase alpha is returned for cutoffs
 				if(score>alpha)
 				{
 					raised_alpha=true;
 					alpha=score;
 					if(alpha>=beta)
 					{
+						// now we make best_score=beta by clamping to the window below
 						killer_moves[remaining_depth].insert_and_overwrite(move);
 						break;
 					}
@@ -300,8 +303,7 @@ namespace engine
 					return 0;
 			}
 
-			if(best_move==Move{})
-				best_move=all_legal_moves.front();
+			best_score=std::clamp(best_score, alpha, beta);
 
 			pv.push_back(best_move);
 			const auto& child_pv{child_pvs.best_child_pv()};
@@ -345,22 +347,34 @@ namespace engine
 		};
 
 		Fixed_capacity_vector<Move, 256> current_pv;
-		int extended_depth{0};
-		unsigned nodes{0},
-		current_depth{1};
-		int score{0};
+		int extended_depth{0}, score{state.evaluate()};
+		unsigned nodes{0}, current_depth{1};
 		for(; search_options.depth? current_depth <= *search_options.depth : current_depth<=max_depth && time_manager.used_time()<time_manager.optimum(); ++current_depth)
 		{
-			extended_depth=nodes=score=0;
-			current_pv.clear();
+			extended_depth=nodes=0;
 			try
 			{
-				const int score = nega_max(current_depth, extended_depth, 0, 0, nodes, current_depth, current_pv);
+				constexpr double half_initial_window_size{chess_data::piece_values[Piece::pawn]/4.0};
+				int alpha=score-half_initial_window_size, beta=score+half_initial_window_size;
+				Search_result_type last_search_result_type;
+				do
+				{
+					score=nega_max(current_depth, extended_depth, 0, 0, nodes, current_depth, current_pv, alpha, beta);
+					last_search_result_type=compute_type(alpha, beta, score);
+
+					if(last_search_result_type==Search_result_type::lower_bound)
+						beta=std::numeric_limits<int>::max();//+=chess_data::piece_values[Piece::pawn];
+					if(last_search_result_type==Search_result_type::upper_bound)
+						alpha=-std::numeric_limits<int>::max();//-=chess_data::piece_values[Piece::pawn];
+				} while(last_search_result_type!=Search_result_type::exact);
+
 				principal_variation = current_pv;
 				output_info(score, nodes, current_depth, extended_depth, principal_variation);
 			}
 			catch(const timeout&)
-			{}
+			{
+
+			}
 			catch(const search_stopped&)
 			{
 				return std::unexpected{search_stopped{}};

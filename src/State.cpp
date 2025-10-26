@@ -490,7 +490,7 @@ Fixed_capacity_vector<std::uint16_t, board_size*board_size> State::to_halfKP_fea
 	return active_feature_indexes;
 }
 
-double State::evaluate() const noexcept
+int State::evaluate() const noexcept
 {
 	return neural_network.evaluate(side_to_move);
 }
