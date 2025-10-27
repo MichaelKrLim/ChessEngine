@@ -2,12 +2,15 @@
 #define Uci_handler_impl_h_INCLUDED
 
 #include "Constants.h"
+#include "Move_generator.h"
 #include "search.h"
 #include "State.h"
 #include "Uci_handler.h"
 
+#include <algorithm>
 #include <chrono>
 #include <condition_variable>
+#include <functional>
 #include <functional>
 #include <iostream>
 #include <sstream>
@@ -72,8 +75,8 @@ namespace uci
 				.move_overhead=options.move_overhead,
 				.threads=options.threads
 			};
-			const auto search_results=engine.generate_best_move(stop_token, search_options);
-			if(!(search_results.error()==engine::search_stopped{}))
+			const auto search_results=engine.generate_best_move(stop_token, search_options, true);
+			if(search_results.has_value())
 				io.output("bestmove ", search_results->pv.front());
 		});
 	}
@@ -86,6 +89,47 @@ namespace uci
 		io.output(std::format("option name Threads type spin default {} min 1 max 1024", engine::default_threads));
 		io.output("option name Move Overhead type spin default 10 min 0 max 5000");
 		io.output("uciok");
+	}
+
+	void Uci_handler::explore_handler() noexcept
+	{
+		io.output("please enter fen");
+		engine::State state{io.input()};
+		io.output("please enter your move");
+		engine::Move move;
+		std::istringstream{io.input()}>>move;
+		push_task([sc=state, m=move, this](std::atomic<bool>& stop_token)
+		{
+			auto state = sc;
+			auto move = m;
+			const auto legal_moves=engine::generate_moves<engine::Moves_type::legal>(state);
+			for(int depth{1}; depth<=9; ++depth)
+			{
+				engine::Search_options options;
+				options.depth=depth;
+				std::vector<std::pair<engine::Move, int>> moves_and_score(legal_moves.size());
+				for(int i{0}; i<legal_moves.size(); ++i)
+				{
+					state.make(legal_moves[i]);
+					engine.set_state(state);
+					if(const auto search_results=engine.generate_best_move(stop_token, options, false); search_results.has_value())
+					{
+						stop_token=false;
+						moves_and_score[i]=std::pair{legal_moves[i], search_results->score};
+					}
+					else
+						return;
+					state.unmove();
+				}
+				std::ranges::sort(moves_and_score, std::greater<>{}, [](const auto& el){ return el.second; });
+				const auto it{std::ranges::find(moves_and_score, move, [](const auto& el){ return el.first; })};
+				const auto move_number{std::distance(moves_and_score.begin(), it)+1};
+				io.output("[depth ", depth, ']', " best move: ", moves_and_score.front().first
+							, " with score of ", moves_and_score.front().second/16
+							, ", you found move ", move_number, '/', legal_moves.size()
+							, " with score of ", it->second/16);
+			}
+		});
 	}
 
 	void Uci_handler::setoption_handler(const Uci_option& uci_option) noexcept

@@ -77,7 +77,7 @@ inline unsigned benchmark(std::optional<std::size_t> number_of_positions_to_test
 		engine.clear_tt();
 		engine.set_state(current_state);
 		std::atomic_bool control{false};
-		const auto search_result{engine.generate_best_move(control, options).value()};
+		const auto search_result{engine.generate_best_move(control, options, true).value()};
 		total_nodes+=search_result.nodes;
 	}
 	return total_nodes;

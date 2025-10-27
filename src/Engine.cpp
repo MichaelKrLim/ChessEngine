@@ -6,7 +6,7 @@
 
 namespace engine
 {
-	std::expected<Search_results, search_stopped> Engine::generate_best_move(std::atomic<bool>& should_stop_searching, const Search_options& search_options) noexcept
+	std::expected<Search_results, search_stopped> Engine::generate_best_move(std::atomic<bool>& should_stop_searching, const Search_options& search_options, const bool output_diagnostics) noexcept
 	{
 		using return_type=std::expected<Search_results, search_stopped>;
 		std::atomic<bool> found_result{false};
@@ -15,7 +15,7 @@ namespace engine
 		std::vector<std::jthread> threads;
 		const auto task=[&](const int thread_id)
 		{
-			const auto return_value{nega_max(should_stop_searching, search_options, state_, transposition_table_, thread_id)};
+			const auto return_value{nega_max(should_stop_searching, search_options, state_, transposition_table_, thread_id, output_diagnostics)};
 			if(!found_result.exchange(true))
 				shared_promise.set_value(return_value);
 			should_stop_searching=true;

@@ -2,6 +2,7 @@
 #define Fixed_capacity_vector_h_INCLUDED
 
 #include <array>
+#include <cassert>
 #include <concepts>
 #include <type_traits>
 
@@ -14,6 +15,12 @@ class Fixed_capacity_vector
 	{
 		if(index >= used_capacity_)
 			used_capacity_ = index+1;
+		return data_[index];
+	}
+
+	constexpr T operator[](const std::size_t index) const noexcept
+	{
+		assert(index<used_capacity_);
 		return data_[index];
 	}
 

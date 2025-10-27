@@ -17,7 +17,8 @@ namespace engine
 														 , const Search_options& search_options
 														 , State state
 														 , Transposition_table& transposition_table
-														 , const int thread_id) noexcept
+														 , const int thread_id
+														 , const bool output_diagnostics) noexcept
 	{
 		static Stdio io;
 
@@ -369,7 +370,8 @@ namespace engine
 				} while(last_search_result_type!=Search_result_type::exact);
 
 				principal_variation = current_pv;
-				output_info(score, nodes, current_depth, extended_depth, principal_variation);
+				if(output_diagnostics)
+					output_info(score, nodes, current_depth, extended_depth, principal_variation);
 			}
 			catch(const timeout&)
 			{

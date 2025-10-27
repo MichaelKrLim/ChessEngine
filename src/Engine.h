@@ -29,7 +29,7 @@ namespace engine
 			transposition_table_.resize(size_mb);
 		}
 
-		[[nodiscard]] std::expected<Search_results, search_stopped> generate_best_move(std::atomic<bool>& should_stop_searching, const Search_options& search_options) noexcept;
+		[[nodiscard]] std::expected<Search_results, search_stopped> generate_best_move(std::atomic<bool>& should_stop_searching, const Search_options& search_options, const bool output_diagnostics) noexcept;
 
 		private:
 

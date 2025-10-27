@@ -41,7 +41,8 @@ namespace engine
 		   , const Search_options& search_options
 		   , State state
 		   , Transposition_table& transposition_table
-		   , const int thread_id) noexcept;
+		   , const int thread_id
+		   , const bool output_diagnostics) noexcept;
 } // namespace engine
 
 #endif // search_h_INCLUDED

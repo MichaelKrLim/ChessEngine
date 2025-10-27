@@ -86,6 +86,7 @@ namespace uci
 		void uci_handler() noexcept;
 		void setoption_handler(const Uci_option& uci_option) noexcept;
 		void stop_handler() noexcept;
+		void explore_handler() noexcept;
 
 		engine::Engine engine;
 		std::jthread worker_thread;
@@ -208,7 +209,8 @@ namespace uci
 			{"stop",       call_handler_v<&Uci_handler::stop_handler>      },
 			{"ucinewgame", call_handler_v<&Uci_handler::ucinewgame_handler>},
 			{"isready",    call_handler_v<&Uci_handler::isready_handler>   },
-			{"setoption",  call_handler_v<&Uci_handler::setoption_handler>}
+			{"setoption",  call_handler_v<&Uci_handler::setoption_handler> },
+			{"explore",  call_handler_v<&Uci_handler::explore_handler> }
 		};
 	};
 } // namespace uci
