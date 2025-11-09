@@ -1,4 +1,3 @@
-#include "Chess_data.h"
 #include "Constants.h"
 #include "Fixed_capacity_vector.h"
 #include "Move_generator.h"
