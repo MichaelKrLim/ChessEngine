@@ -109,13 +109,14 @@ namespace engine
 			++nodes;
 			pv.clear();
 
-			auto all_legal_moves = generate_moves<Moves_type::legal>(state);
 			if(is_threefold_repetition())
 				return 0;
-			else if(remaining_depth<=0 && !all_legal_moves.empty())
-				return quiescence_search(alpha, beta, extended_depth, current_extended_depth, nodes, depth);
-			else if(!search_options.depth && time_manager.used_time()>time_manager.maximum())
+			if(!search_options.depth && time_manager.used_time()>time_manager.maximum())
 				throw timeout{};
+
+			auto all_legal_moves = generate_moves<Moves_type::legal>(state);
+			if(remaining_depth<=0 && !all_legal_moves.empty())
+				return quiescence_search(alpha, beta, extended_depth, current_extended_depth, nodes, depth);
 
 			const int original_alpha{alpha}, original_beta{beta};
 			const auto cache_result=transposition_table[state.zobrist_hash];

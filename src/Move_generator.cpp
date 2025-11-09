@@ -7,12 +7,10 @@
 #include "Move.h"
 #include "Position.h"
 #include "State.h"
-#include "Utility.h"
 
 #include <array>
 #include <functional>
 #include <optional>
-#include <utility>
 #include <vector>
 
 namespace
@@ -66,7 +64,7 @@ namespace
 		const Bitboard pinned_mask{pinned_pieces & ~Bitboard::file(king_square.file_)};
 		const Bitboard movable_if_noncapture{pawns_bb & ~pinned_mask};
 		Bitboard single_moves{(is_white? (movable_if_noncapture<<rank_move) : (movable_if_noncapture>>rank_move)) & ~occupied_squares};
-		single_moves.for_each_piece([&](const Position& destination_square)
+		(single_moves & valid_moves).for_each_piece([&](const Position& destination_square)
 		{
 			const Position origin_square{destination_square.rank_-pawn_direction, destination_square.file_};
 			const Move current_move{origin_square, destination_square};
@@ -77,20 +75,18 @@ namespace
 			}
 			else if constexpr (moves_type == Moves_type::legal)
 			{
-				if(valid_moves.is_occupied(destination_square))
-					add_move(origin_square, destination_square, current_move);
+				add_move(origin_square, destination_square, current_move);
 			}
 		});
 		if constexpr (moves_type == Moves_type::legal)
 		{
 			single_moves &= Bitboard::rank(initial_rank+pawn_direction);
 			const Bitboard double_moves{(is_white? (single_moves<<rank_move) : (single_moves>>rank_move)) & ~occupied_squares};
-			double_moves.for_each_piece([&](const Position& destination_square)
+			(double_moves & valid_moves).for_each_piece([&](const Position& destination_square)
 			{
 				const Position origin_square = Position{destination_square.rank_-pawn_direction*2, destination_square.file_};
 				const Move current_move{origin_square, destination_square};
-				if(valid_moves.is_occupied(destination_square)) [[unlikely]]
-					legal_moves.push_back(current_move);
+				legal_moves.push_back(current_move);
 			});
 		}
 		const auto en_passant_is_pinned = [&](const Position& origin_square)
@@ -108,7 +104,7 @@ namespace
 			const Position destination_square{current_move.destination_square()}, origin_square{current_move.from_square()};
 			const bool is_en_passant{destination_square==en_passant_target_square};
 			const bool not_pinned_or_stays_pinned{!pinned_pieces.is_occupied(origin_square) || std::invoke(relative_diagonal, &king_square) == std::invoke(relative_diagonal, &destination_square)};
-			if(not_pinned_or_stays_pinned && valid_moves.is_occupied(destination_square))
+			if(not_pinned_or_stays_pinned)
 			{
 				if(!is_en_passant || !en_passant_is_pinned(origin_square))
 					add_move(origin_square, destination_square, current_move);
@@ -119,7 +115,7 @@ namespace
 		const Bitboard en_passant_target_square_bitboard{(en_passant_target_square? Bitboard::onebit(en_passant_target_square.value()) : Bitboard{0ULL})};
 		const Bitboard enemy_occupied_squares_with_en_passant_square{enemy_occupied_squares | en_passant_target_square_bitboard};
 		right_captures &= enemy_occupied_squares_with_en_passant_square;
-		right_captures.for_each_piece([&](const Position& destination_square)
+		(right_captures & valid_moves).for_each_piece([&](const Position& destination_square)
 		{
 			const Position origin_square{destination_square.rank_-pawn_direction, destination_square.file_-1};
 			const auto relative_diagonal{is_white? &Position::diagonal_index : &Position::antidiagonal_index};
@@ -128,7 +124,7 @@ namespace
 		pawns_to_move = pawns_bb & ~Bitboard{file_a};
 		Bitboard left_captures{is_white? (pawns_to_move << (rank_move-1)) : (pawns_to_move >> (rank_move+1))};
 		left_captures &= enemy_occupied_squares_with_en_passant_square;
-		left_captures.for_each_piece([&](const Position& destination_square)
+		(left_captures & valid_moves).for_each_piece([&](const Position& destination_square)
 		{
 			const Position origin_square{destination_square.rank_-pawn_direction, destination_square.file_+1};
 			const auto relative_diagonal{is_white? &Position::antidiagonal_index : &Position::diagonal_index};
@@ -141,17 +137,14 @@ namespace
 	{
 		knight_bb.for_each_piece([&](const Position& original_square)
 		{
-			for(const auto& offset : knight_moves_)
+			Bitboard knight_moves = knight_mask[to_index(original_square)] & ~our_occupied_squares;
+			if constexpr (moves_type == Moves_type::noisy)
+				knight_moves &= enemy_occupied_squares;
+			(valid_moves & knight_moves).for_each_piece([&](const auto& destination_square)
 			{
-				const auto [del_rank, del_file] = offset;
-				const Position destination_square(original_square.rank_+del_rank, original_square.file_+del_file);
-				Move move{original_square, destination_square};
-				Bitboard unreachable_squares{our_occupied_squares};
-				if constexpr (moves_type==Moves_type::noisy)
-					unreachable_squares=~enemy_occupied_squares;
-				if(is_valid_destination(destination_square, unreachable_squares) && valid_moves.is_occupied(destination_square))
-						legal_moves.push_back(move);
-			}
+				const Move current_move = Move{original_square, destination_square};
+				legal_moves.push_back(current_move);
+			});
 		});
 	}
 
@@ -180,13 +173,12 @@ namespace
 			if(!in_check)
 				return;
 		}
-		for(const auto& move : king_moves_)
+
+		const Bitboard valid_moves{~(enemy_attack_map | our_occupied_squares)};
+		(king_mask[to_index(original_square)] & valid_moves).for_each_piece([&](const Position& destination_square)
 		{
-			const auto [del_rank, del_file] = move;
-			const Position destination_square(original_square.rank_+del_rank, original_square.file_+del_file);
-			if(is_valid_destination(destination_square, our_occupied_squares))
-				legal_moves.push_back(Move{original_square, destination_square});
-		}
+			legal_moves.push_back(Move{original_square, destination_square});
+		});
 	}
 
 	template <Moves_type moves_type>
@@ -202,11 +194,10 @@ namespace
 			if(pinned_pieces.is_occupied(original_square))
 				rook_moves &= rook_legal_moves_bb(king_square, Bitboard{0ULL});
 
-			rook_moves.for_each_piece([&](const auto& destination_square)
+			(rook_moves & valid_moves).for_each_piece([&](const auto& destination_square)
 			{
 				const Move current_move{original_square, destination_square};
-				if(valid_moves.is_occupied(destination_square))
-					legal_moves.push_back(current_move);
+				legal_moves.push_back(current_move);
 			});
 		});
 	}
@@ -224,11 +215,10 @@ namespace
 			if(pinned_pieces.is_occupied(original_square))
 				bishop_moves &= bishop_legal_moves_bb(king_square, Bitboard{0ULL});
 
-			bishop_moves.for_each_piece([&](const auto& destination_square)
+			(bishop_moves & valid_moves).for_each_piece([&](const auto& destination_square)
 			{
 				const Move current_move{original_square, destination_square};
-				if(valid_moves.is_occupied(destination_square))
-					legal_moves.push_back(current_move);
+				legal_moves.push_back(current_move);
 			});
 		});
 	}

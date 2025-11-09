@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <string_view>
 
 using namespace engine;
 
@@ -9,7 +10,7 @@ int main(int argc, char* argv[])
 {
 	assert((argc == 3 || argc == 4) && "Usage: perft <depth> <fen> <moves...>");
 	const auto depth = std::atoi(argv[1]);
-	const std::string_view fen{argv[2]};
+	const std::string_view fen{std::string_view{argv[2]}=="startpos"? engine::starting_fen:argv[2]};
 	State base_position{fen};
 	if(argc == 4)
 	{
