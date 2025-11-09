@@ -57,6 +57,7 @@ namespace engine
 		constexpr void for_each_piece(Function_type&& f) const;
 
 		[[nodiscard]] constexpr static Bitboard onebit(const Position& position) { return Bitboard{1ULL}<<to_index(position); }
+		[[nodiscard]] constexpr static Bitboard all_bits() { return ~Bitboard{0ULL}; }
 		[[nodiscard]] constexpr static Bitboard rank(const int rank_index) { return Bitboard{rank_one}<<(rank_index*board_size); }
 		[[nodiscard]] constexpr static Bitboard file(const int file_index) { return Bitboard{file_a}<<file_index; }
 

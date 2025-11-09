@@ -32,12 +32,16 @@ namespace engine
 		Position{-1, 1}, Position{-1, -1}
 	}};
 
+	constexpr std::array<Position, 8> knight_moves_ =
+	{{
+		Position{-2, -1}, Position{-2, 1}, Position{-1, -2}, Position{-1, 2},
+		Position{1, -2}, Position{1, 2}, Position{2, -1}, Position{2, 1}
+	}};
+
 	constexpr std::array<Position, 8> king_moves_ =
 	{{
-		Position{1,  1}, Position{1,  -1},
-		Position{-1, 1}, Position{-1, -1},
-		Position{1, 0}, Position{0, 1},
-		Position{-1, 0}, Position{0, -1}
+		Position{1,  1}, Position{1,  -1}, Position{-1, 1}, Position{-1, -1},
+		Position{1, 0}, Position{0, 1}, Position{-1, 0}, Position{0, -1}
 	}};
 }
 

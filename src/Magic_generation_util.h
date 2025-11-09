@@ -40,18 +40,6 @@ namespace engine
 			6, 5, 5, 5, 5, 5, 5, 6
 		};
 
-		static const std::array<Position, 8> knight_moves_ =
-		{{
-			Position{2, 1}, Position{2, -1}, Position{-2, 1}, Position{-2, -1},
-			Position{1, 2}, Position{1, -2}, Position{-1, 2}, Position{-1, -2}
-		}};
-
-		static const std::array<Position, 8> king_moves_ =
-		{{
-			Position{1, 0}, Position{-1, 0}, Position{0,  1}, Position{0,  -1},
-			Position{1, 1}, Position{-1, 1}, Position{1, -1}, Position{-1, -1}
-		}};
-
 		inline Bitboard knight_mask(const Position& square)
 		{
 			Bitboard reachable_squares{0ULL};
