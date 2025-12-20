@@ -108,7 +108,7 @@ namespace uci
 		{
 			std::istringstream value_stream{uci_option.value};
 			if(const std::chrono::milliseconds overhead{Uci_handler::read_time(value_stream)}; overhead>=std::chrono::milliseconds{0} && overhead<=max_move_overhead)
-				options.move_overhead=overhead, io.output(overhead);
+				options.move_overhead=overhead;
 			else
 				io.output("In setoption name 'Move Overhead': value out of range");
 		}
