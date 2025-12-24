@@ -1,7 +1,8 @@
 #ifndef Neural_network_h_INCLUDED
 #define Neural_network_h_INCLUDED
 
-#include <fstream>
+#include <filesystem>
+#include <istream>
 #include <ranges>
 
 #include "common.h"
@@ -16,6 +17,9 @@ class Neural_network
 {
 	public:
 
+	Neural_network(std::istream& is);
+	Neural_network(const std::filesystem::path& path);
+	[[nodiscard]] static Neural_network load_from_file(const std::filesystem::path& path) noexcept;
 	[[nodiscard]] int evaluate(const engine::Side side_to_move) const noexcept;
 	void refresh_accumulator(std::span<const std::uint16_t> features, const engine::Side side) noexcept;
 	void update_accumulator(std::span<const std::uint16_t> removed_features, std::span<const std::uint16_t> added_features, const engine::Side perspective) noexcept;
@@ -39,6 +43,7 @@ class Neural_network
 		std::unreachable();
 	};
 
+
 	engine::Side_map<std::array<std::int16_t, Feature_transformer::dimensions.neurons>> accumulator{};
 
 	private:
@@ -56,13 +61,12 @@ class Neural_network
 								dense_two_dimensions{32,32},
 								dense_three_dimensions{32,1};
 
-	inline static std::ifstream net_file{"/home/michael/coding/projects/ChessEngine/src/nnue/nn-97f742aaefcd.nnue"};
-	inline static NNUE_header header=NNUE_header(net_file);
-	inline static Feature_transformer feature_transformer=Feature_transformer(net_file);
-	inline static std::uint32_t dense_layers_hash=read_little_endian<decltype(dense_layers_hash)>(net_file);
-	inline static Dense_linear_layer<dense_one_dimensions> dense_one=Dense_linear_layer<dense_one_dimensions>(net_file);
-	inline static Dense_linear_layer<dense_two_dimensions> dense_two=Dense_linear_layer<dense_two_dimensions>(net_file);
-	inline static Dense_linear_layer<dense_three_dimensions> dense_three=Dense_linear_layer<dense_three_dimensions>(net_file);
+	NNUE_header header;
+	Feature_transformer feature_transformer;
+	std::uint32_t dense_layers_hash;
+	Dense_linear_layer<dense_one_dimensions> dense_one;
+	Dense_linear_layer<dense_two_dimensions> dense_two;
+	Dense_linear_layer<dense_three_dimensions> dense_three;
 };
 
 #endif

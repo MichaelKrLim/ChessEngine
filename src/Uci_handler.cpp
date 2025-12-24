@@ -73,8 +73,12 @@ namespace uci
 				.threads=options.threads
 			};
 			const auto search_results=engine.generate_best_move(stop_token, search_options);
-			if(!(search_results.error()==engine::search_stopped{}))
+			if(search_results.has_value())
 				io.output("bestmove ", search_results->pv.front());
+			else if(search_results.error()==engine::search_stopped{})
+				return;
+			else
+				io.output("unexpected error");
 		});
 	}
 

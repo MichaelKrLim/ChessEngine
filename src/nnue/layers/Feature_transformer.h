@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <experimental/bits/simd.h>
-#include <fstream>
+#include <istream>
 #include <vector>
 
 #include "../common.h"
@@ -17,7 +17,7 @@ class Feature_transformer
 	using weight_type=std::int16_t;
 
 
-	Feature_transformer(std::ifstream& net_file) noexcept;
+	Feature_transformer(std::istream& net_file) noexcept;
 
 	constexpr static Dimensions dimensions{41024,256};
 	void transform(std::span<const std::uint16_t> active_feature_indexes

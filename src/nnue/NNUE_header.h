@@ -2,11 +2,11 @@
 #define NNUE_header_h_INCLUDED
 
 #include <cassert>
-#include <fstream>
+#include <istream>
 
 struct NNUE_header
 {
-	NNUE_header(std::ifstream& net_file) noexcept;
+	NNUE_header(std::istream& net_file) noexcept;
 
 	std::uint32_t version{0}
 				, hash{0}

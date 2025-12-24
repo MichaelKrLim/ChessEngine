@@ -2,7 +2,7 @@
 #define Dense_linear_layer_h_INCLUDED
 
 #include <experimental/simd>
-#include <fstream>
+#include <istream>
 #include <vector>
 
 #include "../common.h"
@@ -16,7 +16,7 @@ class Dense_linear_layer
 	using bias_type=std::int32_t;
 	using weight_type=std::int8_t;
 
-	Dense_linear_layer(std::ifstream& net_file) noexcept;
+	Dense_linear_layer(std::istream& net_file) noexcept;
 
 	[[nodiscard]] std::array<bias_type, layer_dimensions.neurons> transform(const std::array<std::int8_t, layer_dimensions.features>& column_vector) const noexcept;
 

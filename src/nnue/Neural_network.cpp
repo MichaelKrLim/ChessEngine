@@ -1,5 +1,26 @@
 #include "Neural_network.h"
 
+#include <fstream>
+
+Neural_network Neural_network::load_from_file(const std::filesystem::path& path) noexcept
+{
+	std::ifstream net_file{path};
+	return Neural_network(net_file);
+}
+
+Neural_network::Neural_network(const std::filesystem::path& path)
+	: Neural_network(load_from_file(path))
+{}
+
+Neural_network::Neural_network(std::istream& is)
+	: header(is)
+	, feature_transformer(is)
+	, dense_layers_hash(read_little_endian<decltype(dense_layers_hash)>(is))
+	, dense_one(is)
+	, dense_two(is)
+	, dense_three(is)
+{}
+
 int Neural_network::evaluate(const engine::Side side_to_move) const noexcept
 {
 	std::array<std::int16_t, Feature_transformer::dimensions.neurons*2> transformed_features;

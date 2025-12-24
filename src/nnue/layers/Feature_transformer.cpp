@@ -3,7 +3,7 @@
 #include <experimental/simd>
 #include <numeric>
 
-Feature_transformer::Feature_transformer(std::ifstream& net_file) noexcept
+Feature_transformer::Feature_transformer(std::istream& net_file) noexcept
 	: biases(dimensions.neurons)
 	, weights_data(dimensions.neurons*dimensions.features)
 {

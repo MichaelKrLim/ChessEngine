@@ -110,7 +110,7 @@ namespace engine
 		};
 
 		std::stack<State_delta> history{};
-		Neural_network neural_network;
+		inline static Neural_network neural_network{"/home/michael/coding/projects/ChessEngine/src/nnue/nn-97f742aaefcd.nnue"};
 
 		void validate_fen(const std::array<std::string, 6>& partitioned_fen) const;
 		void parse_fen(const std::string_view fen) noexcept;

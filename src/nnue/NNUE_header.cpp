@@ -1,7 +1,7 @@
 #include "common.h"
 #include "NNUE_header.h"
 
-NNUE_header::NNUE_header(std::ifstream& net_file) noexcept
+NNUE_header::NNUE_header(std::istream& net_file) noexcept
 {
 	const auto read_numerics=[&]<numeric... types>(types&... values)
 	{

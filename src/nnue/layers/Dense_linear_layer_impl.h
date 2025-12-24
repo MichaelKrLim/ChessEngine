@@ -1,7 +1,7 @@
 #include <numeric>
 
 template <Dimensions layer_dimensions>
-Dense_linear_layer<layer_dimensions>::Dense_linear_layer(std::ifstream& net_file) noexcept
+Dense_linear_layer<layer_dimensions>::Dense_linear_layer(std::istream& net_file) noexcept
 	: biases(layer_dimensions.neurons)
 	, weights_data(layer_dimensions.neurons*layer_dimensions.features)
 {

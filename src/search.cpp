@@ -25,6 +25,7 @@ namespace engine
 
 		const static auto compute_type=[](const int alpha, const int beta, const int score)
 		{
+			assert(alpha<beta);
 			if(score<=alpha)      return Search_result_type::upper_bound;
 			else if(score>=beta)  return Search_result_type::lower_bound;
 			else                  return Search_result_type::exact;
@@ -119,6 +120,7 @@ namespace engine
 				return quiescence_search(alpha, beta, extended_depth, current_extended_depth, nodes, depth);
 
 			const int original_alpha{alpha}, original_beta{beta};
+			const bool is_null_window{std::abs(original_alpha-original_beta)<=1};
 			const auto cache_result=transposition_table[state.zobrist_hash];
 			if(cache_result && cache_result->remaining_depth>=remaining_depth)
 			{
@@ -266,7 +268,7 @@ namespace engine
 					continue;
 				}
 
-				if(const unsigned no_reduction{1}; raised_alpha && remaining_depth>2 && beta-alpha>1 && !scout_potential_improvement(no_reduction))
+				if(const unsigned no_reduction{1}; raised_alpha && remaining_depth>2 && !is_null_window && !scout_potential_improvement(no_reduction))
 				{
 					state.unmove();
 					continue;
@@ -282,14 +284,12 @@ namespace engine
 					child_pvs.invert_best_pv_index();
 				}
 
-				// if score==alpha, don't replace becuase alpha is returned for cutoffs
 				if(score>alpha)
 				{
 					raised_alpha=true;
 					alpha=score;
 					if(alpha>=beta)
 					{
-						// now we make best_score=beta by clamping to the window below
 						killer_moves[remaining_depth].insert_and_overwrite(move);
 						break;
 					}
@@ -299,27 +299,25 @@ namespace engine
 			if(all_legal_moves.empty())
 			{
 				if(state.is_square_attacked(state.sides[state.side_to_move].pieces[Piece::king].lsb_square()))
-					return -std::numeric_limits<int>::max();
+					return -std::numeric_limits<int>::max()+10000;
 				else
 					return 0;
 			}
 
-			best_score=std::clamp(best_score, alpha, beta);
+			best_score=std::max(best_score,original_alpha);
 
 			pv.push_back(best_move);
 			const auto& child_pv{child_pvs.best_child_pv()};
 			pv.insert(pv.end(), child_pv.begin(), child_pv.end());
 
-			const auto is_null_window = [](const int alpha, const int beta){ return std::abs(alpha-beta)<=1; };
-
-			if(!is_null_window(alpha, beta))
+			if(!is_null_window)
 			{
 				transposition_table.insert(Transposition_data
 				{
 					.remaining_depth=remaining_depth,
 					.eval=best_score,
 					.zobrist_hash=state.zobrist_hash,
-					.search_result_type=compute_type(original_alpha, original_beta, alpha),
+					.search_result_type=compute_type(original_alpha, original_beta, best_score),
 					.best_move=best_move
 				});
 			}
@@ -357,6 +355,12 @@ namespace engine
 			{
 				constexpr double half_initial_window_size{chess_data::piece_values[Piece::pawn]/4.0};
 				int alpha=score-half_initial_window_size, beta=score+half_initial_window_size;
+
+
+				// oh dear!!
+				if(alpha>=beta) alpha=-std::numeric_limits<int>::max(), beta=std::numeric_limits<int>::max();
+
+
 				Search_result_type last_search_result_type;
 				do
 				{

@@ -19,8 +19,8 @@ Time_manager::Time_manager(const std::optional<chrono::milliseconds>& time_on_cl
 		return;
 	}
 	int moves_to_go{movestogo==0? 30:movestogo};
-	chrono::milliseconds projected_time_left{std::max(chrono::milliseconds{1}, *time_on_clock+(increment-move_overhead)*moves_to_go)};
-	constexpr static chrono::milliseconds ms_to_reach_depth_one{4};
+	[[maybe_unused]]chrono::milliseconds projected_time_left{std::max(chrono::milliseconds{1}, *time_on_clock+(increment-move_overhead)*moves_to_go)};
+	[[maybe_unused]]constexpr static chrono::milliseconds ms_to_reach_depth_one{4};
 	maximum_time=std::clamp(projected_time_left-(moves_to_go*ms_to_reach_depth_one), ms_to_reach_depth_one, *time_on_clock-move_overhead);
 	optimum_time=std::clamp(projected_time_left/moves_to_go, ms_to_reach_depth_one, maximum_time);
 }
