@@ -12,8 +12,13 @@ class Fixed_capacity_vector
 
 	constexpr T& operator[](const std::size_t index) noexcept
 	{
-		if(index >= used_capacity_)
-			used_capacity_ = index+1;
+		if(index>=used_capacity_)
+			used_capacity_=index+1;
+		return data_[index];
+	}
+
+	constexpr T at(const std::size_t index) const noexcept
+	{
 		return data_[index];
 	}
 
@@ -52,16 +57,16 @@ class Fixed_capacity_vector
 
 	constexpr void insert(const auto& pos, const auto& r_begin, const auto& r_end) noexcept
 	{
-		used_capacity_ += std::distance(r_begin, r_end);
-		std::copy(r_begin, r_end, pos);
+		used_capacity_+=std::distance(r_begin,r_end);
+		std::copy(r_begin,r_end,pos);
 	}
 
 	constexpr void clear() noexcept
 	{
-		used_capacity_ = 0;
+		used_capacity_=0;
 	}
 
-	constexpr bool empty() const noexcept { return used_capacity_ == 0; }
+	constexpr bool empty() const noexcept { return used_capacity_==0; }
 
 	constexpr auto begin() const noexcept { return data_.begin(); }
 	constexpr auto end() const noexcept { return data_.begin()+used_capacity_; }

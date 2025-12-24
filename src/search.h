@@ -37,7 +37,7 @@ namespace engine
 
 	[[nodiscard]]
 	std::expected<Search_results, search_stopped>
-	nega_max(const std::atomic<bool>& should_stop_searching
+	iterative_deepening(const std::atomic<bool>& should_stop_searching
 		   , const Search_options& search_options
 		   , State state
 		   , Transposition_table& transposition_table
