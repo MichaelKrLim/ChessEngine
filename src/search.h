@@ -17,7 +17,6 @@ namespace engine
 	{
 		unsigned nodes{0};
 		int score{0};
-		unsigned seldepth{0};
 		Fixed_capacity_vector<Move, 256> pv;
 	};
 

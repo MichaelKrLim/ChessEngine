@@ -44,12 +44,10 @@ namespace engine
 		};
 
 		[[nodiscard]] int quiescence_search(const Search_context& context
-										  , unsigned current_extended_depth
 										  , int alpha
 										  , int beta)
 		{
 			++context.nodes;
-			context.extended_depth=std::max(context.extended_depth,current_extended_depth);
 
 			if(context.should_stop_searching)
 				throw search_stopped{};
@@ -70,7 +68,7 @@ namespace engine
 					continue;
 
 				context.state.make(move);
-				const int score{-quiescence_search(context, current_extended_depth+1, -beta, -alpha)};
+				const int score{-quiescence_search(context, -beta, -alpha)};
 				context.state.unmove();
 
 				if(score>=beta)
@@ -179,7 +177,6 @@ namespace engine
 		[[nodiscard]] int nega_scout(Nega_max_context& context
 				   , const unsigned remaining_depth
 				   , const unsigned depth
-				   , unsigned current_extended_depth
 				   , unsigned number_of_checks_in_current_line
 				   , int alpha = -std::numeric_limits<int>::max()
 				   , int beta = std::numeric_limits<int>::max())
@@ -195,7 +192,7 @@ namespace engine
 
 			auto all_legal_moves = generate_moves<Moves_type::legal>(context.search_context.state);
 			if(remaining_depth<=0 && !all_legal_moves.empty())
-				return quiescence_search(context.search_context, current_extended_depth, alpha, beta);
+				return quiescence_search(context.search_context, alpha, beta);
 
 			const int original_alpha{alpha}, original_beta{beta};
 			const bool is_null_window{std::abs(original_alpha-original_beta)<=1};
@@ -222,7 +219,6 @@ namespace engine
 			Move best_move{all_legal_moves.front()};
 			int best_score{-std::numeric_limits<int>::max()};
 			Fixed_capacity_vector<Move, 256> best_child_pv{};
-			bool raised_alpha{false};
 			const bool in_check{context.search_context.state.in_check()};
 			for(std::size_t move_index{0}; move_index<all_legal_moves.size(); ++move_index)
 			{
@@ -231,46 +227,38 @@ namespace engine
 				if(!context.search_context.search_options.depth && context.search_context.time_manager.used_time()>context.search_context.time_manager.maximum())
 					throw timeout{};
 
-				unsigned reduction{1};
-				if(move_index>2 && depth>=3)
+				unsigned reduction{1}, new_checks_in_current_line{number_of_checks_in_current_line};
+				if(in_check)
+				{
+					if(number_of_checks_in_current_line<=3)
+					{
+						--reduction;
+						++new_checks_in_current_line;
+					}
+				}
+				else if(move_index>2 && remaining_depth>=3)
 				{
 					if(move_index<=6)
 						++reduction;
 					else
 						reduction+=remaining_depth/3;
 
-					if(reduction>remaining_depth)
-						reduction=remaining_depth;
+					reduction=std::min(reduction,remaining_depth);
 				}
-				if(in_check && number_of_checks_in_current_line <= 3)
-				{
-					--reduction;
-					++number_of_checks_in_current_line;
-				}
-				
+
 				context.search_context.state.make(move);
-				struct { int alpha, beta; } null_window{alpha, alpha+1};
-				Nega_max_context null_context{context.search_context, {}, context.transposition_table};
-				const auto scout_potential_improvement = [&](const unsigned reduction) -> bool
-				{
-					int null_window_search_score{-nega_scout(null_context, remaining_depth-reduction, depth, current_extended_depth-(reduction-1), number_of_checks_in_current_line, -null_window.beta, -null_window.alpha)};
-					const Search_result_type null_window_result{compute_type(null_window.alpha, null_window.beta, null_window_search_score)};
-					return null_window_result==Search_result_type::lower_bound;
-				};
 
-				if(reduction!=1 && !scout_potential_improvement(reduction))
+				int score{0};
+				if(move_index>3)
 				{
-					context.search_context.state.unmove();
-					continue;
+					struct { int alpha, beta; } null_window{alpha, alpha+1};
+					Nega_max_context null_context{context.search_context, {}, context.transposition_table};
+					score=-nega_scout(null_context,remaining_depth-reduction,depth,new_checks_in_current_line,-null_window.beta,-null_window.alpha);
 				}
 
-				if(const unsigned no_reduction{1}; raised_alpha && remaining_depth>2 && !is_null_window && !scout_potential_improvement(no_reduction))
-				{
-					context.search_context.state.unmove();
-					continue;
-				}
+				if(move_index<=3 || score>alpha)
+					score=-nega_scout(context,remaining_depth-1,depth,new_checks_in_current_line,-beta,-alpha);
 
-				const int score{-nega_scout(context, remaining_depth-reduction, depth, current_extended_depth-(reduction-1), number_of_checks_in_current_line, -beta, -alpha)};
 				context.search_context.state.unmove();
 
 				if(score>best_score)
@@ -282,7 +270,6 @@ namespace engine
 
 				if(score>alpha)
 				{
-					raised_alpha=true;
 					alpha=score;
 					if(alpha>=beta)
 					{
@@ -294,13 +281,11 @@ namespace engine
 
 			if(all_legal_moves.empty())
 			{
-				if(context.search_context.state.is_square_attacked(context.search_context.state.sides[context.search_context.state.side_to_move].pieces[Piece::king].lsb_square()))
+				if(in_check)
 					return -std::numeric_limits<int>::max()+10000;
 				else
 					return 0;
 			}
-
-			best_score=std::clamp(best_score, original_alpha, original_beta);
 
 			context.current_pv.clear();
 			context.current_pv.push_back(best_move);
@@ -321,7 +306,7 @@ namespace engine
 			return best_score;
 		};
 
-		void output_info(const int& eval, const auto& nodes, const auto& current_depth, const auto& extended_depth, const auto& principal_variation, const Stdio& io, const int thread_id) noexcept
+		void output_info(const int& eval, const auto& nodes, const auto& current_depth, const auto& principal_variation, const Stdio& io, const int thread_id) noexcept
 		{
 			const auto output = [&](std::string_view info)
 			{
@@ -336,9 +321,9 @@ namespace engine
 				io.output(info, pv.str());
 			};
 			if(std::abs(eval)!=std::numeric_limits<int>::max())
-				output(std::format("info [Thread {}] score cp {} nodes {} depth {} seldepth {} pv ", thread_id, eval/16, nodes, current_depth, current_depth+extended_depth));
+				output(std::format("info [Thread {}] score cp {} nodes {} depth {} pv ", thread_id, eval/16, nodes, current_depth));
 			else
-				output(std::format("info [Thread {}] nodes {} depth {} seldepth {} mate ", thread_id, nodes, current_depth, current_depth+extended_depth));
+				output(std::format("info [Thread {}] nodes {} depth {} mate ", thread_id, nodes, current_depth));
 		};
 	}
 
@@ -374,7 +359,7 @@ namespace engine
 				Search_result_type last_search_result_type;
 				do
 				{
-					score=nega_scout(nega_max_context, current_depth, current_depth, 0, 0, alpha, beta);
+					score=nega_scout(nega_max_context, current_depth, current_depth, 0, alpha, beta);
 
 					last_search_result_type=compute_type(alpha, beta, score);
 					if(last_search_result_type==Search_result_type::lower_bound)
@@ -384,7 +369,7 @@ namespace engine
 				} while(last_search_result_type!=Search_result_type::exact);
 
 				principal_variation=nega_max_context.current_pv;
-				output_info(score, nodes, current_depth, extended_depth, principal_variation, io, thread_id);
+				output_info(score, nodes, current_depth, principal_variation, io, thread_id);
 			}
 			catch(const timeout&)
 			{
@@ -399,7 +384,6 @@ namespace engine
 		return Search_results {
 			.nodes=nodes,
 			.score=score,
-			.seldepth=current_depth+extended_depth,
 			.pv=principal_variation,
 		};
 	}
