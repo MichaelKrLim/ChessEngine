@@ -109,7 +109,6 @@ namespace engine
 			Transposition_table& transposition_table;
 
 			std::vector<Killer_move_storage> killer_moves{max_depth};
-			Fixed_capacity_vector<Move, 256> current_pv{};
 		};
 
 		[[nodiscard]] bool most_valuable_vicitim_least_valuable_attacker(const Nega_max_context& context, const Move& lhs, const Move& rhs) noexcept
@@ -174,16 +173,63 @@ namespace engine
 			return false;
 		}
 
+		class Child_pv_storage
+		{
+			public:
+
+			void invert_best_pv_index() noexcept
+			{
+				best_index+=1;
+				best_index%=2;
+			}
+
+			[[nodiscard]] auto& best_child_pv() noexcept
+			{
+				return child_pvs[best_index];
+			}
+
+			[[nodiscard]] auto& inferior_child_pv() noexcept
+			{
+				return child_pvs[(best_index+1)%2];
+			}
+
+			private:
+
+			std::size_t best_index{0};
+			std::array<Fixed_capacity_vector<Move, 256>, 2> child_pvs{};
+		};
+
+		[[nodiscard]] unsigned compute_reduction(const bool in_check, const unsigned number_of_checks_in_current_line, const unsigned move_index, const unsigned remaining_depth) noexcept
+		{
+			unsigned reduction{1};
+			if(in_check)
+			{
+				if(number_of_checks_in_current_line<=3)
+					reduction=0;
+			}
+			else if(move_index>2 && remaining_depth>=3)
+			{
+				if(move_index<=6)
+					++reduction;
+				else
+					reduction+=remaining_depth/3;
+
+				reduction=std::min(reduction,remaining_depth-1);
+			}
+			return reduction;
+		}
+
 		[[nodiscard]] int nega_scout(Nega_max_context& context
-				   , const unsigned remaining_depth
-				   , const unsigned depth
-				   , unsigned number_of_checks_in_current_line
-				   , int alpha = -std::numeric_limits<int>::max()
-				   , int beta = std::numeric_limits<int>::max())
+								   , Fixed_capacity_vector<Move, 256>& current_pv
+								   , const unsigned remaining_depth
+								   , const unsigned depth
+								   , unsigned number_of_checks_in_current_line
+								   , int alpha = -std::numeric_limits<int>::max()
+								   , int beta = std::numeric_limits<int>::max())
 		{
 			++context.search_context.nodes;
 
-			context.current_pv.clear();
+			current_pv.clear();
 
 			if(is_threefold_repetition(context.search_context.state))
 				return 0;
@@ -194,14 +240,13 @@ namespace engine
 			if(remaining_depth<=0 && !all_legal_moves.empty())
 				return quiescence_search(context.search_context, alpha, beta);
 
-			const int original_alpha{alpha}, original_beta{beta};
-			const bool is_null_window{std::abs(original_alpha-original_beta)<=1};
+			const int original_alpha{alpha};
 			const auto cache_result{context.transposition_table[context.search_context.state.zobrist_hash]};
 			if(cache_result && cache_result->remaining_depth>=remaining_depth)
 			{
 				if(cache_result->search_result_type == Search_result_type::exact)
 				{
-					context.current_pv.push_back(cache_result->best_move);
+					current_pv.push_back(cache_result->best_move);
 					return cache_result->eval;
 				}
 				if(cache_result->search_result_type==Search_result_type::lower_bound)
@@ -212,39 +257,21 @@ namespace engine
 					return cache_result->eval;
 			}
 
-			const auto sort_move_strength_descending{[&](const Move& lhs, const Move& rhs){ return heuristic_less(context, cache_result, depth, remaining_depth, lhs, rhs); }};
+			const auto sort_move_strength_descending{[&](const Move& lhs, const Move& rhs){ return heuristic_less(context,cache_result,depth,remaining_depth,lhs,rhs); }};
 			std::ranges::sort(all_legal_moves, sort_move_strength_descending);
 
-			// If all legal moves lead to checkmate for side to move, this would leave best_move uninitialised
-			Move best_move{all_legal_moves.front()};
+			Move best_move{};
 			int best_score{-std::numeric_limits<int>::max()};
-			Fixed_capacity_vector<Move, 256> best_child_pv{};
 			const bool in_check{context.search_context.state.in_check()};
-			for(std::size_t move_index{0}; move_index<all_legal_moves.size(); ++move_index)
+			Child_pv_storage child_pvs;
+			for(unsigned move_index{0}; move_index<all_legal_moves.size(); ++move_index)
 			{
 				const Move& move{all_legal_moves[move_index]};
 
 				if(!context.search_context.search_options.depth && context.search_context.time_manager.used_time()>context.search_context.time_manager.maximum())
 					throw timeout{};
 
-				unsigned reduction{1}, new_checks_in_current_line{number_of_checks_in_current_line};
-				if(in_check)
-				{
-					if(number_of_checks_in_current_line<=3)
-					{
-						--reduction;
-						++new_checks_in_current_line;
-					}
-				}
-				else if(move_index>2 && remaining_depth>=3)
-				{
-					if(move_index<=6)
-						++reduction;
-					else
-						reduction+=remaining_depth/3;
-
-					reduction=std::min(reduction,remaining_depth);
-				}
+				const unsigned reduction{compute_reduction(in_check,number_of_checks_in_current_line,move_index,remaining_depth)};
 
 				context.search_context.state.make(move);
 
@@ -252,12 +279,11 @@ namespace engine
 				if(move_index>3)
 				{
 					struct { int alpha, beta; } null_window{alpha, alpha+1};
-					Nega_max_context null_context{context.search_context, {}, context.transposition_table};
-					score=-nega_scout(null_context,remaining_depth-reduction,depth,new_checks_in_current_line,-null_window.beta,-null_window.alpha);
+					score=-nega_scout(context,child_pvs.inferior_child_pv(),remaining_depth-reduction,depth,number_of_checks_in_current_line+in_check,-null_window.beta,-null_window.alpha);
 				}
 
 				if(move_index<=3 || score>alpha)
-					score=-nega_scout(context,remaining_depth-1,depth,new_checks_in_current_line,-beta,-alpha);
+					score=-nega_scout(context,child_pvs.inferior_child_pv(),remaining_depth-1,depth,number_of_checks_in_current_line+in_check,-beta,-alpha);
 
 				context.search_context.state.unmove();
 
@@ -265,7 +291,7 @@ namespace engine
 				{
 					best_score=score;
 					best_move=move;
-					best_child_pv=context.current_pv;
+					child_pvs.invert_best_pv_index();
 				}
 
 				if(score>alpha)
@@ -287,21 +313,17 @@ namespace engine
 					return 0;
 			}
 
-			context.current_pv.clear();
-			context.current_pv.push_back(best_move);
-			context.current_pv.insert(context.current_pv.end(), best_child_pv.begin(), best_child_pv.end());
+			current_pv.push_back(best_move);
+			current_pv.insert(current_pv.end(), child_pvs.best_child_pv().begin(), child_pvs.best_child_pv().end());
 
-			if(!is_null_window)
+			context.transposition_table.insert(Transposition_data
 			{
-				context.transposition_table.insert(Transposition_data
-				{
-					.remaining_depth=remaining_depth,
-					.eval=best_score,
-					.zobrist_hash=context.search_context.state.zobrist_hash,
-					.search_result_type=compute_type(original_alpha, original_beta, best_score),
-					.best_move=best_move
-				});
-			}
+				.remaining_depth=remaining_depth,
+				.eval=best_score,
+				.zobrist_hash=context.search_context.state.zobrist_hash,
+				.search_result_type=compute_type(original_alpha, beta, best_score),
+				.best_move=best_move
+			});
 
 			return best_score;
 		};
@@ -340,12 +362,12 @@ namespace engine
 		int score{state.evaluate()};
 		unsigned nodes{0}, extended_depth{0};
 		Nega_max_context nega_max_context{Search_context{state, nodes, extended_depth, should_stop_searching, search_options, time_manager}, principal_variation, transposition_table};
+		Fixed_capacity_vector<engine::Move, 256> current_pv{};
 
 		unsigned current_depth{1};
 		for(; search_options.depth? current_depth <= *search_options.depth : current_depth<=max_depth && time_manager.used_time()<time_manager.optimum(); ++current_depth)
 		{
 			extended_depth=nodes=0;
-			nega_max_context.current_pv.clear();
 			try
 			{
 				constexpr int half_initial_window_size{chess_data::piece_values[Piece::pawn]/4};
@@ -359,7 +381,7 @@ namespace engine
 				Search_result_type last_search_result_type;
 				do
 				{
-					score=nega_scout(nega_max_context, current_depth, current_depth, 0, alpha, beta);
+					score=nega_scout(nega_max_context,current_pv,current_depth,current_depth,0,alpha,beta);
 
 					last_search_result_type=compute_type(alpha, beta, score);
 					if(last_search_result_type==Search_result_type::lower_bound)
@@ -368,7 +390,7 @@ namespace engine
 						alpha=-std::numeric_limits<int>::max();
 				} while(last_search_result_type!=Search_result_type::exact);
 
-				principal_variation=nega_max_context.current_pv;
+				principal_variation=current_pv;
 				output_info(score, nodes, current_depth, principal_variation, io, thread_id);
 			}
 			catch(const timeout&)
