@@ -24,7 +24,7 @@ class Feature_transformer
 				 , std::span<bias_type, dimensions.neurons> transformed) const noexcept;
 	void adjust(std::span<const std::uint16_t> feature_indexes
 			  , const auto& reduction
-			  , std::span<bias_type, dimensions.neurons> adjusted)
+			  , std::span<bias_type, dimensions.neurons> adjusted) const noexcept
 	{
 		// Even with column major, it is faster to loop over the features first
 		const_weights_container weights{weights_data.data()};

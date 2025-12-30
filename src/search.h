@@ -40,6 +40,7 @@ namespace engine
 		   , const Search_options& search_options
 		   , State state
 		   , Transposition_table& transposition_table
+		   , const Neural_network& neural_network
 		   , const int thread_id) noexcept;
 } // namespace engine
 

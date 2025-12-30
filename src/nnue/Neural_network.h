@@ -20,10 +20,16 @@ class Neural_network
 	Neural_network(std::istream& is);
 	Neural_network(const std::filesystem::path& path);
 	[[nodiscard]] static Neural_network load_from_file(const std::filesystem::path& path) noexcept;
-	[[nodiscard]] int evaluate(const engine::Side side_to_move) const noexcept;
-	void refresh_accumulator(std::span<const std::uint16_t> features, const engine::Side side) noexcept;
-	void update_accumulator(std::span<const std::uint16_t> removed_features, std::span<const std::uint16_t> added_features, const engine::Side perspective) noexcept;
-	[[nodiscard]] inline static std::uint16_t compute_feature_index(const engine::Piece piece
+	[[nodiscard]] int evaluate(const engine::Side side_to_move, const engine::Side_map<std::array<std::int16_t, Feature_transformer::dimensions.neurons>>& accumulator) const noexcept;
+	void transform_features(std::span<const std::uint16_t> features, std::span<Feature_transformer::bias_type, Feature_transformer::dimensions.neurons> accumulator) const noexcept
+	{
+		feature_transformer.transform(features,accumulator);
+	}
+	void adjust_accumulator(std::span<const std::uint16_t> feature_indices, const auto& reduction, std::span<Feature_transformer::bias_type, Feature_transformer::dimensions.neurons> adjusted) const noexcept
+	{
+		feature_transformer.adjust(feature_indices,reduction,adjusted);
+	}
+	[[nodiscard]] static std::uint16_t compute_feature_index(const engine::Piece piece
 											 , const engine::Position& position
 											 , const engine::Position& king_square
 											 , const engine::Side current_side
@@ -43,13 +49,10 @@ class Neural_network
 		std::unreachable();
 	};
 
-
-	engine::Side_map<std::array<std::int16_t, Feature_transformer::dimensions.neurons>> accumulator{};
-
 	private:
 
 	template <numeric numeric_type, std::size_t size>
-	inline std::array<std::int8_t, size> clipped_ReLU(const std::array<numeric_type, size>& input, const int multiple_of_one_value=1) const noexcept
+	std::array<std::int8_t, size> clipped_ReLU(const std::array<numeric_type, size>& input, const int multiple_of_one_value=1) const noexcept
 	{
 		std::array<std::int8_t, size> output;
 		for(auto&& [new_value, value] : std::views::zip(output, input))

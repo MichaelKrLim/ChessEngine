@@ -60,7 +60,7 @@ namespace engine
 	{
 		public:
 
-		explicit State(const std::string_view fen);
+		explicit State(const std::string_view fen, const Neural_network& state);
 		State() = default;
 
 		struct Piece_and_data
@@ -78,8 +78,8 @@ namespace engine
 		std::uint64_t zobrist_hash;
 		std::vector<std::uint64_t> repetition_history{};
 
-		void make(const Move& move) noexcept;
-		void unmove() noexcept;
+		void make(const Move& move, const Neural_network& neural_network) noexcept;
+		void unmove(const Neural_network& neural_network) noexcept;
 		[[nodiscard]] Bitboard occupied_squares() const noexcept;
 		[[nodiscard]] inline bool is_square_attacked(const Position& position) const noexcept { return enemy_attack_map.is_occupied(position); }
 		[[nodiscard]] bool in_check() const noexcept;
@@ -87,7 +87,7 @@ namespace engine
 		[[nodiscard]] bool is_stalemate() const noexcept;
 		[[nodiscard]] std::optional<Piece> piece_at(const Position& position, const Side& side) const noexcept;
 		[[nodiscard]] Fixed_capacity_vector<std::uint16_t,board_size*board_size> to_halfKP_features(const Side perspective) const noexcept;
-		[[nodiscard]] int evaluate() const noexcept;
+		[[nodiscard]] int evaluate(const Neural_network& neural_network) const noexcept;
 
 		friend std::ostream& operator<<(std::ostream& os, const State& state);
 
@@ -110,12 +110,18 @@ namespace engine
 		};
 
 		std::stack<State_delta> history{};
-		inline static Neural_network neural_network{"/home/michael/coding/projects/ChessEngine/src/nnue/nn-97f742aaefcd.nnue"};
+		engine::Side_map<std::array<std::int16_t, Feature_transformer::dimensions.neurons>> accumulator{};
 
 		void validate_fen(const std::array<std::string, 6>& partitioned_fen) const;
 		void parse_fen(const std::string_view fen) noexcept;
 		void update_castling_rights(const Side& side) noexcept;
-		void change_accumulator(const auto& removed_features, const auto& added_features, const Side moved_side, const Piece moved_piece) noexcept;
+		void change_accumulator(const auto& removed_features, const auto& added_features, const Side moved_side, const Piece moved_piece, const Neural_network& neural_network) noexcept;
+
+		void refresh_accumulator(std::span<const std::uint16_t> features, const engine::Side side, const Neural_network& neural_network) noexcept;
+		void update_accumulator(std::span<const std::uint16_t> removed_features
+									 , std::span<const std::uint16_t> added_features
+									 , const engine::Side perspective
+									 , const Neural_network& neural_network) noexcept;
 	};
 
 	inline std::ostream& operator<<(std::ostream& os, const State& state)

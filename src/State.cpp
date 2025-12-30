@@ -138,7 +138,7 @@ void State::parse_fen(const std::string_view fen) noexcept
 	full_move_clock = std::stoi(fen_fullmove_clock);
 }
 
-State::State(const std::string_view fen)
+State::State(const std::string_view fen, const Neural_network& neural_network)
 {
 	repetition_history.reserve(max_depth);
 	parse_fen(fen);
@@ -148,7 +148,7 @@ State::State(const std::string_view fen)
 	zobrist_hash = zobrist::hash(*this);
 	repetition_history.push_back(zobrist_hash);
 	for(const auto side : all_sides)
-		neural_network.refresh_accumulator(to_halfKP_features(side), side);
+		refresh_accumulator(to_halfKP_features(side), side, neural_network);
 }
 
 std::optional<Piece> State::piece_at(const Position& position, const Side& side) const noexcept
@@ -165,17 +165,17 @@ std::optional<Piece> State::piece_at(const Position& position, const Side& side)
 	return found_piece;
 }
 
-void State::change_accumulator(const auto& removed_features, const auto& added_features, const Side moved_side, const Piece moved_piece) noexcept
+void State::change_accumulator(const auto& removed_features, const auto& added_features, const Side moved_side, const Piece moved_piece, const Neural_network& neural_network) noexcept
 {
 	const Side enemy_side{other_side(moved_side)};
-	neural_network.update_accumulator(removed_features[enemy_side], added_features[enemy_side], enemy_side);
+	update_accumulator(removed_features[enemy_side], added_features[enemy_side], enemy_side, neural_network);
 	if(moved_piece==Piece::king)
-		neural_network.refresh_accumulator(to_halfKP_features(moved_side), moved_side);
+		refresh_accumulator(to_halfKP_features(moved_side), moved_side, neural_network);
 	else
-		neural_network.update_accumulator(removed_features[moved_side], added_features[moved_side], moved_side);
+		update_accumulator(removed_features[moved_side], added_features[moved_side], moved_side, neural_network);
 }
 
-void State::make(const Move& move) noexcept
+void State::make(const Move& move, const Neural_network& neural_network) noexcept
 {
 	Side_position& side{sides[side_to_move]};
 	const Side enemy_side{other_side(side_to_move)};
@@ -319,7 +319,7 @@ void State::make(const Move& move) noexcept
 		half_move_clock,
 	});
 
-	change_accumulator(removed_features, added_features, side_to_move, piece_type);
+	change_accumulator(removed_features, added_features, side_to_move, piece_type, neural_network);
 
 	if(piece_type == Piece::rook || piece_type == Piece::king)
 	{
@@ -347,7 +347,7 @@ void State::make(const Move& move) noexcept
 	repetition_history.push_back(zobrist_hash);
 }
 
-void State::unmove() noexcept
+void State::unmove(const Neural_network& neural_network) noexcept
 {
 	assert(history.size() > 0 && "Tried to undo noexistent move");
 	const bool was_whites_move = side_to_move == Side::black;
@@ -429,7 +429,7 @@ void State::unmove() noexcept
 			added_features[side].push_back(Neural_network::compute_feature_index(*history_data.captured_piece, previous_move_destination, king_squares[side], side_to_move, side));
 	}
 
-	change_accumulator(removed_features, added_features, last_moved_side, history_data.piece);
+	change_accumulator(removed_features, added_features, last_moved_side, history_data.piece, neural_network);
 
 	sides[Side::white].castling_rights=history_data.white_castling_rights;
 	sides[Side::black].castling_rights=history_data.black_castling_rights;
@@ -489,7 +489,22 @@ Fixed_capacity_vector<std::uint16_t, board_size*board_size> State::to_halfKP_fea
 	return active_feature_indexes;
 }
 
-int State::evaluate() const noexcept
+int State::evaluate(const Neural_network& neural_network) const noexcept
 {
-	return neural_network.evaluate(side_to_move);
+	return neural_network.evaluate(side_to_move,accumulator);
+}
+
+void State::refresh_accumulator(std::span<const std::uint16_t> features, const engine::Side side, const Neural_network& neural_network) noexcept
+{
+	neural_network.transform_features(features, accumulator[side]);
+}
+
+void State::update_accumulator(std::span<const std::uint16_t> removed_features
+							 , std::span<const std::uint16_t> added_features
+							 , const engine::Side perspective
+							 , const Neural_network& neural_network) noexcept
+{
+	auto& side_accumulator{accumulator[perspective]};
+	neural_network.adjust_accumulator(removed_features, std::minus<>{}, side_accumulator);
+	neural_network.adjust_accumulator(added_features, std::plus<>{}, side_accumulator);
 }

@@ -15,7 +15,7 @@ namespace engine
 		std::vector<std::jthread> threads;
 		const auto task=[&](const int thread_id)
 		{
-			const auto return_value{iterative_deepening(should_stop_searching, search_options, state_, transposition_table_, thread_id)};
+			const auto return_value{iterative_deepening(should_stop_searching, search_options, state_, transposition_table_, neural_network, thread_id)};
 			if(!found_result.exchange(true))
 				shared_promise.set_value(return_value);
 			should_stop_searching=true;

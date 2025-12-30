@@ -52,9 +52,9 @@ namespace uci
 		push_task([this, input_state](std::atomic<bool>&)
 		{
 			engine.clear_tt();
-			engine::State state{input_state.fen};
+			engine::State state{input_state.fen, engine.neural_network};
 			for(const auto& move : input_state.continuation)
-				state.make(move);
+				state.make(move, engine.neural_network);
 			engine.set_state(state);
 		});
 	}

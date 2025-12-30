@@ -41,6 +41,7 @@ namespace engine
 			const std::atomic<bool>& should_stop_searching;
 			const Search_options& search_options;
 			const Time_manager& time_manager;
+			const Neural_network& neural_network;
 		};
 
 		[[nodiscard]] int quiescence_search(const Search_context& context
@@ -54,7 +55,7 @@ namespace engine
 			if(!context.search_options.depth && context.time_manager.used_time()>context.time_manager.maximum())
 				throw timeout{};
 
-			const int stand_pat{context.state.evaluate()};
+			const int stand_pat{context.state.evaluate(context.neural_network)};
 			int best_score=stand_pat;
 			if(stand_pat>=beta || context.extended_depth > 19)
 				return stand_pat;
@@ -67,9 +68,9 @@ namespace engine
 				if(std::optional<Piece> piece_to_capture{context.state.piece_at(move.destination_square(), other_side(context.state.side_to_move))}; piece_to_capture && stand_pat+chess_data::piece_values[piece_to_capture.value()]+safety_margin<=alpha)
 					continue;
 
-				context.state.make(move);
+				context.state.make(move,context.neural_network);
 				const int score{-quiescence_search(context, -beta, -alpha)};
-				context.state.unmove();
+				context.state.unmove(context.neural_network);
 
 				if(score>=beta)
 					return score;
@@ -240,6 +241,8 @@ namespace engine
 			if(remaining_depth<=0 && !all_legal_moves.empty())
 				return quiescence_search(context.search_context, alpha, beta);
 
+			Move best_move{};
+			int best_score{-std::numeric_limits<int>::max()};
 			const int original_alpha{alpha};
 			const auto cache_result{context.transposition_table[context.search_context.state.zobrist_hash]};
 			if(cache_result && cache_result->remaining_depth>=remaining_depth)
@@ -250,7 +253,11 @@ namespace engine
 					return cache_result->eval;
 				}
 				if(cache_result->search_result_type==Search_result_type::lower_bound)
+				{
 					alpha=std::max(alpha, cache_result->eval);
+					best_move=cache_result->best_move;
+					best_score=cache_result->eval;
+				}
 				if(cache_result->search_result_type==Search_result_type::upper_bound)
 					beta=std::min(beta, cache_result->eval);
 				if(alpha>=beta)
@@ -260,9 +267,7 @@ namespace engine
 			const auto sort_move_strength_descending{[&](const Move& lhs, const Move& rhs){ return heuristic_less(context,cache_result,depth,remaining_depth,lhs,rhs); }};
 			std::ranges::sort(all_legal_moves, sort_move_strength_descending);
 
-			Move best_move{};
-			int best_score{-std::numeric_limits<int>::max()};
-			const bool in_check{context.search_context.state.in_check()};
+			const bool in_check{context.search_context.state.in_check()},  is_null_window{std::abs(original_alpha-beta)<=1};
 			Child_pv_storage child_pvs;
 			for(unsigned move_index{0}; move_index<all_legal_moves.size(); ++move_index)
 			{
@@ -273,19 +278,17 @@ namespace engine
 
 				const unsigned reduction{compute_reduction(in_check,number_of_checks_in_current_line,move_index,remaining_depth)};
 
-				context.search_context.state.make(move);
+				context.search_context.state.make(move,context.search_context.neural_network);
 
 				int score{0};
-				if(move_index>3)
-				{
-					struct { int alpha, beta; } null_window{alpha, alpha+1};
+				struct { int alpha, beta; } null_window{alpha, alpha+1};
+				if(move_index>0)
 					score=-nega_scout(context,child_pvs.inferior_child_pv(),remaining_depth-reduction,depth,number_of_checks_in_current_line+in_check,-null_window.beta,-null_window.alpha);
-				}
 
-				if(move_index<=3 || score>alpha)
+				if(move_index==0 || score>alpha)
 					score=-nega_scout(context,child_pvs.inferior_child_pv(),remaining_depth-1,depth,number_of_checks_in_current_line+in_check,-beta,-alpha);
 
-				context.search_context.state.unmove();
+				context.search_context.state.unmove(context.search_context.neural_network);
 
 				if(score>best_score)
 				{
@@ -316,16 +319,21 @@ namespace engine
 			current_pv.push_back(best_move);
 			current_pv.insert(current_pv.end(), child_pvs.best_child_pv().begin(), child_pvs.best_child_pv().end());
 
-			context.transposition_table.insert(Transposition_data
-			{
-				.remaining_depth=remaining_depth,
-				.eval=best_score,
-				.zobrist_hash=context.search_context.state.zobrist_hash,
-				.search_result_type=compute_type(original_alpha, beta, best_score),
-				.best_move=best_move
-			});
+			alpha=std::min(alpha,beta);
 
-			return best_score;
+			if(!is_null_window)
+			{
+				context.transposition_table.insert(Transposition_data
+				{
+					.remaining_depth=remaining_depth,
+					.eval=alpha,
+					.zobrist_hash=context.search_context.state.zobrist_hash,
+					.search_result_type=compute_type(original_alpha, beta, best_score),
+					.best_move=best_move
+				});
+			}
+
+			return alpha;
 		};
 
 		void output_info(const int& eval, const auto& nodes, const auto& current_depth, const auto& principal_variation, const Stdio& io, const int thread_id) noexcept
@@ -353,15 +361,16 @@ namespace engine
 														 , const Search_options& search_options
 														 , State state
 														 , Transposition_table& transposition_table
+														 , const Neural_network& neural_network
 														 , const int thread_id) noexcept
 	{
 		static Stdio io;
 		Time_manager time_manager(search_options.time[state.side_to_move], search_options.movetime, search_options.increment[state.side_to_move], search_options.move_overhead, search_options.movestogo, state.half_move_clock);
 		Fixed_capacity_vector<Move, 256> principal_variation;
 
-		int score{state.evaluate()};
+		int score{state.evaluate(neural_network)};
 		unsigned nodes{0}, extended_depth{0};
-		Nega_max_context nega_max_context{Search_context{state, nodes, extended_depth, should_stop_searching, search_options, time_manager}, principal_variation, transposition_table};
+		Nega_max_context nega_max_context{Search_context{state, nodes, extended_depth, should_stop_searching, search_options, time_manager, neural_network}, principal_variation, transposition_table};
 		Fixed_capacity_vector<engine::Move, 256> current_pv{};
 
 		unsigned current_depth{1};

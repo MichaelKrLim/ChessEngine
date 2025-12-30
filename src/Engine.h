@@ -31,9 +31,11 @@ namespace engine
 
 		[[nodiscard]] std::expected<Search_results, search_stopped> generate_best_move(std::atomic<bool>& should_stop_searching, const Search_options& search_options) noexcept;
 
+		Neural_network neural_network{"/home/michael/coding/projects/ChessEngine/src/nnue/nn-97f742aaefcd.nnue"};
+
 		private:
 
-		State state_{starting_fen};
+		State state_{starting_fen, neural_network};
 		Transposition_table transposition_table_{default_table_size};
 	};
 }
