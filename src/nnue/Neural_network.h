@@ -7,6 +7,7 @@
 
 #include "common.h"
 #include "../Constants.h"
+#include "../Constants.h"
 #include "layers/Dense_linear_layer.h"
 #include "layers/Feature_transformer.h"
 #include "NNUE_header.h"

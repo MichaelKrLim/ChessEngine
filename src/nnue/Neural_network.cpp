@@ -1,3 +1,4 @@
+#include "Accumulator.h"
 #include "Neural_network.h"
 
 #include <fstream>
@@ -21,7 +22,7 @@ Neural_network::Neural_network(std::istream& is)
 	, dense_three(is)
 {}
 
-int Neural_network::evaluate(const engine::Side side_to_move, const engine::Side_map<std::array<std::int16_t, Feature_transformer::dimensions.neurons>>& accumulator) const noexcept
+int Neural_network::evaluate(const engine::Side side_to_move, const Accumulator& accumulator) const noexcept
 {
 	std::array<std::int16_t, Feature_transformer::dimensions.neurons*2> transformed_features;
 	std::ranges::copy(accumulator[side_to_move]

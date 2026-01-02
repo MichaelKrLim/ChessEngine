@@ -2,6 +2,7 @@
 #define Engine_h_INCLUDED
 
 #include "Constants.h"
+#include "nnue/Neural_network.h"
 #include "search.h"
 #include "State.h"
 #include "Transposition_table.h"
@@ -35,7 +36,7 @@ namespace engine
 
 		private:
 
-		State state_{starting_fen, neural_network};
+		State state_{starting_fen};
 		Transposition_table transposition_table_{default_table_size};
 	};
 }

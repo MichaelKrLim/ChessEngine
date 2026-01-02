@@ -72,7 +72,7 @@ inline unsigned benchmark(std::optional<std::size_t> number_of_positions_to_test
 	{
 		std::println("test {}/{}", i+1, clamped_positions_to_test);
 		const auto fen{positions[i]};
-		engine::State current_state{fen, engine.neural_network};
+		engine::State current_state{fen};
 		engine::Transposition_table tt{engine::default_table_size};
 		engine.clear_tt();
 		engine.set_state(current_state);

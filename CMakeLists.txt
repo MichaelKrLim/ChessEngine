@@ -33,12 +33,14 @@ set(common_sources
 	src/bench.h
 	src/search.h src/search.cpp
 	src/Time_manager.cpp src/Time_manager.h
+	src/move_unmove.cpp src/move_unmove.h
 	src/nnue/NNUE_header.cpp src/nnue/NNUE_header.h
 	src/nnue/Neural_network.cpp src/nnue/Neural_network.h
 	src/nnue/common.h
 	src/nnue/layers/Dense_linear_layer.h
 	src/nnue/layers/Feature_transformer.cpp src/nnue/layers/Feature_transformer.h
 	src/nnue/layers/mdspan.h
+	src/nnue/Accumulator.h
 )
 
 

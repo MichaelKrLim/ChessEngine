@@ -2,6 +2,7 @@
 #define Uci_handler_impl_h_INCLUDED
 
 #include "Constants.h"
+#include "move_unmove.h"
 #include "search.h"
 #include "State.h"
 #include "Uci_handler.h"
@@ -52,9 +53,11 @@ namespace uci
 		push_task([this, input_state](std::atomic<bool>&)
 		{
 			engine.clear_tt();
-			engine::State state{input_state.fen, engine.neural_network};
+			engine::State state{input_state.fen};
+			// This is a hack for now in creating an empty accumulator, need a move(state, move)
+			Accumulator a{};
 			for(const auto& move : input_state.continuation)
-				state.make(move, engine.neural_network);
+				make(state, a, move, engine.neural_network);
 			engine.set_state(state);
 		});
 	}

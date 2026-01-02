@@ -1,7 +1,6 @@
 #include "Constants.h"
 #include "Fixed_capacity_vector.h"
 #include "Move_generator.h"
-#include "Move.h"
 #include "nnue/Neural_network.h"
 #include "State.h"
 #include "Transposition_table.h"
@@ -138,7 +137,7 @@ void State::parse_fen(const std::string_view fen) noexcept
 	full_move_clock = std::stoi(fen_fullmove_clock);
 }
 
-State::State(const std::string_view fen, const Neural_network& neural_network)
+State::State(const std::string_view fen)
 {
 	repetition_history.reserve(max_depth);
 	parse_fen(fen);
@@ -147,8 +146,6 @@ State::State(const std::string_view fen, const Neural_network& neural_network)
 	side_to_move = other_side(side_to_move);
 	zobrist_hash = zobrist::hash(*this);
 	repetition_history.push_back(zobrist_hash);
-	for(const auto side : all_sides)
-		refresh_accumulator(to_halfKP_features(side), side, neural_network);
 }
 
 std::optional<Piece> State::piece_at(const Position& position, const Side& side) const noexcept
@@ -163,284 +160,6 @@ std::optional<Piece> State::piece_at(const Position& position, const Side& side)
 		}
 	}
 	return found_piece;
-}
-
-void State::change_accumulator(const auto& removed_features, const auto& added_features, const Side moved_side, const Piece moved_piece, const Neural_network& neural_network) noexcept
-{
-	const Side enemy_side{other_side(moved_side)};
-	update_accumulator(removed_features[enemy_side], added_features[enemy_side], enemy_side, neural_network);
-	if(moved_piece==Piece::king)
-		refresh_accumulator(to_halfKP_features(moved_side), moved_side, neural_network);
-	else
-		update_accumulator(removed_features[moved_side], added_features[moved_side], moved_side, neural_network);
-}
-
-void State::make(const Move& move, const Neural_network& neural_network) noexcept
-{
-	Side_position& side{sides[side_to_move]};
-	const Side enemy_side{other_side(side_to_move)};
-	auto& opposite_side{sides[enemy_side]};
-	const auto destination_square{move.destination_square()};
-	const auto from_square{move.from_square()};
-	const auto pawn_direction{side_to_move == Side::white? 1 : -1};
-	const auto back_rank{side_to_move == Side::white? 0 : 7};
-	const auto white_old_castling_rights{sides[Side::white].castling_rights};
-	const auto black_old_castling_rights{sides[Side::black].castling_rights};
-	const auto old_zobrist_hash{zobrist_hash};
-	const Piece piece_type{*piece_at(from_square, side_to_move)};
-	const std::optional<Piece> piece_to_capture{piece_at(destination_square, enemy_side)};
-	const Side_map<Position> king_squares=[&]()
-	{
-		Side_map<Position> king_squares;
-		for(const auto side : all_sides)
-			king_squares[side]=sides[side].pieces[Piece::king].lsb_square();
-		return king_squares;
-	}();
-	Side_map<Fixed_capacity_vector<std::uint16_t,4>> added_features;
-	Side_map<Fixed_capacity_vector<std::uint16_t,4>> removed_features;
-
-	const auto handle_capture = [&, this, enemy_back_rank=side_to_move == Side::white? 7 : 0, enemy_side]()
-	{
-		opposite_side.pieces[piece_to_capture.value()].remove_piece(destination_square);
-		for(const auto side : all_sides)
-			removed_features[side].push_back(Neural_network::compute_feature_index(piece_to_capture.value(), destination_square, king_squares[side], enemy_side, side));
-		zobrist::invert_piece_at(zobrist_hash, destination_square, piece_to_capture.value(), other_side(side_to_move));
-		if(piece_to_capture==Piece::rook)
-		{
-			if(destination_square==Position{enemy_back_rank, 0} && opposite_side.castling_rights[Castling_rights::queenside])
-			{
-				opposite_side.castling_rights[Castling_rights::queenside]=false;
-				zobrist::invert_castling_right(zobrist_hash, other_side(side_to_move), Castling_rights::queenside);
-			}
-			else if(destination_square == Position{enemy_back_rank, 7} && opposite_side.castling_rights[Castling_rights::kingside])
-			{
-				opposite_side.castling_rights[Castling_rights::kingside]=false;
-				zobrist::invert_castling_right(zobrist_hash, other_side(side_to_move), Castling_rights::kingside);
-			}
-		}
-	};
-
-	const auto move_and_hash = [&, this](const Position& from_square, const Position& destination_square, const Piece& piece_type_to_move)
-	{
-		sides[side_to_move].pieces[piece_type_to_move].move_piece(from_square, destination_square);
-		if(piece_type_to_move!=Piece::king)
-		{
-			for(const auto side : all_sides)
-			{
-				removed_features[side].push_back(Neural_network::compute_feature_index(piece_type_to_move, from_square, king_squares[side], side_to_move, side));
-				added_features[side].push_back(Neural_network::compute_feature_index(piece_type_to_move, destination_square, king_squares[side], side_to_move, side));
-			}
-		}
-		zobrist::invert_piece_at(zobrist_hash, from_square, piece_type_to_move, side_to_move);
-		zobrist::invert_piece_at(zobrist_hash, destination_square, piece_type_to_move, side_to_move);
-	};
-
-	const auto handle_castling = [this, &destination_square, &back_rank, &side, &from_square, &move_and_hash]()
-	{
-		bool castled_kingside=destination_square.file_==6;
-		Position rook_destination_square, rook_origin_square;
-		if(castled_kingside)
-		{
-			rook_origin_square=Position{back_rank, 7};
-			rook_destination_square=Position{back_rank, destination_square.file_-1};
-		}
-		else
-		{
-			rook_origin_square=Position{back_rank, 0};
-			rook_destination_square=Position{back_rank, destination_square.file_+1};
-		}
-		for(const auto& castling_right : all_castling_rights)
-		{
-			if(side.castling_rights[castling_right])
-			{
-				side.castling_rights[castling_right]=false;
-				zobrist::invert_castling_right(zobrist_hash, side_to_move, castling_right);
-			}
-		}
-		move_and_hash(from_square, destination_square, Piece::king);
-		move_and_hash(rook_origin_square, rook_destination_square, Piece::rook);
-	};
-
-	if(piece_to_capture)
-		handle_capture();
-	const bool is_castling = piece_type == Piece::king && std::abs(destination_square.file_-from_square.file_) > 1,
-			   is_en_passant = en_passant_target_square && piece_type == Piece::pawn && destination_square == en_passant_target_square.value();
-	const auto old_en_passant_target_square = en_passant_target_square;
-	if(en_passant_target_square)
-	{
-		zobrist::invert_en_passant_square(zobrist_hash, en_passant_target_square.value());
-		en_passant_target_square = std::nullopt;
-	}
-	if(move.is_promotion())
-	{
-		const auto promotion_piece = move.promotion_piece();
-		side.pieces[Piece::pawn].remove_piece(from_square);
-		zobrist::invert_piece_at(zobrist_hash, from_square, Piece::pawn, side_to_move);
-		side.pieces[promotion_piece].add_piece(destination_square);
-		zobrist::invert_piece_at(zobrist_hash, destination_square, promotion_piece, side_to_move);
-		for(const auto side : all_sides)
-		{
-			added_features[side].push_back(Neural_network::compute_feature_index(promotion_piece, destination_square, king_squares[side], side_to_move, side));
-			removed_features[side].push_back(Neural_network::compute_feature_index(Piece::pawn, from_square, king_squares[side], side_to_move, side));
-		}
-	}
-	else if(is_castling)
-		handle_castling();
-	else
-	{
-		const bool is_double_pawn_move = piece_type == Piece::pawn && destination_square.rank_ == from_square.rank_ + 2*pawn_direction;
-		if(is_double_pawn_move)
-		{
-			en_passant_target_square = Position{from_square.rank_+pawn_direction, from_square.file_};
-			zobrist::invert_en_passant_square(zobrist_hash, en_passant_target_square.value());
-		}
-		if(is_en_passant)
-		{
-			const Position capture_square{destination_square.rank_-pawn_direction, destination_square.file_};
-			opposite_side.pieces[Piece::pawn].remove_piece(capture_square);
-			for(const auto side : all_sides)
-				removed_features[side].push_back(Neural_network::compute_feature_index(Piece::pawn, capture_square, king_squares[side], enemy_side, side));
-			zobrist::invert_piece_at(zobrist_hash, capture_square, Piece::pawn, other_side(side_to_move));
-		}
-		move_and_hash(from_square, destination_square, piece_type);
-	}
-
-	history.emplace(State_delta
-	{
-		move,
-		piece_type,
-		piece_to_capture,
-		enemy_attack_map,
-		old_en_passant_target_square,
-		is_en_passant,
-		white_old_castling_rights,
-		black_old_castling_rights,
-		old_zobrist_hash, 
-		half_move_clock,
-	});
-
-	change_accumulator(removed_features, added_features, side_to_move, piece_type, neural_network);
-
-	if(piece_type == Piece::rook || piece_type == Piece::king)
-	{
-		if((from_square.file_ == 0 || piece_type == Piece::king) && side.castling_rights[Castling_rights::queenside])
-		{
-			side.castling_rights[Castling_rights::queenside] = false;
-			zobrist::invert_castling_right(zobrist_hash, side_to_move, Castling_rights::queenside);
-		}
-		if((from_square.file_ == 7 || piece_type == Piece::king) && side.castling_rights[Castling_rights::kingside])
-		{
-			side.castling_rights[Castling_rights::kingside] = false;
-			zobrist::invert_castling_right(zobrist_hash, side_to_move, Castling_rights::kingside);
-		}
-	}
-
-	if(piece_type == Piece::pawn || piece_to_capture)
-		half_move_clock = 0;
-	else
-		++half_move_clock;
-	if(side_to_move == Side::black)
-		++full_move_clock;
-	enemy_attack_map = generate_attack_map(*this);
-	zobrist::invert_side_to_move(zobrist_hash);
-	side_to_move = enemy_side;
-	repetition_history.push_back(zobrist_hash);
-}
-
-void State::unmove(const Neural_network& neural_network) noexcept
-{
-	assert(history.size() > 0 && "Tried to undo noexistent move");
-	const bool was_whites_move = side_to_move == Side::black;
-	const auto last_moved_side = was_whites_move? Side::white : Side::black;
-	const auto promotion_rank = was_whites_move? 7 : 0;	
-	const auto history_data = std::move(history.top());
-	history.pop();
-	const Side_map<Position> king_squares=[&]()
-	{
-		Side_map<Position> king_squares;
-		for(const auto side : all_sides)
-			king_squares[side]=sides[side].pieces[Piece::king].lsb_square();
-		return king_squares;
-	}();
-	half_move_clock=history_data.half_move_clock;
-	if(!was_whites_move)
-		--full_move_clock;
-	Side_position& side_to_unmove = sides[last_moved_side];
-	Side_position& current_side_to_move = sides[side_to_move];
-	Side_map<Fixed_capacity_vector<std::uint16_t,4>> added_features;
-	Side_map<Fixed_capacity_vector<std::uint16_t,4>> removed_features;
-	const Position& previous_move_destination = history_data.move.destination_square(), previous_move_origin = history_data.move.from_square();
-	if(history_data.piece == Piece::pawn && previous_move_destination.rank_ == promotion_rank)
-	{
-		side_to_unmove.pieces[history_data.move.promotion_piece()].remove_piece(previous_move_destination);
-		side_to_unmove.pieces[Piece::pawn].add_piece(previous_move_origin);
-		for(const auto side : all_sides)
-		{
-			removed_features[side].push_back(Neural_network::compute_feature_index(history_data.move.promotion_piece(), previous_move_destination, king_squares[side], last_moved_side, side));
-			added_features[side].push_back(Neural_network::compute_feature_index(Piece::pawn, previous_move_origin, king_squares[side], last_moved_side, side));
-		}
-	}
-	else if(history_data.piece == Piece::king && std::abs(previous_move_destination.file_ - previous_move_origin.file_) > 1)
-	{
-		const std::uint8_t rank = last_moved_side == Side::white? 0 : 7;
-		Position rook_destination_square, rook_origin_square;
-		bool castled_kingside = previous_move_destination.file_ == 6;
-		if(castled_kingside)
-		{
-			rook_origin_square = Position{rank, 7};
-			rook_destination_square = Position{rank, 5};
-		}
-		else
-		{
-			rook_origin_square = Position{rank, 0};
-			rook_destination_square = Position{rank, 3};
-		}
-		side_to_unmove.pieces[Piece::king].move_piece(previous_move_destination, previous_move_origin);
-		side_to_unmove.pieces[Piece::rook].move_piece(rook_destination_square, rook_origin_square);
-		// refresh for the last_moved_side so only update side_to_move
-		removed_features[side_to_move].push_back(Neural_network::compute_feature_index(Piece::rook, rook_destination_square, king_squares[side_to_move], last_moved_side, side_to_move));
-		added_features[side_to_move].push_back(Neural_network::compute_feature_index(Piece::rook, rook_origin_square, king_squares[side_to_move], last_moved_side, side_to_move));
-	}
-	else
-	{
-		if(history_data.was_en_passant)
-		{
-			const auto direction = was_whites_move? 1:-1;
-			const Position pawn_to_return{previous_move_destination.rank_-direction, previous_move_destination.file_};
-			current_side_to_move.pieces[Piece::pawn].add_piece(pawn_to_return);
-			for(const auto side : all_sides)
-				added_features[side].push_back(Neural_network::compute_feature_index(Piece::pawn, pawn_to_return, king_squares[side], last_moved_side, side));
-		}
-		side_to_unmove.pieces[history_data.piece].move_piece(previous_move_destination, previous_move_origin);
-		if(history_data.piece!=Piece::king)
-		{
-			for(const auto side : all_sides)
-			{
-				added_features[side].push_back(Neural_network::compute_feature_index(history_data.piece, previous_move_origin, king_squares[side], last_moved_side, side));
-				removed_features[side].push_back(Neural_network::compute_feature_index(history_data.piece, previous_move_destination, king_squares[side], last_moved_side, side));
-			}
-		}
-	}
-
-	if(history_data.captured_piece)
-	{
-		current_side_to_move.pieces[*history_data.captured_piece].add_piece(previous_move_destination);
-		for(const auto side : all_sides)
-			added_features[side].push_back(Neural_network::compute_feature_index(*history_data.captured_piece, previous_move_destination, king_squares[side], side_to_move, side));
-	}
-
-	change_accumulator(removed_features, added_features, last_moved_side, history_data.piece, neural_network);
-
-	sides[Side::white].castling_rights=history_data.white_castling_rights;
-	sides[Side::black].castling_rights=history_data.black_castling_rights;
-
-
-	side_to_move = last_moved_side;
-	enemy_attack_map = history_data.enemy_attack_map;
-	en_passant_target_square = history_data.en_passant_target_square;
-
-	repetition_history.pop_back();
-	zobrist_hash = history_data.previous_zobrist_hash;
 }
 
 Bitboard State::occupied_squares() const noexcept
@@ -489,22 +208,7 @@ Fixed_capacity_vector<std::uint16_t, board_size*board_size> State::to_halfKP_fea
 	return active_feature_indexes;
 }
 
-int State::evaluate(const Neural_network& neural_network) const noexcept
+int State::evaluate(const Neural_network& neural_network, const engine::Side_map<std::array<std::int16_t, Feature_transformer::dimensions.neurons>>& accumulator) const noexcept
 {
-	return neural_network.evaluate(side_to_move,accumulator);
-}
-
-void State::refresh_accumulator(std::span<const std::uint16_t> features, const engine::Side side, const Neural_network& neural_network) noexcept
-{
-	neural_network.transform_features(features, accumulator[side]);
-}
-
-void State::update_accumulator(std::span<const std::uint16_t> removed_features
-							 , std::span<const std::uint16_t> added_features
-							 , const engine::Side perspective
-							 , const Neural_network& neural_network) noexcept
-{
-	auto& side_accumulator{accumulator[perspective]};
-	neural_network.adjust_accumulator(removed_features, std::minus<>{}, side_accumulator);
-	neural_network.adjust_accumulator(added_features, std::plus<>{}, side_accumulator);
+	return neural_network.evaluate(side_to_move, accumulator);
 }

@@ -1,6 +1,8 @@
 #include "Chess_data.h"
 #include "Constants.h"
 #include "Move_generator.h"
+#include "move_unmove.h"
+#include "nnue/Accumulator.h"
 #include "Pieces.h"
 #include "search.h"
 #include "Stdio.h"
@@ -36,6 +38,7 @@ namespace engine
 		struct Search_context
 		{
 			State& state;
+			Accumulator& accumulator;
 			unsigned& nodes, &extended_depth;
 
 			const std::atomic<bool>& should_stop_searching;
@@ -55,7 +58,7 @@ namespace engine
 			if(!context.search_options.depth && context.time_manager.used_time()>context.time_manager.maximum())
 				throw timeout{};
 
-			const int stand_pat{context.state.evaluate(context.neural_network)};
+			const int stand_pat{context.state.evaluate(context.neural_network, context.accumulator)};
 			int best_score=stand_pat;
 			if(stand_pat>=beta || context.extended_depth > 19)
 				return stand_pat;
@@ -68,9 +71,9 @@ namespace engine
 				if(std::optional<Piece> piece_to_capture{context.state.piece_at(move.destination_square(), other_side(context.state.side_to_move))}; piece_to_capture && stand_pat+chess_data::piece_values[piece_to_capture.value()]+safety_margin<=alpha)
 					continue;
 
-				context.state.make(move,context.neural_network);
+				make(context.state, context.accumulator, move, context.neural_network);
 				const int score{-quiescence_search(context, -beta, -alpha)};
-				context.state.unmove(context.neural_network);
+				unmove(context.state, context.accumulator, context.neural_network);
 
 				if(score>=beta)
 					return score;
@@ -278,7 +281,7 @@ namespace engine
 
 				const unsigned reduction{compute_reduction(in_check,number_of_checks_in_current_line,move_index,remaining_depth)};
 
-				context.search_context.state.make(move,context.search_context.neural_network);
+				make(context.search_context.state, context.search_context.accumulator, move,context.search_context.neural_network);
 
 				int score{0};
 				struct { int alpha, beta; } null_window{alpha, alpha+1};
@@ -288,7 +291,7 @@ namespace engine
 				if(move_index==0 || score>alpha)
 					score=-nega_scout(context,child_pvs.inferior_child_pv(),remaining_depth-1,depth,number_of_checks_in_current_line+in_check,-beta,-alpha);
 
-				context.search_context.state.unmove(context.search_context.neural_network);
+				unmove(context.search_context.state, context.search_context.accumulator, context.search_context.neural_network);
 
 				if(score>best_score)
 				{
@@ -368,9 +371,28 @@ namespace engine
 		Time_manager time_manager(search_options.time[state.side_to_move], search_options.movetime, search_options.increment[state.side_to_move], search_options.move_overhead, search_options.movestogo, state.half_move_clock);
 		Fixed_capacity_vector<Move, 256> principal_variation;
 
-		int score{state.evaluate(neural_network)};
+		Accumulator accumulator{fresh_accumulator(state, neural_network)};
+
+		int score{state.evaluate(neural_network, accumulator)};
 		unsigned nodes{0}, extended_depth{0};
-		Nega_max_context nega_max_context{Search_context{state, nodes, extended_depth, should_stop_searching, search_options, time_manager, neural_network}, principal_variation, transposition_table};
+
+		Nega_max_context nega_max_context
+		{
+			.search_context=Search_context
+			{
+				state,
+				accumulator,
+				nodes,
+				extended_depth,
+				should_stop_searching,
+				search_options,
+				time_manager,
+				neural_network
+			},
+			.principal_variation=principal_variation,
+			.transposition_table=transposition_table
+		};
+
 		Fixed_capacity_vector<engine::Move, 256> current_pv{};
 
 		unsigned current_depth{1};
