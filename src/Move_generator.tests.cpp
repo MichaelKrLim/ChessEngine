@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "Move_generator.h"
+#include "move_unmove.h"
 
 using namespace engine;
 
@@ -19,10 +20,10 @@ using namespace engine;
 		}
 		else
 		{
-			state.make(move);
+			make(state, move);
 			current_count = depth == 2? generate_moves<Moves_type::legal>(state).size() : perft(depth-1, state, false);
 			nodes += current_count;
-			state.unmove();
+			unmove(state);
 		}
 	}
 	return nodes;

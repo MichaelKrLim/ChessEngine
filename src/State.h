@@ -65,6 +65,8 @@ namespace engine
 		explicit State(const std::string_view fen);
 		State() = default;
 
+		bool operator==(const State& rhs) const=default; 
+
 		struct Piece_and_data
 		{
 			Piece piece;
@@ -72,7 +74,7 @@ namespace engine
 			Side side;
 		};
 
-		struct State_delta
+		struct Delta
 		{
 			Move move;
 			Piece piece;
@@ -85,7 +87,7 @@ namespace engine
 			std::uint64_t previous_zobrist_hash;
 			unsigned half_move_clock;
 
-			constexpr bool operator==(const State_delta& state_delta) const = default;
+			constexpr bool operator==(const Delta& state_delta) const = default;
 		};
 
 		Enum_map<Side, Side_position, 2> sides{};
@@ -95,7 +97,7 @@ namespace engine
 		std::optional<Position> en_passant_target_square{std::nullopt};
 		std::uint64_t zobrist_hash;
 		std::vector<std::uint64_t> repetition_history{};
-		std::stack<State_delta> history{};
+		std::stack<Delta> history{};
 
 		[[nodiscard]] Bitboard occupied_squares() const noexcept;
 		[[nodiscard]] inline bool is_square_attacked(const Position& position) const noexcept { return enemy_attack_map.is_occupied(position); }

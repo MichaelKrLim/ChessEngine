@@ -1,4 +1,5 @@
 #include "Move_generator.h"
+#include "move_unmove.h"
 
 #include <iostream>
 #include <sstream>
@@ -16,7 +17,7 @@ int main(int argc, char* argv[])
 	{
 		std::istringstream iss{argv[3]};
 		for(Move move; iss>>move;)
-			base_position.make(move);
+			make(base_position, move);
 	}
 	const auto perft = [](this auto&& rec, int depth, State& state, const bool&& is_root) -> unsigned long long
 	{
@@ -31,10 +32,10 @@ int main(int argc, char* argv[])
 			}
 			else
 			{
-				state.make(move);
+				make(state, move);
 				current_count=depth == 2? generate_moves<Moves_type::legal>(state).size() : rec(depth-1, state, false);
 				nodes+=current_count;
-				state.unmove();
+				unmove(state);
 			}
 			if(is_root)
 				std::cout<<move<<' '<<current_count<<std::endl;

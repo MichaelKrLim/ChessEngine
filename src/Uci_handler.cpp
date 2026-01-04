@@ -54,10 +54,8 @@ namespace uci
 		{
 			engine.clear_tt();
 			engine::State state{input_state.fen};
-			// This is a hack for now in creating an empty accumulator, need a move(state, move)
-			Accumulator a{};
 			for(const auto& move : input_state.continuation)
-				make(state, a, move, engine.neural_network);
+				make(state, move);
 			engine.set_state(state);
 		});
 	}

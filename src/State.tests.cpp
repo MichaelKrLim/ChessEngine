@@ -1,6 +1,7 @@
 #include <doctest/doctest.h>
 
 #include "Move.h"
+#include "move_unmove.h"
 #include "State.h"
 
 using namespace engine;
@@ -28,7 +29,7 @@ TEST_SUITE("State.h")
 		State state{"r4rk1/pppqbp1p/2n1pnp1/1b1p4/3PP3/4BNP1/PPPQNPBP/R4RK1 w - - 0 1"};
 		const State state_copy{state};
 		const Position origin_square{3, 4}, destination_square{4, 4};
-		state.make(Move{origin_square, destination_square});
+		make(state, Move{origin_square, destination_square});
 
 		CHECK_FALSE(state.piece_at(origin_square, Side::white));
 		CHECK(state.piece_at(destination_square, Side::white)==Piece::pawn);
@@ -55,8 +56,8 @@ TEST_SUITE("State.h")
 		{
 			State state{fen};
 			const State state_copy{state};
-			state.make(move);
-			state.unmove();
+			make(state, move);
+			unmove(state);
 			CHECK(state==state_copy);
 		}
 	}

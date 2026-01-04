@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include "move_unmove.h"
 #include "State.h"
 #include "Transposition_table.h"
 
@@ -80,7 +81,7 @@ TEST_SUITE("Transposition Table")
 			const auto hash{zobrist::hash(state)};
 			REQUIRE(hash==zobrist::hash(state));
 
-			state.make(Move{Position{1, 1}, Position{3, 1}});
+			make(state, Move{Position{1, 1}, Position{3, 1}});
 			CHECK(zobrist::hash(state)!=hash);
 		}
 	}
