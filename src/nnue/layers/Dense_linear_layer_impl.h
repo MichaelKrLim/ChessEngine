@@ -24,15 +24,10 @@ std::array<typename Dense_linear_layer<layer_dimensions>::bias_type, layer_dimen
 	const_weights_container weights{weights_data.data()};
 	for(std::size_t neuron_index{0}; neuron_index<layer_dimensions.neurons; ++neuron_index)
 	{
-		// this prevents the compiler from swapping our loops around which causes slower single byte loads
-		std::atomic_signal_fence(std::memory_order_seq_cst);
-
-		std::int32_t accumulator{biases[neuron_index]};
-		const std::int8_t* const neuron{&weights[neuron_index,0]};
-		// the casts here allow us to use 'vpmaddwd'
-		for(std::size_t feature_index{0}; feature_index<column_vector.size(); ++feature_index)
-			accumulator+=static_cast<std::int16_t>(neuron[feature_index])*static_cast<std::int16_t>(column_vector[feature_index]);
-		result[neuron_index]=accumulator;
+		const auto neuron_indexes{std::views::iota(0uz, layer_dimensions.features)};
+		const auto neuron{std::submdspan(weights, neuron_index, std::full_extent)};
+		// vectorisation seems to only be applied with the views::iota? can't use &weights[neuron_index,0]
+		result[neuron_index]=std::transform_reduce(column_vector.begin(), column_vector.end(), neuron_indexes.begin(), biases[neuron_index], std::plus<>{}, [&](const auto feature, const auto neuron_index){ return neuron[neuron_index]*feature; });
 	}
 	return result;
 }

@@ -11,8 +11,7 @@ class Time_manager
 						, const std::optional<std::chrono::milliseconds>& movetime
 						, const std::chrono::milliseconds& increment
 						, const std::chrono::milliseconds& move_overhead
-						, const int movestogo
-						, const int ply) noexcept;
+						, const int movestogo) noexcept;
 
 	[[nodiscard]] inline std::chrono::milliseconds optimum() const noexcept { return optimum_time; }
 	[[nodiscard]] inline std::chrono::milliseconds maximum() const noexcept { return maximum_time; }

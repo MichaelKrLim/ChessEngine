@@ -144,7 +144,7 @@ namespace engine
 					return false;
 			}
 
-			if(const auto pv_index=depth-remaining_depth; pv_index<context.principal_variation.size())
+			if(const std::size_t pv_index=depth-remaining_depth; pv_index<context.principal_variation.size())
 			{
 				const auto pv_move=context.principal_variation.at(pv_index);
 				const bool lhs_is_pv_move=lhs == pv_move,
@@ -368,7 +368,7 @@ namespace engine
 														 , const int thread_id) noexcept
 	{
 		static Stdio io;
-		Time_manager time_manager(search_options.time[state.side_to_move], search_options.movetime, search_options.increment[state.side_to_move], search_options.move_overhead, search_options.movestogo, state.half_move_clock);
+		Time_manager time_manager(search_options.time[state.side_to_move], search_options.movetime, search_options.increment[state.side_to_move], search_options.move_overhead, search_options.movestogo);
 		Fixed_capacity_vector<Move, 256> principal_variation;
 
 		Accumulator accumulator{fresh_accumulator(state, neural_network)};

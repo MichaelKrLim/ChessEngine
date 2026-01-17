@@ -8,8 +8,7 @@ Time_manager::Time_manager(const std::optional<chrono::milliseconds>& time_on_cl
 						 , const std::optional<chrono::milliseconds>& movetime
 						 , const chrono::milliseconds& increment
 						 , const chrono::milliseconds& move_overhead
-						 , const int movestogo
-						 , const int ply) noexcept
+						 , const int movestogo) noexcept
 	: start_time(std::chrono::steady_clock::now())
 {
 	if(!time_on_clock.has_value())

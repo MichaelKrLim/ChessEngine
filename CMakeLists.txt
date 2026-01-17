@@ -10,9 +10,9 @@ set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_options(-Wall
+					-Wextra
 					-pedantic
 					-O3
-					-g
 					-march=native) # -Werror causes bug in gcc
 
 # for windows
