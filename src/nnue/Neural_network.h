@@ -53,9 +53,9 @@ class Neural_network
 	private:
 
 	template <numeric numeric_type, std::size_t size>
-	std::array<std::int8_t, size> clipped_ReLU(const std::array<numeric_type, size>& input, const int multiple_of_one_value=1) const noexcept
+	std::array<std::uint8_t, size> clipped_ReLU(const std::array<numeric_type, size>& input, const int multiple_of_one_value=1) const noexcept
 	{
-		std::array<std::int8_t, size> output;
+		std::array<std::uint8_t, size> output;
 		for(auto&& [new_value, value] : std::views::zip(output, input))
 			new_value=std::clamp(value/multiple_of_one_value,0,127);
 		return output;

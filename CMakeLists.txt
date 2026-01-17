@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_options(-Wall
 					-pedantic
 					-O3
+					-g
 					-march=native) # -Werror causes bug in gcc
 
 # for windows

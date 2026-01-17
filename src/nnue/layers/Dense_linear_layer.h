@@ -1,7 +1,6 @@
 #ifndef Dense_linear_layer_h_INCLUDED
 #define Dense_linear_layer_h_INCLUDED
 
-#include <experimental/simd>
 #include <istream>
 #include <vector>
 
@@ -18,7 +17,7 @@ class Dense_linear_layer
 
 	Dense_linear_layer(std::istream& net_file) noexcept;
 
-	[[nodiscard]] std::array<bias_type, layer_dimensions.neurons> transform(const std::array<std::int8_t, layer_dimensions.features>& column_vector) const noexcept;
+	[[nodiscard]] std::array<bias_type, layer_dimensions.neurons> transform(const std::array<std::uint8_t, layer_dimensions.features>& column_vector) const noexcept;
 
 	private:
 
