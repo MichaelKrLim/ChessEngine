@@ -313,11 +313,11 @@ namespace engine
 		const auto history_data{std::move(state.history.top())};
 		state.history.pop();
 
-		const auto add_at = [&](const Position& square_to_add_at, const Piece piece_to_add, const Side side, Side_map<Position> king_squares)
+		const auto add_at = [&](const Position& square_to_add_at, const Piece piece_to_add, const Side side, const Side_map<Position>&)
 		{
 			state.sides[side].pieces[piece_to_add].add_piece(square_to_add_at);
 		};
-		const auto remove_at = [&](const Position& square_to_remove_at, const Piece piece_to_remove, const Side side, Side_map<Position> king_squares)
+		const auto remove_at = [&](const Position& square_to_remove_at, const Piece piece_to_remove, const Side side, const Side_map<Position>&)
 		{
 			state.sides[side].pieces[piece_to_remove].remove_piece(square_to_remove_at);
 		};

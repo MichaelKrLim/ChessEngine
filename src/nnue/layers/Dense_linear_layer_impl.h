@@ -24,10 +24,12 @@ std::array<typename Dense_linear_layer<layer_dimensions>::bias_type, layer_dimen
 	const_weights_container weights{weights_data.data()};
 	for(std::size_t neuron_index{0}; neuron_index<layer_dimensions.neurons; ++neuron_index)
 	{
-		const auto neuron_indexes{std::views::iota(0uz, layer_dimensions.features)};
+		// this is a transform reduce, HOWEVER this is implemented by reducing unrolled chunks of 4 at a time which is less performant in our case
 		const auto neuron{std::submdspan(weights, neuron_index, std::full_extent)};
-		// vectorisation seems to only be applied with the views::iota? can't use &weights[neuron_index,0]
-		result[neuron_index]=std::transform_reduce(column_vector.begin(), column_vector.end(), neuron_indexes.begin(), biases[neuron_index], std::plus<>{}, [&](const auto feature, const auto neuron_index){ return neuron[neuron_index]*feature; });
+		std::int32_t sum{biases[neuron_index]};
+		for(std::size_t feature_index{0}; const auto& feature : column_vector)
+			sum+=neuron[feature_index++]*feature;
+		result[neuron_index]=sum;
 	}
 	return result;
 }
